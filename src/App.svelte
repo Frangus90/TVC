@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { invoke } from "@tauri-apps/api/core";
   import { getCurrentWebview } from "@tauri-apps/api/webview";
   import Sidebar from "./lib/components/layout/Sidebar.svelte";
   import Header from "./lib/components/layout/Header.svelte";
@@ -23,12 +24,19 @@
     }, 2000);
   });
 
-  // CTRL+L to open dev tools
-  function handleKeydown(event: KeyboardEvent) {
-    if (event.ctrlKey && event.key === "l") {
+  // CTRL+Shift+I to open dev tools (like browser)
+  async function handleKeydown(event: KeyboardEvent) {
+    if (event.ctrlKey && event.shiftKey && event.key === "I") {
       event.preventDefault();
       console.log("[TVC] Opening dev tools...");
-      getCurrentWebview().openDevTools();
+      try {
+        const webview = getCurrentWebview();
+        await invoke("plugin:webview|internal_toggle_devtools", {
+          label: webview.label,
+        });
+      } catch (err) {
+        console.error("[TVC] Failed to open dev tools:", err);
+      }
     }
   }
 </script>
