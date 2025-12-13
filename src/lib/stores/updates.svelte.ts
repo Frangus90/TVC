@@ -29,17 +29,25 @@ export function getDownloadProgress() {
 }
 
 export async function checkForUpdates(silent = true): Promise<void> {
-  if (isChecking) return;
+  console.log("[TVC Update] checkForUpdates called, silent:", silent);
+  if (isChecking) {
+    console.log("[TVC Update] Already checking, skipping");
+    return;
+  }
 
   isChecking = true;
   try {
+    console.log("[TVC Update] Calling check()...");
     const update = await check();
+    console.log("[TVC Update] check() result:", update);
 
     if (update?.available) {
+      console.log("[TVC Update] Update available! Version:", update.version);
       updateAvailable = true;
       updateVersion = update.version;
 
       if (!silent) {
+        console.log("[TVC Update] Showing update dialog...");
         const confirmed = await ask(
           `A new version (${update.version}) is available!\n\n${update.body || "No release notes available."}\n\nWould you like to download and install it now?`,
           {
@@ -50,15 +58,19 @@ export async function checkForUpdates(silent = true): Promise<void> {
           }
         );
 
+        console.log("[TVC Update] User response:", confirmed);
         if (confirmed) {
           await downloadAndInstall(update);
         }
       }
+    } else {
+      console.log("[TVC Update] No update available or update is null");
     }
   } catch (error) {
-    console.error("Failed to check for updates:", error);
+    console.error("[TVC Update] Failed to check for updates:", error);
   } finally {
     isChecking = false;
+    console.log("[TVC Update] Check complete");
   }
 }
 

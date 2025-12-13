@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
   import Sidebar from "./lib/components/layout/Sidebar.svelte";
   import Header from "./lib/components/layout/Header.svelte";
   import MonthView from "./lib/components/calendar/MonthView.svelte";
@@ -11,14 +12,28 @@
   import { getViewMode } from "./lib/stores/calendar.svelte";
   import { checkForUpdates } from "./lib/stores/updates.svelte";
 
-  // Check for updates on app start (silent check)
+  // Check for updates on app start
   onMount(() => {
-    // Delay slightly to let app fully load
+    console.log("[TVC] App mounted, will check for updates in 2s...");
     setTimeout(() => {
-      checkForUpdates(false).catch(console.error);
+      console.log("[TVC] Checking for updates...");
+      checkForUpdates(false).catch((err) => {
+        console.error("[TVC] Update check failed:", err);
+      });
     }, 2000);
   });
+
+  // CTRL+L to open dev tools
+  function handleKeydown(event: KeyboardEvent) {
+    if (event.ctrlKey && event.key === "l") {
+      event.preventDefault();
+      console.log("[TVC] Opening dev tools...");
+      getCurrentWebviewWindow().openDevTools();
+    }
+  }
 </script>
+
+<svelte:window on:keydown={handleKeydown} />
 
 <div class="flex h-screen bg-background text-text">
   <Sidebar />
