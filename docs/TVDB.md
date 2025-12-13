@@ -1,0 +1,2 @@
+- API key: a3ceb063-8688-4916-9c1d-8f8039e87307
+- https://thetvdb.github.io/v4-api/#/
