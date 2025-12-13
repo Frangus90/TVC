@@ -27,3 +27,6 @@ Thumbs.db
 # Tauri signing keys (NEVER COMMIT)
 *.key
 %USERPROFILE%/
+
+#Claude AI files
+.claude/
