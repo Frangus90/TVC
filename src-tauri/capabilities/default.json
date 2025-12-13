@@ -15,6 +15,7 @@
     "updater:allow-download-and-install",
     "dialog:default",
     "dialog:allow-ask",
+    "dialog:allow-message",
     "process:default",
     "process:allow-restart"
   ]

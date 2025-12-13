@@ -1,6 +1,6 @@
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
-import { ask } from "@tauri-apps/plugin-dialog";
+import { ask, message } from "@tauri-apps/plugin-dialog";
 
 let updateAvailable = $state(false);
 let updateVersion = $state<string | null>(null);
@@ -122,10 +122,9 @@ export async function triggerUpdateCheck(): Promise<void> {
   await checkForUpdates(false);
 
   if (!updateAvailable) {
-    await ask("You're running the latest version!", {
+    await message("You're running the latest version!", {
       title: "No Updates",
       kind: "info",
-      okLabel: "OK",
     });
   }
 }

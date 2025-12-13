@@ -151,28 +151,36 @@ $latestJson = '{
   }
 }'
 
-Set-Content "$bundlePath\latest.json" $latestJson -Encoding UTF8
+# Write without BOM (UTF8 with BOM breaks JSON parsing)
+[System.IO.File]::WriteAllText("$bundlePath\latest.json", $latestJson)
 Write-Success "  Created latest.json"
 
 # Step 4: Create GitHub release
 Write-Step "Creating GitHub release v$Version..."
 
-$releaseNotes = "## What's New`n`n$Notes"
+# Write release notes to a temp file to avoid escaping issues
+$releaseNotesFile = "$env:TEMP\tvc-release-notes.md"
+$releaseNotesContent = "## What's New`r`n`r`n$Notes"
+Set-Content -Path $releaseNotesFile -Value $releaseNotesContent -Encoding UTF8
 
 Push-Location $ProjectRoot
 try {
-    gh release create "v$Version" `
+    $result = gh release create "v$Version" `
         "$bundlePath\$exeName" `
         "$bundlePath\$exeName.sig" `
         "$bundlePath\latest.json" `
         --title "v$Version" `
-        --notes $releaseNotes
+        --notes-file $releaseNotesFile 2>&1
 
     if ($LASTEXITCODE -ne 0) {
+        Write-Err "gh output: $result"
         throw "GitHub release creation failed"
     }
+
+    Write-Host $result
 } finally {
     Pop-Location
+    Remove-Item $releaseNotesFile -ErrorAction SilentlyContinue
 }
 
 Write-Host "`n========================================" -ForegroundColor Green
