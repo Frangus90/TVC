@@ -48,7 +48,7 @@
       "endpoints": [
         "https://github.com/Frangus90/TVC/releases/latest/download/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM2NzcxMkEzQzgxNjAxN0YKUldSL0FSYklveEozeG1JNkl4aHE1YStNY1l3UnJreU0wY1lObE02Y3NuL2lkNzdkSEZTQklJL08K",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEZCM0IxNDdCMDhBRkQzNTcKUldSWDA2OElleFE3K3pVNGpOZkFsa1RRbWs3RWQ3RTBFT3lzNzR6RTIwVmo5TjU4SXZqaHlTYW0K",
       "windows": {
         "installMode": "passive"
       }
