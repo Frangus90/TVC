@@ -29,7 +29,10 @@
       "Bash(git commit -m \"$(cat <<''EOF''\nInitial commit - TVC v0.3.0\n\nTV Calendar app for tracking TV shows and scheduling episodes.\n\nFeatures:\n- Search and track TV shows via TVDB API\n- Month, Week, and Agenda calendar views\n- Schedule episodes manually with multi-select and season scheduling\n- Day detail view for managing episodes\n- Mark episodes as watched\n- Auto-updater support (ready for GitHub Releases)\n\nTech stack:\n- Tauri v2 (Rust backend)\n- Svelte 5 + TypeScript (frontend)\n- Tailwind CSS v4 (styling)\n- SQLite (local storage)\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")",
       "Bash(git push:*)",
       "Bash(git pull:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(del \"C:\\Users\\aleks\\AppData\\Roaming\\com.tvc.app\\tvc.db\")",
+      "Bash(TAURI_SIGNING_PRIVATE_KEY=\"dW50cnVzdGVkIGNvbW1lbnQ6IHJzaWduIGVuY3J5cHRlZCBzZWNyZXQga2V5ClJXUlRZMEl5R2Z2M09LTFJwcFRMTmNvaHczdjdLM21KVS9UVXlhU0VwK2pxUnd6VDRHZ0FBQkFBQUFBQUFBQUFBQUlBQUFBQVJieDlmUU4vTWYrQjRIa1JoSitlTFhvVjE2ZXlDNGlOd3dRNjM4SFFDRG1aWm9uMFNJelZnZkxEcWJGc3RQakJGMHpXUDczKzlVMTFobkxkcEE3cVdGODhkOEViZnBlY0xtVlMvaUZIajNLNURTUHhTOFVWODJyL2crNVRBc0lKRXFuRitpYkdGQ1U9Cg==\" npm run tauri build)"
     ],
     "deny": [],
     "ask": []
