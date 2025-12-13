@@ -41,7 +41,7 @@ export async function checkForUpdates(silent = true): Promise<void> {
 
       if (!silent) {
         const confirmed = await ask(
-          `A new version (${update.version}) is available. Would you like to download and install it now?`,
+          `A new version (${update.version}) is available!\n\n${update.body || "No release notes available."}\n\nWould you like to download and install it now?`,
           {
             title: "Update Available",
             kind: "info",

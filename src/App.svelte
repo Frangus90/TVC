@@ -15,7 +15,7 @@
   onMount(() => {
     // Delay slightly to let app fully load
     setTimeout(() => {
-      checkForUpdates(true).catch(console.error);
+      checkForUpdates(false).catch(console.error);
     }, 2000);
   });
 </script>
