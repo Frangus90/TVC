@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Plus, Tv, Trash2 } from "lucide-svelte";
+  import { Plus, Tv, Trash2, RefreshCw } from "lucide-svelte";
   import { onMount } from "svelte";
   import {
     getTrackedShows,
@@ -7,6 +7,10 @@
     openSearchModal,
     removeShow,
   } from "../../stores/shows.svelte";
+  import {
+    triggerUpdateCheck,
+    isCheckingForUpdates,
+  } from "../../stores/updates.svelte";
 
   onMount(() => {
     loadTrackedShows();
@@ -74,6 +78,14 @@
       <Plus class="w-4 h-4" />
       Add Show
     </button>
-    <p class="text-xs text-text-muted text-center mt-3">v0.4.3</p>
+    <button
+      onclick={triggerUpdateCheck}
+      disabled={isCheckingForUpdates()}
+      class="w-full flex items-center justify-center gap-2 mt-2 px-3 py-1.5 text-xs text-text-muted hover:text-text hover:bg-surface-hover rounded transition-colors disabled:opacity-50"
+    >
+      <RefreshCw class="w-3 h-3 {isCheckingForUpdates() ? 'animate-spin' : ''}" />
+      {isCheckingForUpdates() ? "Checking..." : "Check for Updates"}
+    </button>
+    <p class="text-xs text-text-muted text-center mt-2">v0.4.4</p>
   </div>
 </aside>

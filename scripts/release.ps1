@@ -12,7 +12,7 @@ $ProjectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Pa
 # Colors for output
 function Write-Step { param($msg) Write-Host "`n>> $msg" -ForegroundColor Cyan }
 function Write-Success { param($msg) Write-Host $msg -ForegroundColor Green }
-function Write-Error { param($msg) Write-Host $msg -ForegroundColor Red }
+function Write-Err { param($msg) Write-Host $msg -ForegroundColor Red }
 
 # Get version if not provided
 if (-not $Version) {
@@ -20,7 +20,7 @@ if (-not $Version) {
     Write-Host "Current version: $currentVersion" -ForegroundColor Yellow
     $Version = Read-Host "Enter new version (e.g., 0.4.4)"
     if (-not $Version) {
-        Write-Error "Version is required"
+        Write-Err "Version is required"
         exit 1
     }
 }
@@ -62,10 +62,27 @@ $packageJson = $packageJson -replace '"version": "[^"]*"', "`"version`": `"$Vers
 Set-Content "$ProjectRoot\package.json" $packageJson -NoNewline
 Write-Success "  Updated package.json"
 
-# Cargo.toml
-$cargoToml = Get-Content "$ProjectRoot\src-tauri\Cargo.toml" -Raw
-$cargoToml = $cargoToml -replace 'version = "[^"]*"', "version = `"$Version`""
-Set-Content "$ProjectRoot\src-tauri\Cargo.toml" $cargoToml -NoNewline
+# Cargo.toml - only update [package] version, not dependencies
+$cargoPath = "$ProjectRoot\src-tauri\Cargo.toml"
+$cargoLines = Get-Content $cargoPath
+$inPackage = $false
+$newCargoLines = @()
+
+foreach ($line in $cargoLines) {
+    if ($line -match '^\[package\]') {
+        $inPackage = $true
+    } elseif ($line -match '^\[') {
+        $inPackage = $false
+    }
+
+    if ($inPackage -and $line -match '^version = "') {
+        $newCargoLines += "version = `"$Version`""
+    } else {
+        $newCargoLines += $line
+    }
+}
+
+Set-Content $cargoPath ($newCargoLines -join "`n")
 Write-Success "  Updated Cargo.toml"
 
 # tauri.conf.json
@@ -76,7 +93,7 @@ Write-Success "  Updated tauri.conf.json"
 
 # Sidebar.svelte (version display)
 $sidebar = Get-Content "$ProjectRoot\src\lib\components\layout\Sidebar.svelte" -Raw
-$sidebar = $sidebar -replace 'v[\d\.]+</p>', "v$Version</p>"
+$sidebar = $sidebar -replace '>v[\d\.]+</p>', ">v$Version</p>"
 Set-Content "$ProjectRoot\src\lib\components\layout\Sidebar.svelte" $sidebar -NoNewline
 Write-Success "  Updated Sidebar.svelte"
 
@@ -85,7 +102,7 @@ Write-Step "Building with signing..."
 
 $keyPath = "$env:USERPROFILE\.tauri\tvc-pwd.key"
 if (-not (Test-Path $keyPath)) {
-    Write-Error "Signing key not found at $keyPath"
+    Write-Err "Signing key not found at $keyPath"
     exit 1
 }
 
@@ -112,31 +129,29 @@ $exeName = "TVC_${Version}_x64-setup.exe"
 $sigFile = "$bundlePath\$exeName.sig"
 
 if (-not (Test-Path $sigFile)) {
-    Write-Error "Signature file not found: $sigFile"
+    Write-Err "Signature file not found: $sigFile"
     exit 1
 }
 
-$signature = Get-Content $sigFile -Raw
-$signature = $signature.Trim()
+$signature = (Get-Content $sigFile -Raw).Trim()
 
-# Format notes for JSON (escape newlines)
-$jsonNotes = "v$Version`n`n" + ($Notes -replace "`r`n", "`n" -replace "`n", "\n")
+# Format notes for JSON (escape special characters properly)
+$escapedNotes = "v$Version - " + ($Notes -replace '\\', '\\\\' -replace '"', '\"' -replace "`r`n", ' - ' -replace "`n", ' - ')
 
-$latestJson = @"
-{
-  "version": "$Version",
-  "notes": "$jsonNotes",
-  "pub_date": "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')",
+# Build JSON manually to avoid newline issues
+$latestJson = '{
+  "version": "' + $Version + '",
+  "notes": "' + $escapedNotes + '",
+  "pub_date": "' + (Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ') + '",
   "platforms": {
     "windows-x86_64": {
-      "url": "https://github.com/Frangus90/TVC/releases/download/v$Version/$exeName",
-      "signature": "$signature"
+      "url": "https://github.com/Frangus90/TVC/releases/download/v' + $Version + '/' + $exeName + '",
+      "signature": "' + $signature + '"
     }
   }
-}
-"@
+}'
 
-Set-Content "$bundlePath\latest.json" $latestJson
+Set-Content "$bundlePath\latest.json" $latestJson -Encoding UTF8
 Write-Success "  Created latest.json"
 
 # Step 4: Create GitHub release
