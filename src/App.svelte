@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+  import { getCurrentWebview } from "@tauri-apps/api/webview";
   import Sidebar from "./lib/components/layout/Sidebar.svelte";
   import Header from "./lib/components/layout/Header.svelte";
   import MonthView from "./lib/components/calendar/MonthView.svelte";
@@ -28,7 +28,7 @@
     if (event.ctrlKey && event.key === "l") {
       event.preventDefault();
       console.log("[TVC] Opening dev tools...");
-      getCurrentWebviewWindow().openDevTools();
+      getCurrentWebview().openDevTools();
     }
   }
 </script>
