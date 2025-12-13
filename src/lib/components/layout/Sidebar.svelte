@@ -74,5 +74,6 @@
       <Plus class="w-4 h-4" />
       Add Show
     </button>
+    <p class="text-xs text-text-muted text-center mt-3">v0.4.1</p>
   </div>
 </aside>
