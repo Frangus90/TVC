@@ -18,7 +18,7 @@ function Write-Err { param($msg) Write-Host $msg -ForegroundColor Red }
 if (-not $Version) {
     $currentVersion = (Get-Content "$ProjectRoot\package.json" | ConvertFrom-Json).version
     Write-Host "Current version: $currentVersion" -ForegroundColor Yellow
-    $Version = Read-Host "Enter new version (e.g., 0.4.4)"
+    $Version = Read-Host "Enter new version "
     if (-not $Version) {
         Write-Err "Version is required"
         exit 1
