@@ -1,5 +1,8 @@
 -- Add performance indexes for common queries
 
+-- Add scheduled_date column to episodes table (needed for scheduling feature)
+ALTER TABLE episodes ADD COLUMN scheduled_date TEXT;
+
 -- Composite index for calendar queries (show_id + aired)
 CREATE INDEX IF NOT EXISTS idx_episodes_show_air ON episodes(show_id, aired);
 
