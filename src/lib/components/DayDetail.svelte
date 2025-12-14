@@ -1,6 +1,6 @@
 <script lang="ts">
   import { format, parseISO } from "date-fns";
-  import { X, Check, Calendar, CalendarX, Eye, EyeOff } from "lucide-svelte";
+  import { X, Check, Calendar, CalendarX, Eye, EyeOff, Trash2 } from "lucide-svelte";
   import {
     isDayDetailOpen,
     getDayDetailDate,
@@ -8,6 +8,7 @@
     getEpisodesForDate,
     toggleEpisodeWatched,
     unscheduleEpisode,
+    getTrackedShows,
     type Episode,
   } from "../stores/shows.svelte";
 
@@ -24,12 +25,16 @@
     const episodes = getEpisodesForDate(date);
 
     // Group by show
+    const shows = getTrackedShows();
     const groups = new Map<number, GroupedEpisodes>();
     for (const ep of episodes) {
       if (!groups.has(ep.show_id)) {
+        const show = shows.find(s => s.id === ep.show_id);
         groups.set(ep.show_id, {
           showName: ep.show_name,
           posterUrl: ep.poster_url,
+          showId: ep.show_id,
+          showColor: show?.color || null,
           episodes: [],
         });
       }
@@ -72,6 +77,31 @@
       0
     );
   }
+
+  function getScheduledCount(): number {
+    return groupedEpisodes().reduce(
+      (sum, g) => sum + g.episodes.filter((e) => !!e.scheduled_date).length,
+      0
+    );
+  }
+
+  async function handleClearAll() {
+    const date = getDayDetailDate();
+    if (!date) return;
+
+    const scheduledCount = getScheduledCount();
+    if (scheduledCount === 0) return;
+
+    if (confirm(`Are you sure you want to unschedule all ${scheduledCount} episode${scheduledCount !== 1 ? 's' : ''} for this day?`)) {
+      const episodes = getEpisodesForDate(date);
+      const scheduledEpisodes = episodes.filter(ep => ep.scheduled_date);
+      
+      // Unschedule all scheduled episodes
+      for (const episode of scheduledEpisodes) {
+        await unscheduleEpisode(episode.id);
+      }
+    }
+  }
 </script>
 
 {#if isDayDetailOpen() && getDayDetailDate()}
@@ -95,13 +125,25 @@
           {/if}
         </p>
       </div>
-      <button
-        onclick={closeDayDetail}
-        class="p-2 rounded-lg hover:bg-surface-hover transition-colors"
-        aria-label="Close"
-      >
-        <X class="w-5 h-5" />
-      </button>
+      <div class="flex items-center gap-2">
+        {#if getScheduledCount() > 0}
+          <button
+            onclick={handleClearAll}
+            class="px-3 py-1.5 text-sm bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors flex items-center gap-2"
+            title="Unschedule all episodes for this day"
+          >
+            <Trash2 class="w-4 h-4" />
+            Clear All
+          </button>
+        {/if}
+        <button
+          onclick={closeDayDetail}
+          class="p-2 rounded-lg hover:bg-surface-hover transition-colors"
+          aria-label="Close"
+        >
+          <X class="w-5 h-5" />
+        </button>
+      </div>
     </div>
 
     <!-- Content -->
@@ -144,6 +186,7 @@
                       : isScheduled
                         ? 'bg-premiere/10'
                         : 'bg-upcoming/10'}"
+                    style={group.showColor ? `border-left: 3px solid ${group.showColor};` : ''}
                   >
                     <!-- Episode info -->
                     <div class="flex-1 min-w-0">

@@ -8,6 +8,7 @@
     getEpisodePickerDate,
     scheduleEpisode,
     scheduleMultipleEpisodes,
+    getTrackedShows,
     type ShowEpisode,
   } from "../stores/shows.svelte";
 
@@ -16,6 +17,13 @@
 
   // Track selected episodes for multi-select
   let selectedEpisodes = $state<Set<number>>(new Set());
+
+  // Filter state
+  let filterWatched = $state<"all" | "watched" | "unwatched">("all");
+  let filterSeason = $state<number | null>(null);
+  let searchQuery = $state("");
+  let previewEpisode = $state<ShowEpisode | null>(null);
+  let previewPosition = $state<{ x: number; y: number } | null>(null);
 
   function handleKeyDown(event: KeyboardEvent) {
     if (event.key === "Escape") {
@@ -111,16 +119,86 @@
     if (num === null || num === undefined) return "??";
     return String(num).padStart(2, "0");
   }
+
+  // Get available seasons for filter
+  function getAvailableSeasons(): number[] {
+    const seasons = new Set<number>();
+    for (const ep of getEpisodePickerEpisodes()) {
+      seasons.add(ep.season_number ?? 0);
+    }
+    return Array.from(seasons).sort((a, b) => a - b);
+  }
+
+  // Filter episodes based on current filters (memoized)
+  let filteredEpisodes = $derived.by(() => {
+    let episodes = getEpisodePickerEpisodes();
+
+    // Filter by watched status
+    if (filterWatched === "watched") {
+      episodes = episodes.filter((ep) => ep.watched);
+    } else if (filterWatched === "unwatched") {
+      episodes = episodes.filter((ep) => !ep.watched);
+    }
+
+    // Filter by season
+    if (filterSeason !== null) {
+      episodes = episodes.filter((ep) => (ep.season_number ?? 0) === filterSeason);
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      episodes = episodes.filter(
+        (ep) =>
+          ep.name?.toLowerCase().includes(query) ||
+          `s${String(ep.season_number ?? 0).padStart(2, "0")}e${String(ep.episode_number ?? 0).padStart(2, "0")}`.includes(query)
+      );
+    }
+
+    return episodes;
+  });
+
+  function handleSelectAll() {
+    const newSelected = new Set(selectedEpisodes);
+    for (const ep of filteredEpisodes) {
+      newSelected.add(ep.id);
+    }
+    selectedEpisodes = newSelected;
+  }
+
+  function handleSelectNone() {
+    const newSelected = new Set(selectedEpisodes);
+    for (const ep of filteredEpisodes) {
+      newSelected.delete(ep.id);
+    }
+    selectedEpisodes = newSelected;
+  }
+
+  async function handleScheduleNextN(n: number) {
+    const date = getEpisodePickerDate();
+    if (!date) return;
+
+    const unwatched = getEpisodePickerEpisodes()
+      .filter((ep) => !ep.watched && !ep.scheduled_date)
+      .slice(0, n);
+
+    if (unwatched.length > 0) {
+      const episodeIds = unwatched.map((ep) => ep.id);
+      await scheduleMultipleEpisodes(episodeIds, date);
+      selectedEpisodes = new Set();
+    }
+  }
 </script>
 
 <svelte:window on:keydown={handleKeyDown} />
 
 {#if isEpisodePickerOpen()}
   {@const show = getEpisodePickerShow()}
-  {@const episodes = getEpisodePickerEpisodes()}
+  {@const allEpisodes = getEpisodePickerEpisodes()}
   {@const date = getEpisodePickerDate()}
-  {@const grouped = groupBySeason(episodes)}
+  {@const grouped = groupBySeason(filteredEpisodes)}
   {@const sortedSeasons = [...grouped.entries()].sort((a, b) => a[0] - b[0])}
+  {@const availableSeasons = getAvailableSeasons()}
 
   <!-- Backdrop -->
   <button
@@ -131,7 +209,7 @@
 
   <!-- Modal -->
   <div
-    class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg z-50 bg-surface rounded-xl border border-border shadow-2xl max-h-[80vh] flex flex-col"
+    class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl z-50 bg-surface rounded-xl border border-border shadow-2xl max-h-[80vh] flex flex-col"
   >
     <!-- Header -->
     <div class="flex items-center justify-between p-4 border-b border-border">
@@ -150,32 +228,90 @@
       </button>
     </div>
 
-    <!-- Expand/Collapse controls + hint -->
-    <div class="flex items-center justify-between px-4 py-2 border-b border-border text-xs">
-      <div class="flex gap-2">
-        {#if sortedSeasons.length > 1}
+    <!-- Filters and controls -->
+    <div class="px-4 py-3 border-b border-border space-y-3">
+      <!-- Search and filters row -->
+      <div class="flex items-center gap-2">
+        <input
+          type="text"
+          placeholder="Search episodes..."
+          bind:value={searchQuery}
+          class="flex-1 px-3 py-1.5 text-sm rounded border border-border bg-surface text-text placeholder:text-text-muted outline-none focus:ring-2 focus:ring-accent"
+        />
+        <select
+          bind:value={filterWatched}
+          class="px-2 py-1.5 text-sm rounded border border-border bg-surface text-text outline-none focus:ring-2 focus:ring-accent"
+        >
+          <option value="all">All</option>
+          <option value="watched">Watched</option>
+          <option value="unwatched">Unwatched</option>
+        </select>
+        <select
+          bind:value={filterSeason}
+          class="px-2 py-1.5 text-sm rounded border border-border bg-surface text-text outline-none focus:ring-2 focus:ring-accent"
+        >
+          <option value={null}>All Seasons</option>
+          {#each availableSeasons as season}
+            <option value={season}>{season === 0 ? "Specials" : `Season ${season}`}</option>
+          {/each}
+        </select>
+      </div>
+
+      <!-- Action buttons row -->
+      <div class="flex items-center justify-between text-xs">
+        <div class="flex gap-2">
+          {#if sortedSeasons.length > 1}
+            <button
+              onclick={() => expandAll(grouped)}
+              class="text-accent hover:underline"
+            >
+              Expand All
+            </button>
+            <span class="text-text-muted">|</span>
+            <button
+              onclick={collapseAll}
+              class="text-accent hover:underline"
+            >
+              Collapse All
+            </button>
+          {/if}
+        </div>
+        <div class="flex items-center gap-2">
           <button
-            onclick={() => expandAll(grouped)}
+            onclick={handleSelectAll}
             class="text-accent hover:underline"
           >
-            Expand All
+            Select All
           </button>
           <span class="text-text-muted">|</span>
           <button
-            onclick={collapseAll}
+            onclick={handleSelectNone}
             class="text-accent hover:underline"
           >
-            Collapse All
+            Select None
           </button>
-        {/if}
+          <span class="text-text-muted">|</span>
+          <button
+            onclick={() => handleScheduleNextN(5)}
+            class="text-accent hover:underline"
+            title="Schedule next 5 unwatched episodes"
+          >
+            Next 5
+          </button>
+        </div>
       </div>
-      <span class="text-text-muted">Ctrl+click to multi-select</span>
     </div>
 
     <!-- Episodes list -->
     <div class="flex-1 overflow-auto">
-      {#if episodes.length === 0}
-        <p class="text-text-muted text-center py-8">No episodes found</p>
+      {#if filteredEpisodes.length === 0}
+        <p class="text-text-muted text-center py-8">
+          {#if searchQuery.trim() || filterWatched !== "all" || filterSeason !== null}
+            No episodes match the current filters
+          {:else}
+            No episodes found
+          {/if}
+        </p>
       {:else}
         {#each sortedSeasons as [season, seasonEpisodes]}
           {@const isExpanded = expandedSeasons.has(season)}
@@ -218,11 +354,49 @@
               <ul class="pb-2">
                 {#each seasonEpisodes as episode}
                   {@const isSelected = selectedEpisodes.has(episode.id)}
+                  {@const showColor = show?.color || null}
                   <li>
                     <button
                       onclick={(e) => handleEpisodeClick(e, episode)}
+                      onmouseenter={(e) => {
+                        previewEpisode = episode;
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const previewWidth = 320; // max-w-xs = 20rem = 320px
+                        const previewHeight = 300; // Approximate height
+                        const padding = 16;
+                        
+                        let x = rect.left + rect.width + padding; // Position to the right of the episode item
+                        let y = rect.top; // Align with the top of the episode item
+                        
+                        // Check if preview would go off the right edge
+                        if (x + previewWidth > window.innerWidth) {
+                          // Position to the left of the episode item instead
+                          x = rect.left - previewWidth - padding;
+                          // If still off screen, position at the right edge
+                          if (x < 0) {
+                            x = window.innerWidth - previewWidth - padding;
+                          }
+                        }
+                        
+                        // Check if preview would go off the bottom edge
+                        if (y + previewHeight > window.innerHeight) {
+                          y = window.innerHeight - previewHeight - padding;
+                        }
+                        
+                        // Check if preview would go off the top edge
+                        if (y < padding) {
+                          y = padding;
+                        }
+                        
+                        previewPosition = { x, y };
+                      }}
+                      onmouseleave={() => {
+                        previewEpisode = null;
+                        previewPosition = null;
+                      }}
                       class="w-full flex items-center gap-3 px-4 py-2 transition-colors text-left group
                         {isSelected ? 'bg-accent/20' : 'hover:bg-surface-hover'}"
+                      style={showColor ? `border-left: 3px solid ${showColor};` : ''}
                     >
                       <!-- Selection indicator -->
                       <div class="w-5 h-5 rounded border flex-shrink-0 flex items-center justify-center
@@ -231,13 +405,31 @@
                           <Check class="w-3 h-3 text-white" />
                         {/if}
                       </div>
+                      <!-- Episode thumbnail -->
+                      {#if episode.image_url}
+                        <img
+                          src={episode.image_url}
+                          alt=""
+                          class="w-12 h-[72px] rounded object-cover flex-shrink-0"
+                          loading="lazy"
+                        />
+                      {:else}
+                        <div class="w-12 h-[72px] rounded bg-border flex-shrink-0"></div>
+                      {/if}
                       <span class="text-sm text-text-muted w-10 flex-shrink-0 font-mono">
                         E{formatEpisodeNumber(episode.episode_number)}
                       </span>
-                      <span class="flex-1 text-sm truncate {episode.watched ? 'text-text-muted' : 'text-text'}">
-                        {episode.name || "TBA"}
-                      </span>
-                      <div class="flex items-center gap-2">
+                      <div class="flex-1 min-w-0">
+                        <span class="text-sm truncate block {episode.watched ? 'text-text-muted' : 'text-text'}">
+                          {episode.name || "TBA"}
+                        </span>
+                        {#if episode.overview}
+                          <p class="text-xs text-text-muted line-clamp-1 mt-0.5">
+                            {episode.overview}
+                          </p>
+                        {/if}
+                      </div>
+                      <div class="flex items-center gap-2 flex-shrink-0">
                         {#if episode.watched}
                           <Check class="w-4 h-4 text-watched" />
                         {/if}
@@ -281,4 +473,47 @@
       </div>
     {/if}
   </div>
+
+  <!-- Episode preview tooltip -->
+  {#if previewEpisode && previewPosition}
+    <div
+      class="fixed z-[60] bg-surface border border-border rounded-lg shadow-xl p-4 max-w-xs pointer-events-none"
+      style="left: {previewPosition.x}px; top: {previewPosition.y}px; transform: translateY(0);"
+    >
+      {#if previewEpisode.image_url}
+        <img
+          src={previewEpisode.image_url}
+          alt=""
+          class="w-full h-48 rounded object-cover mb-2"
+        />
+      {/if}
+      <h4 class="font-semibold text-sm mb-1">
+        S{String(previewEpisode.season_number ?? 0).padStart(2, "0")}E{formatEpisodeNumber(previewEpisode.episode_number)}
+        {#if previewEpisode.name}
+          - {previewEpisode.name}
+        {/if}
+      </h4>
+      {#if previewEpisode.overview}
+        <p class="text-xs text-text-muted line-clamp-3">{previewEpisode.overview}</p>
+      {/if}
+      {#if previewEpisode.aired}
+        <p class="text-xs text-text-muted mt-2">Aired: {previewEpisode.aired}</p>
+      {/if}
+    </div>
+  {/if}
 {/if}
+
+<style>
+  .line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+</style>

@@ -9,6 +9,7 @@
     nextPeriod,
     goToToday,
   } from "../../stores/calendar.svelte";
+  import ThemeSelector from "../ThemeSelector.svelte";
 
   function getHeaderTitle(): string {
     const date = getCurrentDate();
@@ -59,16 +60,19 @@
     {getHeaderTitle()}
   </h1>
 
-  <div class="flex bg-background rounded-lg p-1">
-    {#each ["month", "week", "agenda"] as mode}
-      <button
-        onclick={() => setViewMode(mode as "month" | "week" | "agenda")}
-        class="px-3 py-1 text-sm rounded-md transition-colors capitalize {getViewMode() === mode
-          ? 'bg-surface text-text'
-          : 'text-text-muted hover:text-text'}"
-      >
-        {mode}
-      </button>
-    {/each}
+  <div class="flex items-center gap-2">
+    <div class="flex bg-background rounded-lg p-1">
+      {#each ["month", "week", "agenda"] as mode}
+        <button
+          onclick={() => setViewMode(mode as "month" | "week" | "agenda")}
+          class="px-3 py-1 text-sm rounded-md transition-colors capitalize {getViewMode() === mode
+            ? 'bg-surface text-text'
+            : 'text-text-muted hover:text-text'}"
+        >
+          {mode}
+        </button>
+      {/each}
+    </div>
+    <ThemeSelector />
   </div>
 </header>

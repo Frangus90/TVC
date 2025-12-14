@@ -30,3 +30,6 @@ Thumbs.db
 
 #Claude AI files
 .claude/
+
+# Plans
+plans/

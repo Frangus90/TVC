@@ -1,18 +1,56 @@
+pub mod cache;
+pub mod rate_limit;
+
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
+use std::time::Duration;
 use tokio::sync::RwLock;
 
 const API_BASE: &str = "https://api4.thetvdb.com/v4";
 const API_KEY: &str = "a3ceb063-8688-4916-9c1d-8f8039e87307";
 
 static TOKEN: OnceLock<RwLock<Option<String>>> = OnceLock::new();
+static CACHE: OnceLock<cache::ApiCache> = OnceLock::new();
+static RATE_LIMITER: OnceLock<rate_limit::RateLimiter> = OnceLock::new();
+
+fn get_cache() -> &'static cache::ApiCache {
+    CACHE.get_or_init(|| cache::ApiCache::new())
+}
+
+fn get_rate_limiter() -> &'static rate_limit::RateLimiter {
+    RATE_LIMITER.get_or_init(|| rate_limit::RateLimiter::default())
+}
+
+async fn retry_with_backoff<F, Fut, T>(
+    mut f: F,
+    max_retries: u32,
+) -> Result<T, Box<dyn std::error::Error + Send + Sync>>
+where
+    F: FnMut() -> Fut,
+    Fut: std::future::Future<Output = Result<T, Box<dyn std::error::Error + Send + Sync>>>,
+{
+    let mut last_error = None;
+    for attempt in 0..=max_retries {
+        match f().await {
+            Ok(result) => return Ok(result),
+            Err(e) => {
+                last_error = Some(e);
+                if attempt < max_retries {
+                    let delay = Duration::from_millis(100 * 2_u64.pow(attempt));
+                    tokio::time::sleep(delay).await;
+                }
+            }
+        }
+    }
+    Err(last_error.unwrap())
+}
 
 fn get_token_lock() -> &'static RwLock<Option<String>> {
     TOKEN.get_or_init(|| RwLock::new(None))
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchResult {
     pub tvdb_id: Option<String>,
     pub id: Option<String>,
@@ -26,7 +64,7 @@ pub struct SearchResult {
     pub year: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SeriesExtended {
     pub id: i64,
@@ -41,12 +79,12 @@ pub struct SeriesExtended {
     pub average_runtime: Option<i32>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Status {
     pub name: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AirsDays {
     pub sunday: Option<bool>,
     pub monday: Option<bool>,
@@ -57,7 +95,7 @@ pub struct AirsDays {
     pub saturday: Option<bool>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EpisodeBase {
     pub id: i64,
     #[serde(alias = "seriesId")]
@@ -146,39 +184,109 @@ async fn get_token() -> Result<String, Box<dyn std::error::Error + Send + Sync>>
 pub async fn search_series(
     query: &str,
 ) -> Result<Vec<SearchResult>, Box<dyn std::error::Error + Send + Sync>> {
-    let token = get_token().await?;
-    let client = Client::new();
+    // Check cache first
+    let cache = get_cache();
+    if let Some(cached) = cache.get_search(query).await {
+        return Ok(cached);
+    }
 
-    let response = client
-        .get(format!("{}/search", API_BASE))
-        .query(&[("query", query), ("type", "series")])
-        .bearer_auth(&token)
-        .send()
-        .await?;
+    // Rate limiting
+    get_rate_limiter().wait_if_needed().await;
+
+    let token = get_token().await?;
+    let query_str = query.to_string();
+
+    let response = retry_with_backoff(
+        || {
+            let token = token.clone();
+            let query = query_str.clone();
+            async move {
+                let client = Client::new();
+                let response = client
+                    .get(format!("{}/search", API_BASE))
+                    .query(&[("query", query.as_str()), ("type", "series")])
+                    .bearer_auth(&token)
+                    .send()
+                    .await?;
+
+                if !response.status().is_success() {
+                    return Err(format!("API error: {}", response.status()).into());
+                }
+
+                Ok(response)
+            }
+        },
+        3,
+    )
+    .await?;
 
     let search_response: SearchResponse = response.json().await?;
-    Ok(search_response.data)
+    let results = search_response.data;
+
+    // Cache the results
+    cache.set_search(query.to_string(), results.clone()).await;
+
+    Ok(results)
 }
 
 pub async fn get_series_extended(
     id: i64,
 ) -> Result<SeriesExtended, Box<dyn std::error::Error + Send + Sync>> {
-    let token = get_token().await?;
-    let client = Client::new();
+    // Check cache first
+    let cache = get_cache();
+    if let Some(cached) = cache.get_show(id).await {
+        return Ok(cached);
+    }
 
-    let response = client
-        .get(format!("{}/series/{}/extended", API_BASE, id))
-        .bearer_auth(&token)
-        .send()
-        .await?;
+    // Rate limiting
+    get_rate_limiter().wait_if_needed().await;
+
+    let token = get_token().await?;
+
+    let response = retry_with_backoff(
+        || {
+            let token = token.clone();
+            let id = id;
+            async move {
+                let client = Client::new();
+                let response = client
+                    .get(format!("{}/series/{}/extended", API_BASE, id))
+                    .bearer_auth(&token)
+                    .send()
+                    .await?;
+
+                if !response.status().is_success() {
+                    return Err(format!("API error: {}", response.status()).into());
+                }
+
+                Ok(response)
+            }
+        },
+        3,
+    )
+    .await?;
 
     let api_response: ApiResponse<SeriesExtended> = response.json().await?;
-    Ok(api_response.data)
+    let show = api_response.data;
+
+    // Cache the result
+    cache.set_show(id, show.clone()).await;
+
+    Ok(show)
 }
 
 pub async fn get_series_episodes(
     id: i64,
 ) -> Result<Vec<EpisodeBase>, Box<dyn std::error::Error + Send + Sync>> {
+    // Check cache first
+    let cache = get_cache();
+    if let Some(cached) = cache.get_episodes(id).await {
+        return Ok(cached);
+    }
+
+    // Rate limiting
+    get_rate_limiter().wait_if_needed().await;
+
     let token = get_token().await?;
     let client = Client::new();
 
@@ -267,6 +375,9 @@ pub async fn get_series_episodes(
             season_cmp
         }
     });
+
+    // Cache the results
+    cache.set_episodes(id, all_episodes.clone()).await;
 
     Ok(all_episodes)
 }

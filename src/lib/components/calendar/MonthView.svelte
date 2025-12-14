@@ -21,6 +21,7 @@
     openEpisodePicker,
     unscheduleEpisode,
     openDayDetail,
+    scheduleEpisode,
     type Episode,
   } from "../../stores/shows.svelte";
 
@@ -37,7 +38,7 @@
     loadEpisodesForRange(format(calendarStart, "yyyy-MM-dd"), format(calendarEnd, "yyyy-MM-dd"));
   });
 
-  let calendarDays = $derived(() => {
+  let calendarDays = $derived.by(() => {
     const monthStart = startOfMonth(getCurrentDate());
     const monthEnd = endOfMonth(getCurrentDate());
     const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
@@ -55,6 +56,13 @@
       return isSameDay(parseISO(displayDate), day);
     });
   }
+
+  function getShowColor(showId: number): string | null {
+    const show = getTrackedShows().find((s) => s.id === showId);
+    return show?.color || null;
+  }
+
+
 
   async function handleToggleWatched(event: MouseEvent, episode: Episode) {
     event.stopPropagation();
@@ -97,26 +105,31 @@
 
   <!-- Calendar grid -->
   <div class="flex-1 grid grid-cols-7 auto-rows-fr">
-    {#each calendarDays() as day}
+    {#each calendarDays as day}
       {@const isCurrentMonth = isSameMonth(day, getCurrentDate())}
       {@const today = isToday(day)}
       {@const dayEpisodes = getEpisodesForDay(day)}
       <div
+        role="region"
+        aria-label="Calendar day {format(day, 'MMMM d, yyyy')}"
+        data-date={format(day, "yyyy-MM-dd")}
         class="border-b border-r border-border p-2 min-h-[100px] overflow-hidden group {isCurrentMonth
           ? ''
           : 'bg-background/50'}"
       >
         <div class="flex items-center justify-between mb-1">
-          <button
-            onclick={() => handleDayClick(day)}
-            class="text-sm hover:bg-surface-hover rounded-full transition-colors {today
-              ? 'bg-accent text-white w-6 h-6 flex items-center justify-center'
-              : isCurrentMonth
-                ? 'text-text w-6 h-6 flex items-center justify-center'
-                : 'text-text-muted w-6 h-6 flex items-center justify-center'}"
-          >
-            {format(day, "d")}
-          </button>
+          <div class="flex items-center gap-1.5">
+            <button
+              onclick={() => handleDayClick(day)}
+              class="text-sm hover:bg-surface-hover rounded-full transition-colors {today
+                ? 'bg-accent text-white w-7 h-7 flex items-center justify-center font-semibold ring-2 ring-accent/50'
+                : isCurrentMonth
+                  ? 'text-text w-6 h-6 flex items-center justify-center'
+                  : 'text-text-muted w-6 h-6 flex items-center justify-center'}"
+            >
+              {format(day, "d")}
+            </button>
+          </div>
           <button
             onclick={() => handleAddClick(day)}
             class="p-1 rounded hover:bg-surface-hover opacity-0 group-hover:opacity-100 transition-opacity"
@@ -130,15 +143,30 @@
         <div class="space-y-1">
           {#each dayEpisodes.slice(0, 3) as episode}
             {@const isScheduled = !!episode.scheduled_date}
-            <button
-              onclick={(e) => handleToggleWatched(e, episode)}
+            {@const showColor = getShowColor(episode.show_id)}
+            {@const cardStyle = showColor
+              ? `border-l-2 border-[${showColor}]`
+              : ''}
+            <div
+              role="button"
+              tabindex="0"
+              onclick={(e) => { 
+                handleToggleWatched(e, episode); 
+              }}
+              onkeydown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleToggleWatched(e, episode);
+                }
+              }}
               oncontextmenu={(e) => { e.preventDefault(); handleUnschedule(e, episode); }}
               class="w-full text-left p-1.5 rounded text-xs transition-colors relative group/ep {episode.watched
-                ? 'bg-watched/20 text-watched line-through'
+                ? 'bg-watched/20 text-watched line-through cursor-default'
                 : isScheduled
-                  ? 'bg-premiere/20 text-premiere hover:bg-premiere/30'
-                  : 'bg-upcoming/20 text-upcoming hover:bg-upcoming/30'}"
-              title={isScheduled ? "Right-click to unschedule" : "Click to toggle watched"}
+                  ? 'bg-premiere/20 text-premiere hover:bg-premiere/30 cursor-pointer'
+                  : 'bg-upcoming/20 text-upcoming hover:bg-upcoming/30 cursor-pointer'} {cardStyle}"
+              style={showColor ? `border-left-color: ${showColor}` : ''}
+              title={isScheduled ? "Right-click to unschedule" : episode.watched ? "Watched" : "Click to toggle watched"}
             >
               <div class="flex items-center gap-1">
                 {#if episode.watched}
@@ -154,7 +182,7 @@
                   - {episode.name}
                 {/if}
               </div>
-            </button>
+            </div>
           {/each}
           {#if dayEpisodes.length > 3}
             <button

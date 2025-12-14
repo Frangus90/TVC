@@ -31,7 +31,7 @@
     loadEpisodesForRange(format(weekStart, "yyyy-MM-dd"), format(weekEnd, "yyyy-MM-dd"));
   });
 
-  let weekDays = $derived(() => {
+  let weekDays = $derived.by(() => {
     const weekStart = startOfWeek(getCurrentDate(), { weekStartsOn: 1 });
     const weekEnd = endOfWeek(getCurrentDate(), { weekStartsOn: 1 });
     return eachDayOfInterval({ start: weekStart, end: weekEnd });
@@ -45,6 +45,12 @@
       return isSameDay(parseISO(displayDate), day);
     });
   }
+
+  function getShowColor(showId: number): string | null {
+    const show = getTrackedShows().find((s) => s.id === showId);
+    return show?.color || null;
+  }
+
 
   async function handleToggleWatched(event: MouseEvent, episode: Episode) {
     event.stopPropagation();
@@ -76,21 +82,23 @@
 <div class="h-full flex flex-col">
   <!-- Week grid - 7 columns -->
   <div class="flex-1 grid grid-cols-7 gap-2">
-    {#each weekDays() as day}
+    {#each weekDays as day}
       {@const today = isToday(day)}
       {@const dayEpisodes = getEpisodesForDay(day)}
       <div class="flex flex-col border border-border rounded-lg overflow-hidden bg-surface">
         <!-- Day header -->
-        <div class="p-3 border-b border-border flex items-center justify-between {today ? 'bg-accent/10' : ''}">
-          <button
-            onclick={() => handleDayClick(day)}
-            class="text-center hover:bg-surface-hover rounded-lg px-2 py-1 transition-colors"
-          >
-            <div class="text-xs text-text-muted uppercase">{format(day, "EEE")}</div>
-            <div class="text-xl font-semibold {today ? 'text-accent' : 'text-text'}">
-              {format(day, "d")}
-            </div>
-          </button>
+        <div class="p-3 border-b border-border flex items-center justify-between {today ? 'bg-accent/10 ring-2 ring-accent/50' : ''}">
+          <div class="flex items-center gap-2">
+            <button
+              onclick={() => handleDayClick(day)}
+              class="text-center hover:bg-surface-hover rounded-lg px-2 py-1 transition-colors"
+            >
+              <div class="text-xs text-text-muted uppercase">{format(day, "EEE")}</div>
+              <div class="text-xl font-semibold {today ? 'text-accent' : 'text-text'}">
+                {format(day, "d")}
+              </div>
+            </button>
+          </div>
           <button
             onclick={() => handleAddClick(day)}
             class="p-1.5 rounded hover:bg-surface-hover transition-colors"
@@ -104,6 +112,7 @@
         <div class="flex-1 p-2 space-y-2 overflow-auto">
           {#each dayEpisodes as episode}
             {@const isScheduled = !!episode.scheduled_date}
+            {@const showColor = getShowColor(episode.show_id)}
             <button
               onclick={(e) => handleToggleWatched(e, episode)}
               oncontextmenu={(e) => { e.preventDefault(); handleUnschedule(e, episode); }}
@@ -112,6 +121,7 @@
                 : isScheduled
                   ? 'bg-premiere/20 text-premiere hover:bg-premiere/30'
                   : 'bg-upcoming/20 text-upcoming hover:bg-upcoming/30'}"
+              style={showColor ? `border-left: 3px solid ${showColor}` : ''}
               title={isScheduled ? "Right-click to unschedule" : "Click to toggle watched"}
             >
               <div class="flex items-center gap-1.5 mb-1">

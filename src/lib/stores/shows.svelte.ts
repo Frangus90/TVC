@@ -6,6 +6,10 @@ export interface TrackedShow {
   name: string;
   poster_url: string | null;
   status: string | null;
+  color: string | null;
+  notes: string | null;
+  tags: string | null;
+  rating: number | null;
 }
 
 export interface SearchResult {
@@ -42,6 +46,8 @@ export interface ShowEpisode {
   aired: string | null;
   scheduled_date: string | null;
   watched: boolean;
+  image_url: string | null;
+  overview: string | null;
 }
 
 let db: Database | null = null;
@@ -200,13 +206,20 @@ export async function searchShows(query: string): Promise<void> {
 
 export async function loadTrackedShows(): Promise<void> {
   try {
-    const database = await getDb();
-    const rows = await database.select<TrackedShow[]>(
-      "SELECT id, name, poster_url, status FROM shows ORDER BY name"
-    );
-    trackedShows = rows;
+    const shows = await invoke<TrackedShow[]>("get_tracked_shows");
+    trackedShows = shows;
   } catch (error) {
     console.error("Failed to load tracked shows:", error);
+    // Fallback to database if backend command fails
+    try {
+      const database = await getDb();
+      const rows = await database.select<TrackedShow[]>(
+        "SELECT id, name, poster_url, status, color, notes, tags FROM shows ORDER BY name"
+      );
+      trackedShows = rows;
+    } catch (dbError) {
+      console.error("Database fallback also failed:", dbError);
+    }
   }
 }
 
@@ -215,56 +228,15 @@ export async function addShow(show: SearchResult): Promise<void> {
   if (!showId) return;
 
   try {
-    const details = await invoke<{
-      id: number;
-      name: string;
-      slug: string | null;
-      image: string | null;
-      status: { name: string | null } | null;
-      first_aired: string | null;
-      overview: string | null;
-      airs_time: string | null;
-      airs_days: {
-        sunday: boolean | null;
-        monday: boolean | null;
-        tuesday: boolean | null;
-        wednesday: boolean | null;
-        thursday: boolean | null;
-        friday: boolean | null;
-        saturday: boolean | null;
-      } | null;
-      average_runtime: number | null;
-    }>("get_show_details", { id: showId });
-
-    const database = await getDb();
-
-    const airsDaysJson = details.airs_days
-      ? JSON.stringify(details.airs_days)
-      : null;
-
-    await database.execute(
-      `INSERT OR REPLACE INTO shows (id, name, slug, status, poster_url, first_aired, overview, airs_time, airs_days, runtime)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-      [
-        details.id,
-        details.name,
-        details.slug,
-        details.status?.name,
-        details.image,
-        details.first_aired,
-        details.overview,
-        details.airs_time,
-        airsDaysJson,
-        details.average_runtime,
-      ]
-    );
+    // Use backend command to add show
+    await invoke("add_show", { id: showId });
 
     // Update UI immediately
     await loadTrackedShows();
     closeSearchModal();
 
     // Sync episodes in background (don't await)
-    syncShowEpisodes(details.id).then(() => {
+    syncShowEpisodes(showId).then(() => {
       // Refresh calendar after sync completes
       if (currentCalendarRange) {
         loadEpisodesForRange(currentCalendarRange.start, currentCalendarRange.end);
@@ -277,8 +249,7 @@ export async function addShow(show: SearchResult): Promise<void> {
 
 export async function removeShow(showId: number): Promise<void> {
   try {
-    const database = await getDb();
-    await database.execute("DELETE FROM shows WHERE id = $1", [showId]);
+    await invoke("remove_show", { id: showId });
     await loadTrackedShows();
 
     // Immediately remove episodes from calendar state
@@ -290,44 +261,8 @@ export async function removeShow(showId: number): Promise<void> {
 
 export async function syncShowEpisodes(showId: number): Promise<void> {
   try {
-    const episodes = await invoke<
-      {
-        id: number;
-        series_id: number | null;
-        name: string | null;
-        aired: string | null;
-        runtime: number | null;
-        image: string | null;
-        season_number: number | null;
-        episode_number: number | null;
-        overview: string | null;
-      }[]
-    >("sync_episodes_for_show", { showId });
-
-    const database = await getDb();
-
-    for (const ep of episodes) {
-      await database.execute(
-        `INSERT OR REPLACE INTO episodes (id, show_id, season_number, episode_number, name, overview, aired, runtime, image_url)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [
-          ep.id,
-          showId,
-          ep.season_number,
-          ep.episode_number,
-          ep.name,
-          ep.overview,
-          ep.aired,
-          ep.runtime,
-          ep.image,
-        ]
-      );
-    }
-
-    await database.execute(
-      "UPDATE shows SET last_synced = datetime('now') WHERE id = $1",
-      [showId]
-    );
+    // Use backend command to sync episodes
+    await invoke("sync_show_episodes", { showId });
   } catch (error) {
     console.error("Failed to sync episodes:", error);
   }
@@ -339,44 +274,54 @@ export async function loadEpisodesForRange(
 ): Promise<void> {
   currentCalendarRange = { start: startDate, end: endDate };
   try {
-    const database = await getDb();
-    const rows = await database.select<
-      {
-        id: number;
-        show_id: number;
-        name: string | null;
-        season_number: number;
-        episode_number: number;
-        aired: string | null;
-        scheduled_date: string | null;
-        watched: number;
-        show_name: string;
-        poster_url: string | null;
-      }[]
-    >(
-      `SELECT e.id, e.show_id, e.name, e.season_number, e.episode_number, e.aired, e.scheduled_date, e.watched,
-              s.name as show_name, s.poster_url
-       FROM episodes e
-       JOIN shows s ON e.show_id = s.id
-       WHERE (e.aired >= $1 AND e.aired <= $2) OR (e.scheduled_date >= $1 AND e.scheduled_date <= $2)
-       ORDER BY COALESCE(e.scheduled_date, e.aired), s.name`,
-      [startDate, endDate]
-    );
-
-    calendarEpisodes = rows.map((row) => ({
-      id: row.id,
-      show_id: row.show_id,
-      show_name: row.show_name,
-      season_number: row.season_number,
-      episode_number: row.episode_number,
-      name: row.name,
-      aired: row.aired,
-      scheduled_date: row.scheduled_date,
-      watched: row.watched === 1,
-      poster_url: row.poster_url,
-    }));
+    const episodes = await invoke<Episode[]>("get_episodes_for_range", {
+      startDate,
+      endDate,
+    });
+    calendarEpisodes = episodes;
   } catch (error) {
     console.error("Failed to load episodes:", error);
+    // Fallback to database if backend command fails
+    try {
+      const database = await getDb();
+      const rows = await database.select<
+        {
+          id: number;
+          show_id: number;
+          name: string | null;
+          season_number: number;
+          episode_number: number;
+          aired: string | null;
+          scheduled_date: string | null;
+          watched: number;
+          show_name: string;
+          poster_url: string | null;
+        }[]
+      >(
+        `SELECT e.id, e.show_id, e.name, e.season_number, e.episode_number, e.aired, e.scheduled_date, e.watched,
+                s.name as show_name, s.poster_url
+         FROM episodes e
+         JOIN shows s ON e.show_id = s.id
+         WHERE (e.aired >= $1 AND e.aired <= $2) OR (e.scheduled_date >= $1 AND e.scheduled_date <= $2)
+         ORDER BY COALESCE(e.scheduled_date, e.aired), s.name`,
+        [startDate, endDate]
+      );
+
+      calendarEpisodes = rows.map((row) => ({
+        id: row.id,
+        show_id: row.show_id,
+        show_name: row.show_name,
+        season_number: row.season_number,
+        episode_number: row.episode_number,
+        name: row.name,
+        aired: row.aired,
+        scheduled_date: row.scheduled_date,
+        watched: row.watched === 1,
+        poster_url: row.poster_url,
+      }));
+    } catch (dbError) {
+      console.error("Database fallback also failed:", dbError);
+    }
   }
 }
 
@@ -385,11 +330,7 @@ export async function toggleEpisodeWatched(
   watched: boolean
 ): Promise<void> {
   try {
-    const database = await getDb();
-    await database.execute(
-      `UPDATE episodes SET watched = $1, watched_at = $2 WHERE id = $3`,
-      [watched ? 1 : 0, watched ? new Date().toISOString() : null, episodeId]
-    );
+    await invoke("mark_episode_watched", { episodeId, watched });
 
     calendarEpisodes = calendarEpisodes.map((ep) =>
       ep.id === episodeId ? { ...ep, watched } : ep
@@ -408,7 +349,7 @@ export async function openEpisodePicker(show: TrackedShow, date: string): Promis
   try {
     const database = await getDb();
     const rows = await database.select<ShowEpisode[]>(
-      `SELECT id, season_number, episode_number, name, aired, scheduled_date, watched
+      `SELECT id, season_number, episode_number, name, aired, scheduled_date, watched, image_url, overview
        FROM episodes
        WHERE show_id = $1
        ORDER BY season_number, episode_number`,
@@ -432,34 +373,44 @@ export function closeEpisodePicker() {
 }
 
 export async function scheduleEpisode(episodeId: number, date: string): Promise<void> {
+  console.log("[Schedule] scheduleEpisode called:", { episodeId, date });
   try {
-    const database = await getDb();
-    await database.execute(
-      "UPDATE episodes SET scheduled_date = $1 WHERE id = $2",
-      [date, episodeId]
-    );
+    console.log("[Schedule] Invoking backend command 'schedule_episode'");
+    await invoke("schedule_episode", { episodeId, date });
+    console.log("[Schedule] Backend command completed successfully");
 
     // Refresh calendar
     if (currentCalendarRange) {
+      console.log("[Schedule] Refreshing calendar range:", {
+        start: currentCalendarRange.start,
+        end: currentCalendarRange.end,
+      });
       await loadEpisodesForRange(currentCalendarRange.start, currentCalendarRange.end);
+      console.log("[Schedule] Calendar refreshed");
+    } else {
+      console.log("[Schedule] No current calendar range, skipping refresh");
     }
 
     closeEpisodePicker();
+    console.log("[Schedule] scheduleEpisode completed successfully");
   } catch (error) {
-    console.error("Failed to schedule episode:", error);
+    console.error("[Schedule] Failed to schedule episode:", error);
+    if (error instanceof Error) {
+      console.error("[Schedule] Error details:", {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+      });
+    }
+    throw error; // Re-throw so the caller can handle it
   }
 }
 
 export async function scheduleMultipleEpisodes(episodeIds: number[], date: string): Promise<void> {
   try {
-    const database = await getDb();
-
     // Schedule all episodes
     for (const episodeId of episodeIds) {
-      await database.execute(
-        "UPDATE episodes SET scheduled_date = $1 WHERE id = $2",
-        [date, episodeId]
-      );
+      await invoke("schedule_episode", { episodeId, date });
     }
 
     // Refresh calendar
@@ -475,11 +426,7 @@ export async function scheduleMultipleEpisodes(episodeIds: number[], date: strin
 
 export async function unscheduleEpisode(episodeId: number): Promise<void> {
   try {
-    const database = await getDb();
-    await database.execute(
-      "UPDATE episodes SET scheduled_date = NULL WHERE id = $1",
-      [episodeId]
-    );
+    await invoke("unschedule_episode", { episodeId });
 
     // Remove from calendar or refresh
     if (currentCalendarRange) {

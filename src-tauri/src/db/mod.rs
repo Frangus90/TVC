@@ -1,8 +1,5 @@
 // Database operations module
-// Will be implemented using tauri-plugin-sql
-
-// The actual database operations are performed through the SQL plugin
-// from the frontend. This module provides types and helper functions.
+pub mod connection;
 
 use serde::{Deserialize, Serialize};
 
