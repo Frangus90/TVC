@@ -48,11 +48,6 @@ impl ApiCache {
     pub async fn set_episodes(&self, id: i64, episodes: Vec<crate::tvdb::EpisodeBase>) {
         self.episodes_cache.insert(id, episodes).await;
     }
-
-    pub fn invalidate_show(&self, id: i64) {
-        self.show_cache.invalidate(&id);
-        self.episodes_cache.invalidate(&id);
-    }
 }
 
 impl Default for ApiCache {

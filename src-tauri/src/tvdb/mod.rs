@@ -123,7 +123,6 @@ struct SeasonRecord {
 #[derive(Debug, Deserialize)]
 struct SeasonType {
     id: Option<i64>,
-    name: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

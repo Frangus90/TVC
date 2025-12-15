@@ -61,11 +61,13 @@
   <!-- Modal -->
   <div
     class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[60] bg-surface rounded-xl border border-border shadow-2xl w-[500px] max-w-[95vw] max-h-[85vh] flex flex-col"
-    onclick={(e) => e.stopPropagation()}
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="theme-modal-title"
   >
     <!-- Header -->
     <div class="flex items-center justify-between p-5 border-b border-border">
-      <h2 class="text-xl font-semibold">Theme Settings</h2>
+      <h2 id="theme-modal-title" class="text-xl font-semibold">Theme Settings</h2>
       <button
         onclick={() => open = false}
         class="p-2 rounded-lg hover:bg-surface-hover transition-colors"

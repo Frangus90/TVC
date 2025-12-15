@@ -8,12 +8,6 @@ pub enum AppError {
     #[error("API error: {0}")]
     Api(String),
 
-    #[error("Validation error: {0}")]
-    Validation(String),
-
-    #[error("Not found: {0}")]
-    NotFound(String),
-
     #[error("Internal error: {0}")]
     Internal(String),
 }
@@ -35,6 +29,4 @@ impl From<serde_json::Error> for AppError {
         AppError::Internal(format!("JSON error: {}", err))
     }
 }
-
-pub type AppResult<T> = Result<T, AppError>;
 

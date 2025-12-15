@@ -3,39 +3,57 @@ mod db;
 mod error;
 mod tvdb;
 
+use db::migration_repair::{repair_migration_checksums, MigrationDef};
 use tauri_plugin_sql::{Migration, MigrationKind};
+
+// Migration SQL content - embedded at compile time
+const MIGRATION_001: &str = include_str!("../migrations/001_initial.sql");
+const MIGRATION_002: &str = include_str!("../migrations/002_add_indexes.sql");
+const MIGRATION_003: &str = include_str!("../migrations/003_add_show_metadata.sql");
+const MIGRATION_004: &str = include_str!("../migrations/004_add_episode_metadata.sql");
+const MIGRATION_005: &str = include_str!("../migrations/005_add_show_rating.sql");
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // CRITICAL: Repair migration checksums BEFORE SQL plugin initializes
+    // This ensures old databases work with new versions even if migration files changed
+    repair_migration_checksums(&[
+        MigrationDef { version: 1, sql: MIGRATION_001 },
+        MigrationDef { version: 2, sql: MIGRATION_002 },
+        MigrationDef { version: 3, sql: MIGRATION_003 },
+        MigrationDef { version: 4, sql: MIGRATION_004 },
+        MigrationDef { version: 5, sql: MIGRATION_005 },
+    ]);
+
     let migrations = vec![
         Migration {
             version: 1,
             description: "create initial tables",
-            sql: include_str!("../migrations/001_initial.sql"),
+            sql: MIGRATION_001,
             kind: MigrationKind::Up,
         },
         Migration {
             version: 2,
             description: "add performance indexes",
-            sql: include_str!("../migrations/002_add_indexes.sql"),
+            sql: MIGRATION_002,
             kind: MigrationKind::Up,
         },
         Migration {
             version: 3,
             description: "add show metadata columns",
-            sql: include_str!("../migrations/003_add_show_metadata.sql"),
+            sql: MIGRATION_003,
             kind: MigrationKind::Up,
         },
         Migration {
             version: 4,
             description: "add episode metadata columns",
-            sql: include_str!("../migrations/004_add_episode_metadata.sql"),
+            sql: MIGRATION_004,
             kind: MigrationKind::Up,
         },
         Migration {
             version: 5,
             description: "add show rating column",
-            sql: include_str!("../migrations/005_add_show_rating.sql"),
+            sql: MIGRATION_005,
             kind: MigrationKind::Up,
         },
     ];
