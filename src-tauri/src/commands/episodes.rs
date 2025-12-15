@@ -114,11 +114,24 @@ pub async fn sync_show_episodes(app: AppHandle, show_id: i64) -> Result<(), Stri
         .map_err(|e| format!("Failed to begin transaction: {}", e))?;
 
     for episode in episodes {
+        // Use INSERT ... ON CONFLICT to properly update existing episodes
+        // - New episodes: insert with scheduled_date = aired
+        // - Existing episodes: update metadata AND scheduled_date to new aired date
+        // - Preserves: watched, watched_at, rating, tags (user data)
         sqlx::query(
             r#"
-            INSERT OR REPLACE INTO episodes
-            (id, show_id, season_number, episode_number, name, overview, aired, runtime, image_url)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO episodes
+            (id, show_id, season_number, episode_number, name, overview, aired, runtime, image_url, scheduled_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                season_number = excluded.season_number,
+                episode_number = excluded.episode_number,
+                name = excluded.name,
+                overview = excluded.overview,
+                aired = excluded.aired,
+                runtime = excluded.runtime,
+                image_url = excluded.image_url,
+                scheduled_date = excluded.aired
             "#,
         )
         .bind(episode.id)
@@ -130,6 +143,7 @@ pub async fn sync_show_episodes(app: AppHandle, show_id: i64) -> Result<(), Stri
         .bind(episode.aired.as_ref())
         .bind(episode.runtime)
         .bind(episode.image.as_ref())
+        .bind(episode.aired.as_ref()) // scheduled_date = aired for new episodes
         .execute(&mut *tx)
         .await
         .map_err(|e| format!("Failed to sync episode: {}", e))?;
