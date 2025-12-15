@@ -233,7 +233,6 @@ export async function addShow(show: SearchResult): Promise<void> {
 
     // Update UI immediately
     await loadTrackedShows();
-    closeSearchModal();
 
     // Sync episodes in background (don't await)
     syncShowEpisodes(showId).then(() => {

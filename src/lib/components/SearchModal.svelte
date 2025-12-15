@@ -144,6 +144,17 @@
         </ul>
       {/if}
     </div>
+
+    <!-- Footer -->
+    <div class="p-4 border-t border-border">
+      <button
+        type="button"
+        onclick={closeSearchModal}
+        class="w-full py-2.5 text-text-muted hover:bg-surface-hover rounded-lg transition-colors"
+      >
+        Close
+      </button>
+    </div>
   </div>
 {/if}
 
