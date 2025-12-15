@@ -9,3 +9,4 @@ ALTER TABLE shows ADD COLUMN notes TEXT;
 -- Tags for organization (stored as JSON array)
 ALTER TABLE shows ADD COLUMN tags TEXT;
 
+
