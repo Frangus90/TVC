@@ -13,16 +13,82 @@ $ProjectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Pa
 function Write-Step { param($msg) Write-Host "`n>> $msg" -ForegroundColor Cyan }
 function Write-Success { param($msg) Write-Host $msg -ForegroundColor Green }
 function Write-Err { param($msg) Write-Host $msg -ForegroundColor Red }
+function Write-Info { param($msg) Write-Host $msg -ForegroundColor Yellow }
+
+# Check latest GitHub release
+Write-Step "Checking GitHub releases..."
+$latestRelease = $null
+$allReleases = @()
+try {
+    $latestRelease = gh release view --json tagName,publishedAt,name 2>$null | ConvertFrom-Json
+    $allReleases = gh release list --limit 5 --json tagName,publishedAt 2>$null | ConvertFrom-Json
+} catch {
+    Write-Info "Could not fetch GitHub releases (this is OK for first release)"
+}
+
+if ($latestRelease) {
+    Write-Host "Latest GitHub release: " -NoNewline
+    Write-Host $latestRelease.tagName -ForegroundColor Green -NoNewline
+    Write-Host " (published: $($latestRelease.publishedAt.Substring(0,10)))"
+
+    if ($allReleases.Count -gt 1) {
+        Write-Host "Recent releases: $($allReleases.tagName -join ', ')" -ForegroundColor DarkGray
+    }
+} else {
+    Write-Info "No existing releases found on GitHub"
+}
 
 # Get version if not provided
 if (-not $Version) {
     $currentVersion = (Get-Content "$ProjectRoot\package.json" | ConvertFrom-Json).version
-    Write-Host "Current version: $currentVersion" -ForegroundColor Yellow
-    $Version = Read-Host "Enter new version "
+    Write-Host "`nCurrent local version: " -NoNewline
+    Write-Host $currentVersion -ForegroundColor Yellow
+    $Version = Read-Host "Enter version to release"
     if (-not $Version) {
         Write-Err "Version is required"
         exit 1
     }
+}
+
+# Check if this version/tag already exists
+$tagExists = $false
+$releaseExists = $false
+try {
+    $existingRelease = gh release view "v$Version" --json tagName 2>$null | ConvertFrom-Json
+    if ($existingRelease) {
+        $releaseExists = $true
+        $tagExists = $true
+    }
+} catch {
+    # Release doesn't exist, check if tag exists
+    $tagCheck = git tag -l "v$Version" 2>$null
+    if ($tagCheck) {
+        $tagExists = $true
+    }
+}
+
+if ($releaseExists) {
+    Write-Host "`n" -NoNewline
+    Write-Err "Release v$Version already exists on GitHub!"
+    Write-Host "Options:"
+    Write-Host "  1. Delete the existing release and re-release"
+    Write-Host "  2. Cancel and choose a different version"
+    $choice = Read-Host "`nEnter choice (1/2)"
+
+    if ($choice -eq "1") {
+        Write-Step "Deleting existing release v$Version..."
+        gh release delete "v$Version" --yes 2>&1 | Out-Null
+        # Also delete the tag so we can recreate it
+        git tag -d "v$Version" 2>&1 | Out-Null
+        git push origin --delete "v$Version" 2>&1 | Out-Null
+        Write-Success "  Deleted existing release and tag"
+    } else {
+        Write-Host "Cancelled."
+        exit 0
+    }
+} elseif ($tagExists) {
+    Write-Info "`nTag v$Version exists but has no release (was deleted)"
+    Write-Host "The release will be uploaded to the existing tag."
 }
 
 # Get release notes if not provided

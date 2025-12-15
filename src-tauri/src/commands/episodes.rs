@@ -101,6 +101,11 @@ pub async fn get_episodes_for_range(
 
 #[tauri::command]
 pub async fn sync_show_episodes(app: AppHandle, show_id: i64) -> Result<(), String> {
+    // Fetch show details from TVDB
+    let show_details = crate::tvdb::get_series_extended(show_id)
+        .await
+        .map_err(|e| format!("Failed to fetch show details: {}", e))?;
+
     // Get episodes from TVDB
     let episodes = crate::tvdb::get_series_episodes(show_id)
         .await
@@ -109,10 +114,45 @@ pub async fn sync_show_episodes(app: AppHandle, show_id: i64) -> Result<(), Stri
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    // Batch insert/update episodes
     let mut tx = pool.begin().await
         .map_err(|e| format!("Failed to begin transaction: {}", e))?;
 
+    // Update show metadata (preserves user data: color, notes, tags, rating)
+    let airs_days_json = show_details.airs_days
+        .as_ref()
+        .and_then(|days| serde_json::to_string(days).ok());
+
+    sqlx::query(
+        r#"
+        UPDATE shows SET
+            name = ?,
+            slug = ?,
+            status = ?,
+            poster_url = ?,
+            first_aired = ?,
+            overview = ?,
+            airs_time = ?,
+            airs_days = ?,
+            runtime = ?,
+            last_synced = datetime('now')
+        WHERE id = ?
+        "#,
+    )
+    .bind(&show_details.name)
+    .bind(show_details.slug.as_ref())
+    .bind(show_details.status.as_ref().and_then(|s| s.name.as_ref()))
+    .bind(show_details.image.as_ref())
+    .bind(show_details.first_aired.as_ref())
+    .bind(show_details.overview.as_ref())
+    .bind(show_details.airs_time.as_ref())
+    .bind(airs_days_json.as_deref())
+    .bind(show_details.average_runtime)
+    .bind(show_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| format!("Failed to update show: {}", e))?;
+
+    // Update episodes
     for episode in episodes {
         // Use INSERT ... ON CONFLICT to properly update existing episodes
         // - New episodes: insert with scheduled_date = aired
@@ -148,13 +188,6 @@ pub async fn sync_show_episodes(app: AppHandle, show_id: i64) -> Result<(), Stri
         .await
         .map_err(|e| format!("Failed to sync episode: {}", e))?;
     }
-
-    // Update last_synced timestamp
-    sqlx::query("UPDATE shows SET last_synced = datetime('now') WHERE id = ?")
-        .bind(show_id)
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| format!("Failed to update last_synced: {}", e))?;
 
     tx.commit().await
         .map_err(|e| format!("Failed to commit transaction: {}", e))?;

@@ -8,7 +8,7 @@
     parseISO,
     isSameDay,
   } from "date-fns";
-  import { Check, Plus, Calendar } from "lucide-svelte";
+  import { Check, Plus } from "lucide-svelte";
   import { getCurrentDate } from "../../stores/calendar.svelte";
   import {
     getCalendarEpisodes,
@@ -111,24 +111,22 @@
         <!-- Episodes for this day -->
         <div class="flex-1 p-2 space-y-2 overflow-auto">
           {#each dayEpisodes as episode}
-            {@const isScheduled = !!episode.scheduled_date}
+            {@const hasAired = episode.aired && new Date(episode.aired) <= new Date()}
             {@const showColor = getShowColor(episode.show_id)}
             <button
               onclick={(e) => handleToggleWatched(e, episode)}
               oncontextmenu={(e) => { e.preventDefault(); handleUnschedule(e, episode); }}
               class="w-full text-left p-2 rounded-lg text-sm transition-colors {episode.watched
                 ? 'bg-watched/20 text-watched'
-                : isScheduled
+                : hasAired
                   ? 'bg-premiere/20 text-premiere hover:bg-premiere/30'
                   : 'bg-upcoming/20 text-upcoming hover:bg-upcoming/30'}"
               style={showColor ? `border-left: 3px solid ${showColor}` : ''}
-              title={isScheduled ? "Right-click to unschedule" : "Click to toggle watched"}
+              title={episode.watched ? "Watched" : hasAired ? "Click to mark watched" : "Upcoming"}
             >
               <div class="flex items-center gap-1.5 mb-1">
                 {#if episode.watched}
                   <Check class="w-3.5 h-3.5 flex-shrink-0" />
-                {:else if isScheduled}
-                  <Calendar class="w-3.5 h-3.5 flex-shrink-0" />
                 {/if}
                 <span class="font-medium truncate">{episode.show_name}</span>
               </div>

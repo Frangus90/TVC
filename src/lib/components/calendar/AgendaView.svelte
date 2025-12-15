@@ -1,6 +1,6 @@
 <script lang="ts">
   import { format, parseISO, addDays, isToday, isTomorrow, isPast } from "date-fns";
-  import { Check, Calendar, Tv } from "lucide-svelte";
+  import { Check, Tv } from "lucide-svelte";
   import {
     getCalendarEpisodes,
     loadEpisodesForRange,
@@ -84,17 +84,17 @@
           <!-- Episodes for this date -->
           <div class="space-y-2">
             {#each episodes as episode}
-              {@const isScheduled = !!episode.scheduled_date}
+              {@const hasAired = episode.aired && new Date(episode.aired) <= new Date()}
               <button
                 onclick={(e) => handleToggleWatched(e, episode)}
                 oncontextmenu={(e) => { e.preventDefault(); handleUnschedule(e, episode); }}
                 class="w-full flex items-center gap-4 p-4 rounded-xl border transition-colors text-left
                   {episode.watched
                     ? 'bg-watched/10 border-watched/30 text-watched'
-                    : isScheduled
+                    : hasAired
                       ? 'bg-premiere/10 border-premiere/30 hover:bg-premiere/20'
                       : 'bg-surface border-border hover:bg-surface-hover'}"
-                title={isScheduled ? "Right-click to unschedule" : "Click to toggle watched"}
+                title={episode.watched ? "Watched" : hasAired ? "Click to mark watched" : "Upcoming"}
               >
                 <!-- Poster -->
                 {#if episode.poster_url}
@@ -113,9 +113,6 @@
                     <span class="font-semibold truncate {episode.watched ? 'line-through opacity-75' : 'text-text'}">
                       {episode.show_name}
                     </span>
-                    {#if isScheduled}
-                      <Calendar class="w-4 h-4 text-premiere flex-shrink-0" />
-                    {/if}
                   </div>
                   <div class="text-sm {episode.watched ? 'opacity-75' : 'text-text-muted'}">
                     <span class="font-mono">

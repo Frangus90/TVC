@@ -11,7 +11,7 @@
     parseISO,
     isSameDay,
   } from "date-fns";
-  import { Check, Plus, Calendar } from "lucide-svelte";
+  import { Check, Plus } from "lucide-svelte";
   import { getCurrentDate } from "../../stores/calendar.svelte";
   import {
     getCalendarEpisodes,
@@ -142,7 +142,7 @@
         <!-- Episode cards -->
         <div class="space-y-1">
           {#each dayEpisodes.slice(0, 3) as episode}
-            {@const isScheduled = !!episode.scheduled_date}
+            {@const hasAired = episode.aired && new Date(episode.aired) <= new Date()}
             {@const showColor = getShowColor(episode.show_id)}
             {@const cardStyle = showColor
               ? `border-l-2 border-[${showColor}]`
@@ -150,8 +150,8 @@
             <div
               role="button"
               tabindex="0"
-              onclick={(e) => { 
-                handleToggleWatched(e, episode); 
+              onclick={(e) => {
+                handleToggleWatched(e, episode);
               }}
               onkeydown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -162,17 +162,15 @@
               oncontextmenu={(e) => { e.preventDefault(); handleUnschedule(e, episode); }}
               class="w-full text-left p-1.5 rounded text-xs transition-colors relative group/ep {episode.watched
                 ? 'bg-watched/20 text-watched line-through cursor-default'
-                : isScheduled
+                : hasAired
                   ? 'bg-premiere/20 text-premiere hover:bg-premiere/30 cursor-pointer'
                   : 'bg-upcoming/20 text-upcoming hover:bg-upcoming/30 cursor-pointer'} {cardStyle}"
               style={showColor ? `border-left-color: ${showColor}` : ''}
-              title={isScheduled ? "Right-click to unschedule" : episode.watched ? "Watched" : "Click to toggle watched"}
+              title={episode.watched ? "Watched" : hasAired ? "Click to mark watched" : "Upcoming"}
             >
               <div class="flex items-center gap-1">
                 {#if episode.watched}
                   <Check class="w-3 h-3 flex-shrink-0" />
-                {:else if isScheduled}
-                  <Calendar class="w-3 h-3 flex-shrink-0" />
                 {/if}
                 <span class="truncate font-medium">{episode.show_name}</span>
               </div>

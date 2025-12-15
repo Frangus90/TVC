@@ -189,7 +189,7 @@
           class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
         >
           <RefreshCw class="w-4 h-4" />
-          Sync Episodes
+          Refresh Show
         </button>
         <button
           onclick={handleOpenTVDB}
@@ -219,7 +219,7 @@
       <div class="flex-1 overflow-auto p-6">
         {#if episodes.length === 0}
           <div class="text-center py-10 text-text-muted">
-            <p>No episodes found. Click "Sync Episodes" to fetch episodes from TVDB.</p>
+            <p>No episodes found. Click "Refresh Show" to fetch data from TVDB.</p>
           </div>
         {:else}
           <div class="space-y-6">
