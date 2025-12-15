@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { X, Calendar, Check, ChevronDown, ChevronRight, Plus } from "lucide-svelte";
+  import { X, Check, ChevronDown, ChevronRight, Plus } from "lucide-svelte";
   import {
     isEpisodePickerOpen,
     closeEpisodePicker,
@@ -8,7 +8,6 @@
     getEpisodePickerDate,
     scheduleEpisode,
     scheduleMultipleEpisodes,
-    getTrackedShows,
     type ShowEpisode,
   } from "../stores/shows.svelte";
 
@@ -197,7 +196,6 @@
 
 {#if isEpisodePickerOpen()}
   {@const show = getEpisodePickerShow()}
-  {@const allEpisodes = getEpisodePickerEpisodes()}
   {@const date = getEpisodePickerDate()}
   {@const grouped = groupBySeason(filteredEpisodes)}
   {@const sortedSeasons = [...grouped.entries()].sort((a, b) => a[0] - b[0])}
