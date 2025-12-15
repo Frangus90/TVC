@@ -84,6 +84,7 @@
 
   <!-- Backdrop -->
   <button
+    type="button"
     class="fixed inset-0 bg-black/60 z-50"
     onclick={closeShowDetail}
     aria-label="Close modal"
@@ -101,6 +102,7 @@
       <div class="p-6">
         <p class="text-red-400">{getError()}</p>
         <button
+          type="button"
           onclick={closeShowDetail}
           class="mt-4 px-4 py-2 bg-accent text-white rounded-lg"
         >
@@ -138,6 +140,7 @@
               {/if}
             </div>
             <button
+              type="button"
               onclick={closeShowDetail}
               class="p-2 rounded-lg hover:bg-surface-hover transition-colors flex-shrink-0"
               aria-label="Close"
@@ -185,6 +188,7 @@
       <!-- Actions -->
       <div class="flex items-center gap-2 p-4 border-b border-border">
         <button
+          type="button"
           onclick={handleSync}
           class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
         >
@@ -192,6 +196,7 @@
           Refresh Show
         </button>
         <button
+          type="button"
           onclick={handleOpenTVDB}
           class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
         >
@@ -199,6 +204,7 @@
           TVDB
         </button>
         <button
+          type="button"
           onclick={handleOpenWikipedia}
           class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
         >
@@ -206,6 +212,7 @@
           Wikipedia
         </button>
         <button
+          type="button"
           onclick={handleRemove}
           class="px-3 py-1.5 text-sm bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors flex items-center gap-2 ml-auto"
         >
@@ -266,6 +273,7 @@
   .line-clamp-3 {
     display: -webkit-box;
     -webkit-line-clamp: 3;
+    line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }

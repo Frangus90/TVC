@@ -35,14 +35,6 @@
     selectedShows = newSelected;
   }
 
-  function selectAllShows() {
-    selectedShows = new Set(getTrackedShows().map((s) => s.id));
-  }
-
-  function clearSelection() {
-    selectedShows = new Set();
-  }
-
   async function handleBulkRemove() {
     if (selectedShows.size === 0) return;
 
@@ -70,6 +62,7 @@
       <div class="flex items-center gap-2">
         {#if bulkMode}
           <button
+            type="button"
             onclick={() => { bulkMode = false; selectedShows = new Set(); }}
             class="text-xs text-text-muted hover:text-text"
           >
@@ -77,6 +70,7 @@
           </button>
           {#if selectedShows.size > 0}
             <button
+              type="button"
               onclick={handleBulkRemove}
               class="text-xs text-red-400 hover:text-red-300"
             >
@@ -85,6 +79,7 @@
           {/if}
         {:else}
           <button
+            type="button"
             onclick={() => bulkMode = true}
             class="text-xs text-accent hover:underline"
           >
@@ -106,16 +101,19 @@
           {@const isSelected = selectedShows.has(show.id)}
           <li>
             {#if bulkMode}
-              <div class="group w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-hover transition-colors">
-                <button
-                  onclick={(e) => { e.stopPropagation(); toggleShowSelection(show.id); }}
+              <button
+                type="button"
+                onclick={() => toggleShowSelection(show.id)}
+                class="group w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-hover transition-colors text-left"
+              >
+                <span
                   class="w-5 h-5 rounded border flex-shrink-0 flex items-center justify-center
                     {isSelected ? 'bg-accent border-accent' : 'border-border'}"
                 >
                   {#if isSelected}
                     <Check class="w-3 h-3 text-white" />
                   {/if}
-                </button>
+                </span>
                 {#if show.poster_url}
                   <img src={show.poster_url} alt="" class="w-8 h-12 rounded object-cover" loading="lazy" decoding="async" />
                 {:else}
@@ -124,7 +122,7 @@
                   </div>
                 {/if}
                 <span class="flex-1 text-sm truncate">{show.name}</span>
-              </div>
+              </button>
             {:else}
               <div class="group w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-hover transition-colors">
                 <button
@@ -151,6 +149,7 @@
                   </div>
                 </button>
                 <button
+                  type="button"
                   onclick={(e) => { e.stopPropagation(); handleRemoveShow(e, show.id); }}
                   class="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-red-500/20 text-red-400 transition-all"
                   aria-label="Remove show"
@@ -167,6 +166,7 @@
 
   <div class="p-3 border-t border-border">
     <button
+      type="button"
       onclick={openSearchModal}
       class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-white rounded-lg transition-colors font-medium"
     >
@@ -174,6 +174,7 @@
       Add Show
     </button>
     <button
+      type="button"
       onclick={triggerUpdateCheck}
       disabled={isCheckingForUpdates()}
       class="w-full flex items-center justify-center gap-2 mt-2 px-3 py-1.5 text-xs text-text-muted hover:text-text hover:bg-surface-hover rounded transition-colors disabled:opacity-50"

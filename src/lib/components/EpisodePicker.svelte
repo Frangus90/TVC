@@ -31,34 +31,37 @@
     }
   }
 
+  function toggleEpisodeSelection(episode: ShowEpisode) {
+    const newSelected = new Set(selectedEpisodes);
+    if (newSelected.has(episode.id)) {
+      newSelected.delete(episode.id);
+    } else {
+      newSelected.add(episode.id);
+    }
+    selectedEpisodes = newSelected;
+  }
+
   function handleEpisodeClick(event: MouseEvent, episode: ShowEpisode) {
     const date = getEpisodePickerDate();
     if (!date) return;
 
     if (event.ctrlKey || event.metaKey) {
       // CTRL+click: toggle selection
-      const newSelected = new Set(selectedEpisodes);
-      if (newSelected.has(episode.id)) {
-        newSelected.delete(episode.id);
-      } else {
-        newSelected.add(episode.id);
-      }
-      selectedEpisodes = newSelected;
+      toggleEpisodeSelection(episode);
     } else {
       // Regular click: schedule immediately (if no selection) or add to selection
       if (selectedEpisodes.size === 0) {
         scheduleEpisode(episode.id, date);
       } else {
         // If there's already a selection, toggle this one too
-        const newSelected = new Set(selectedEpisodes);
-        if (newSelected.has(episode.id)) {
-          newSelected.delete(episode.id);
-        } else {
-          newSelected.add(episode.id);
-        }
-        selectedEpisodes = newSelected;
+        toggleEpisodeSelection(episode);
       }
     }
+  }
+
+  function handleCheckboxClick(event: MouseEvent, episode: ShowEpisode) {
+    event.stopPropagation();
+    toggleEpisodeSelection(episode);
   }
 
   async function handleScheduleSelected() {
@@ -202,6 +205,7 @@
 
   <!-- Backdrop -->
   <button
+    type="button"
     class="fixed inset-0 bg-black/60 z-50"
     onclick={closeEpisodePicker}
     aria-label="Close modal"
@@ -220,6 +224,7 @@
         </p>
       </div>
       <button
+        type="button"
         onclick={closeEpisodePicker}
         class="p-1.5 rounded-lg hover:bg-surface-hover transition-colors"
         aria-label="Close"
@@ -262,6 +267,7 @@
         <div class="flex gap-2">
           {#if sortedSeasons.length > 1}
             <button
+              type="button"
               onclick={() => expandAll(grouped)}
               class="text-accent hover:underline"
             >
@@ -269,6 +275,7 @@
             </button>
             <span class="text-text-muted">|</span>
             <button
+              type="button"
               onclick={collapseAll}
               class="text-accent hover:underline"
             >
@@ -278,6 +285,7 @@
         </div>
         <div class="flex items-center gap-2">
           <button
+            type="button"
             onclick={handleSelectAll}
             class="text-accent hover:underline"
           >
@@ -285,6 +293,7 @@
           </button>
           <span class="text-text-muted">|</span>
           <button
+            type="button"
             onclick={handleSelectNone}
             class="text-accent hover:underline"
           >
@@ -292,6 +301,7 @@
           </button>
           <span class="text-text-muted">|</span>
           <button
+            type="button"
             onclick={() => handleScheduleNextN(5)}
             class="text-accent hover:underline"
             title="Schedule next 5 unwatched episodes"
@@ -321,6 +331,7 @@
             <!-- Season header (clickable) -->
             <div class="flex items-center hover:bg-surface-hover transition-colors">
               <button
+                type="button"
                 onclick={() => toggleSeason(season)}
                 class="flex-1 flex items-center gap-2 p-3 text-left"
               >
@@ -341,6 +352,7 @@
               </button>
               <!-- Add season button -->
               <button
+                type="button"
                 onclick={(e) => handleScheduleSeason(e, seasonEpisodes)}
                 class="p-2 mr-2 rounded-lg hover:bg-accent/20 text-accent transition-colors"
                 title="Schedule entire {season === 0 ? 'Specials' : `Season ${season}`}"
@@ -356,96 +368,102 @@
                   {@const isSelected = selectedEpisodes.has(episode.id)}
                   {@const showColor = show?.color || null}
                   <li>
-                    <button
-                      onclick={(e) => handleEpisodeClick(e, episode)}
+                    <div
+                      class="w-full flex items-center gap-3 px-4 py-2 transition-colors group
+                        {isSelected ? 'bg-accent/20' : 'hover:bg-surface-hover'}"
+                      style={showColor ? `border-left: 3px solid ${showColor};` : ''}
+                      role="listitem"
                       onmouseenter={(e) => {
                         previewEpisode = episode;
                         const rect = e.currentTarget.getBoundingClientRect();
-                        const previewWidth = 320; // max-w-xs = 20rem = 320px
-                        const previewHeight = 300; // Approximate height
+                        const previewWidth = 320;
+                        const previewHeight = 300;
                         const padding = 16;
-                        
-                        let x = rect.left + rect.width + padding; // Position to the right of the episode item
-                        let y = rect.top; // Align with the top of the episode item
-                        
-                        // Check if preview would go off the right edge
+
+                        let x = rect.left + rect.width + padding;
+                        let y = rect.top;
+
                         if (x + previewWidth > window.innerWidth) {
-                          // Position to the left of the episode item instead
                           x = rect.left - previewWidth - padding;
-                          // If still off screen, position at the right edge
                           if (x < 0) {
                             x = window.innerWidth - previewWidth - padding;
                           }
                         }
-                        
-                        // Check if preview would go off the bottom edge
+
                         if (y + previewHeight > window.innerHeight) {
                           y = window.innerHeight - previewHeight - padding;
                         }
-                        
-                        // Check if preview would go off the top edge
+
                         if (y < padding) {
                           y = padding;
                         }
-                        
+
                         previewPosition = { x, y };
                       }}
                       onmouseleave={() => {
                         previewEpisode = null;
                         previewPosition = null;
                       }}
-                      class="w-full flex items-center gap-3 px-4 py-2 transition-colors text-left group
-                        {isSelected ? 'bg-accent/20' : 'hover:bg-surface-hover'}"
-                      style={showColor ? `border-left: 3px solid ${showColor};` : ''}
                     >
-                      <!-- Selection indicator -->
-                      <div class="w-5 h-5 rounded border flex-shrink-0 flex items-center justify-center
-                        {isSelected ? 'bg-accent border-accent' : 'border-border'}">
+                      <!-- Selection checkbox -->
+                      <button
+                        type="button"
+                        onclick={(e) => handleCheckboxClick(e, episode)}
+                        class="w-5 h-5 rounded border flex-shrink-0 flex items-center justify-center
+                          {isSelected ? 'bg-accent border-accent' : 'border-border hover:border-accent/50'}"
+                        aria-label={isSelected ? "Deselect episode" : "Select episode"}
+                      >
                         {#if isSelected}
                           <Check class="w-3 h-3 text-white" />
                         {/if}
-                      </div>
-                      <!-- Episode thumbnail -->
-                      {#if episode.image_url}
-                        <img
-                          src={episode.image_url}
-                          alt=""
-                          class="w-12 h-[72px] rounded object-cover flex-shrink-0"
-                          loading="lazy"
-                        />
-                      {:else}
-                        <div class="w-12 h-[72px] rounded bg-border flex-shrink-0"></div>
-                      {/if}
-                      <span class="text-sm text-text-muted w-10 flex-shrink-0 font-mono">
-                        E{formatEpisodeNumber(episode.episode_number)}
-                      </span>
-                      <div class="flex-1 min-w-0">
-                        <span class="text-sm truncate block {episode.watched ? 'text-text-muted' : 'text-text'}">
-                          {episode.name || "TBA"}
-                        </span>
-                        {#if episode.overview}
-                          <p class="text-xs text-text-muted line-clamp-1 mt-0.5">
-                            {episode.overview}
-                          </p>
-                        {/if}
-                      </div>
-                      <div class="flex items-center gap-2 flex-shrink-0">
-                        {#if episode.watched}
-                          <Check class="w-4 h-4 text-watched" />
-                        {/if}
-                        {#if episode.scheduled_date}
-                          <span class="text-xs text-premiere bg-premiere/10 px-2 py-0.5 rounded">
-                            {episode.scheduled_date}
-                          </span>
-                        {:else if episode.aired}
-                          <span class="text-xs text-text-muted">
-                            {episode.aired}
-                          </span>
+                      </button>
+                      <!-- Episode content (clickable) -->
+                      <button
+                        type="button"
+                        onclick={(e) => handleEpisodeClick(e, episode)}
+                        class="flex-1 flex items-center gap-3 text-left min-w-0"
+                      >
+                        {#if episode.image_url}
+                          <img
+                            src={episode.image_url}
+                            alt=""
+                            class="w-12 h-[72px] rounded object-cover flex-shrink-0"
+                            loading="lazy"
+                          />
                         {:else}
-                          <span class="text-xs text-text-muted italic">TBA</span>
+                          <div class="w-12 h-[72px] rounded bg-border flex-shrink-0"></div>
                         {/if}
-                      </div>
-                    </button>
+                        <span class="text-sm text-text-muted w-10 flex-shrink-0 font-mono">
+                          E{formatEpisodeNumber(episode.episode_number)}
+                        </span>
+                        <div class="flex-1 min-w-0">
+                          <span class="text-sm truncate block {episode.watched ? 'text-text-muted' : 'text-text'}">
+                            {episode.name || "TBA"}
+                          </span>
+                          {#if episode.overview}
+                            <p class="text-xs text-text-muted line-clamp-1 mt-0.5">
+                              {episode.overview}
+                            </p>
+                          {/if}
+                        </div>
+                        <div class="flex items-center gap-2 flex-shrink-0">
+                          {#if episode.watched}
+                            <Check class="w-4 h-4 text-watched" />
+                          {/if}
+                          {#if episode.scheduled_date}
+                            <span class="text-xs text-premiere bg-premiere/10 px-2 py-0.5 rounded">
+                              {episode.scheduled_date}
+                            </span>
+                          {:else if episode.aired}
+                            <span class="text-xs text-text-muted">
+                              {episode.aired}
+                            </span>
+                          {:else}
+                            <span class="text-xs text-text-muted italic">TBA</span>
+                          {/if}
+                        </div>
+                      </button>
+                    </div>
                   </li>
                 {/each}
               </ul>
@@ -459,12 +477,14 @@
     {#if selectedEpisodes.size > 0}
       <div class="p-4 border-t border-border flex items-center justify-between gap-3">
         <button
+          type="button"
           onclick={clearSelection}
           class="px-3 py-2 text-sm text-text-muted hover:bg-surface-hover rounded-lg transition-colors"
         >
           Clear selection
         </button>
         <button
+          type="button"
           onclick={handleScheduleSelected}
           class="px-4 py-2 bg-accent hover:bg-accent-hover text-white rounded-lg transition-colors font-medium"
         >
@@ -507,12 +527,14 @@
   .line-clamp-1 {
     display: -webkit-box;
     -webkit-line-clamp: 1;
+    line-clamp: 1;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
   .line-clamp-3 {
     display: -webkit-box;
     -webkit-line-clamp: 3;
+    line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
