@@ -120,11 +120,6 @@
           oninput={handleFontSizeChange}
           class="w-full"
         />
-        <div class="flex items-center justify-between text-xs text-text-muted mt-1">
-          <span>75%</span>
-          <span>100%</span>
-          <span>150%</span>
-        </div>
       </div>
 
       <!-- Compact Spacing -->
