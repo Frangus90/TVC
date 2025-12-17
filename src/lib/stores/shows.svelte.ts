@@ -339,6 +339,19 @@ export async function toggleEpisodeWatched(
   }
 }
 
+// Update calendar episodes when bulk marking watched status
+export function updateCalendarEpisodesWatched(
+  showId: number,
+  watched: boolean,
+  seasonNumber?: number
+): void {
+  calendarEpisodes = calendarEpisodes.map((ep) => {
+    if (ep.show_id !== showId) return ep;
+    if (seasonNumber !== undefined && ep.season_number !== seasonNumber) return ep;
+    return { ...ep, watched };
+  });
+}
+
 // Episode scheduling functions
 export async function openEpisodePicker(show: TrackedShow, date: string): Promise<void> {
   episodePickerShow = show;

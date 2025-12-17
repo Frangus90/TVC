@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import Database from "@tauri-apps/plugin-sql";
-import type { TrackedShow, Episode } from "./shows.svelte";
+import type { Episode } from "./shows.svelte";
 
 export interface ShowDetail {
   id: number;
@@ -155,6 +155,43 @@ export async function updateShowRating(
   } catch (err) {
     console.error("Failed to update show rating:", err);
     error = err instanceof Error ? err.message : "Failed to update rating";
+  }
+}
+
+export async function markSeasonWatched(
+  showId: number,
+  seasonNumber: number,
+  watched: boolean
+): Promise<void> {
+  try {
+    await invoke("mark_season_watched", { showId, seasonNumber, watched });
+    // Update local state immediately
+    showEpisodes = showEpisodes.map((ep) =>
+      ep.season_number === seasonNumber ? { ...ep, watched } : ep
+    );
+    // Update calendar episodes as well
+    const { updateCalendarEpisodesWatched } = await import("./shows.svelte");
+    updateCalendarEpisodesWatched(showId, watched, seasonNumber);
+  } catch (err) {
+    console.error("Failed to mark season watched:", err);
+    error = err instanceof Error ? err.message : "Failed to mark season watched";
+  }
+}
+
+export async function markShowWatched(
+  showId: number,
+  watched: boolean
+): Promise<void> {
+  try {
+    await invoke("mark_show_watched", { showId, watched });
+    // Update local state immediately
+    showEpisodes = showEpisodes.map((ep) => ({ ...ep, watched }));
+    // Update calendar episodes as well
+    const { updateCalendarEpisodesWatched } = await import("./shows.svelte");
+    updateCalendarEpisodesWatched(showId, watched);
+  } catch (err) {
+    console.error("Failed to mark show watched:", err);
+    error = err instanceof Error ? err.message : "Failed to mark show watched";
   }
 }
 

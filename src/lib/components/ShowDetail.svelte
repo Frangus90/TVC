@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { X, Trash2, RefreshCw, ExternalLink, Star } from "lucide-svelte";
+  import { X, Trash2, RefreshCw, ExternalLink, Star, Check, CheckCheck } from "lucide-svelte";
   import {
     isShowDetailOpen,
     getCurrentShow,
@@ -9,6 +9,8 @@
     closeShowDetail,
     syncShowEpisodes,
     updateShowRating,
+    markSeasonWatched,
+    markShowWatched,
   } from "../stores/showDetail.svelte";
   import { removeShow } from "../stores/shows.svelte";
   import { openUrl } from "@tauri-apps/plugin-opener";
@@ -72,6 +74,31 @@
 
   function getTotalCount(episodes: ReturnType<typeof getShowEpisodes>) {
     return episodes.length;
+  }
+
+  function isSeasonWatched(seasonEpisodes: ReturnType<typeof getShowEpisodes>) {
+    return seasonEpisodes.length > 0 && seasonEpisodes.every((ep) => ep.watched);
+  }
+
+  function isAllWatched(episodes: ReturnType<typeof getShowEpisodes>) {
+    return episodes.length > 0 && episodes.every((ep) => ep.watched);
+  }
+
+  async function handleMarkShowWatched() {
+    const show = getCurrentShow();
+    const episodes = getShowEpisodes();
+    if (!show) return;
+
+    const allWatched = isAllWatched(episodes);
+    await markShowWatched(show.id, !allWatched);
+  }
+
+  async function handleMarkSeasonWatched(seasonNumber: number, seasonEpisodes: ReturnType<typeof getShowEpisodes>) {
+    const show = getCurrentShow();
+    if (!show) return;
+
+    const allWatched = isSeasonWatched(seasonEpisodes);
+    await markSeasonWatched(show.id, seasonNumber, !allWatched);
   }
 </script>
 
@@ -197,6 +224,14 @@
         </button>
         <button
           type="button"
+          onclick={handleMarkShowWatched}
+          class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
+        >
+          <CheckCheck class="w-4 h-4" />
+          {isAllWatched(episodes) ? "Mark All Unwatched" : "Mark All Watched"}
+        </button>
+        <button
+          type="button"
           onclick={handleOpenTVDB}
           class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
         >
@@ -232,12 +267,22 @@
           <div class="space-y-6">
             {#each grouped as [season, seasonEpisodes]}
               <div class="bg-background rounded-lg p-4">
-                <h3 class="font-semibold text-lg mb-3">
-                  {season === 0 ? "Specials" : `Season ${season}`}
-                  <span class="text-sm text-text-muted font-normal ml-2">
-                    ({seasonEpisodes.length} episodes)
-                  </span>
-                </h3>
+                <div class="flex items-center justify-between mb-3">
+                  <h3 class="font-semibold text-lg">
+                    {season === 0 ? "Specials" : `Season ${season}`}
+                    <span class="text-sm text-text-muted font-normal ml-2">
+                      ({getWatchedCount(seasonEpisodes)}/{seasonEpisodes.length} watched)
+                    </span>
+                  </h3>
+                  <button
+                    type="button"
+                    onclick={() => handleMarkSeasonWatched(season, seasonEpisodes)}
+                    class="px-2 py-1 text-xs bg-surface-hover hover:bg-surface-hover/80 rounded transition-colors flex items-center gap-1"
+                  >
+                    <Check class="w-3 h-3" />
+                    {isSeasonWatched(seasonEpisodes) ? "Mark Unwatched" : "Mark Watched"}
+                  </button>
+                </div>
                 <div class="space-y-2">
                   {#each seasonEpisodes as episode}
                     <div

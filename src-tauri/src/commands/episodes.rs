@@ -240,4 +240,56 @@ pub async fn unschedule_episode(app: AppHandle, episode_id: i64) -> Result<(), S
     Ok(())
 }
 
+#[tauri::command]
+pub async fn mark_season_watched(
+    app: AppHandle,
+    show_id: i64,
+    season_number: i32,
+    watched: bool,
+) -> Result<(), String> {
+    let pool = connection::get_pool(&app).await
+        .map_err(|e| format!("Database error: {}", e))?;
+
+    sqlx::query(
+        r#"
+        UPDATE episodes
+        SET watched = ?
+        WHERE show_id = ? AND season_number = ?
+        "#,
+    )
+    .bind(if watched { 1 } else { 0 })
+    .bind(show_id)
+    .bind(season_number)
+    .execute(&pool)
+    .await
+    .map_err(|e| format!("Failed to mark season watched: {}", e))?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn mark_show_watched(
+    app: AppHandle,
+    show_id: i64,
+    watched: bool,
+) -> Result<(), String> {
+    let pool = connection::get_pool(&app).await
+        .map_err(|e| format!("Database error: {}", e))?;
+
+    sqlx::query(
+        r#"
+        UPDATE episodes
+        SET watched = ?
+        WHERE show_id = ?
+        "#,
+    )
+    .bind(if watched { 1 } else { 0 })
+    .bind(show_id)
+    .execute(&pool)
+    .await
+    .map_err(|e| format!("Failed to mark show watched: {}", e))?;
+
+    Ok(())
+}
+
 

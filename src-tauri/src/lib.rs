@@ -78,6 +78,8 @@ pub fn run() {
             commands::shows::update_show_rating,
             commands::episodes::sync_show_episodes,
             commands::episodes::mark_episode_watched,
+            commands::episodes::mark_season_watched,
+            commands::episodes::mark_show_watched,
             commands::episodes::get_episodes_for_range,
             commands::episodes::schedule_episode,
             commands::episodes::unschedule_episode,
