@@ -2,6 +2,9 @@ import { invoke } from "@tauri-apps/api/core";
 import Database from "@tauri-apps/plugin-sql";
 import type { Episode } from "./shows.svelte";
 
+// Use separate database in dev mode to avoid breaking production data
+const DB_NAME = import.meta.env.DEV ? "sqlite:tvc_dev.db" : "sqlite:tvc.db";
+
 export interface ShowDetail {
   id: number;
   name: string;
@@ -26,7 +29,7 @@ let db: Database | null = null;
 
 async function getDb(): Promise<Database> {
   if (!db) {
-    db = await Database.load("sqlite:tvc.db");
+    db = await Database.load(DB_NAME);
   }
   return db;
 }

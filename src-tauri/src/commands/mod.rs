@@ -1,5 +1,6 @@
 pub mod shows;
 pub mod episodes;
+pub mod movies;
 
 use crate::tvdb::{self, EpisodeBase, SearchResult, SeriesExtended};
 

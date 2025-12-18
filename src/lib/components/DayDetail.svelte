@@ -15,6 +15,8 @@
   interface GroupedEpisodes {
     showName: string;
     posterUrl: string | null;
+    showId: number;
+    showColor: string | null;
     episodes: Episode[];
   }
 

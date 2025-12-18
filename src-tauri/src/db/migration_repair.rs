@@ -6,6 +6,7 @@
 use rusqlite::Connection;
 use sha2::{Digest, Sha384};
 use std::path::PathBuf;
+use super::get_db_filename;
 
 /// Migration definition with version and SQL content
 pub struct MigrationDef {
@@ -16,7 +17,7 @@ pub struct MigrationDef {
 /// Get the database path in the app data directory
 fn get_db_path() -> Option<PathBuf> {
     let data_dir = dirs::data_dir()?;
-    Some(data_dir.join("com.tvc.app").join("tvc.db"))
+    Some(data_dir.join("com.tvc.app").join(get_db_filename()))
 }
 
 /// Calculate SHA-384 checksum of migration SQL (matches sqlx format)

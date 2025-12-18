@@ -1,6 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import Database from "@tauri-apps/plugin-sql";
 
+// Use separate database in dev mode to avoid breaking production data
+const DB_NAME = import.meta.env.DEV ? "sqlite:tvc_dev.db" : "sqlite:tvc.db";
+
 export interface TrackedShow {
   id: number;
   name: string;
@@ -54,7 +57,7 @@ let db: Database | null = null;
 
 async function getDb(): Promise<Database> {
   if (!db) {
-    db = await Database.load("sqlite:tvc.db");
+    db = await Database.load(DB_NAME);
     // Ensure scheduled_date column exists (migration)
     await db.execute(`
       CREATE TABLE IF NOT EXISTS _migrations (version INTEGER PRIMARY KEY);
@@ -76,6 +79,7 @@ async function getDb(): Promise<Database> {
 
 // Application state
 let trackedShows = $state<TrackedShow[]>([]);
+let archivedShows = $state<TrackedShow[]>([]);
 let searchModalOpen = $state(false);
 let searchQuery = $state("");
 let searchResults = $state<SearchResult[]>([]);
@@ -96,6 +100,10 @@ let dayDetailDate = $state<string | null>(null);
 // Getters
 export function getTrackedShows() {
   return trackedShows;
+}
+
+export function getArchivedShows() {
+  return archivedShows;
 }
 
 export function isSearchModalOpen() {
@@ -255,6 +263,37 @@ export async function removeShow(showId: number): Promise<void> {
     calendarEpisodes = calendarEpisodes.filter((ep) => ep.show_id !== showId);
   } catch (error) {
     console.error("Failed to remove show:", error);
+  }
+}
+
+export async function loadArchivedShows(): Promise<void> {
+  try {
+    const shows = await invoke<TrackedShow[]>("get_archived_shows");
+    archivedShows = shows;
+  } catch (error) {
+    console.error("Failed to load archived shows:", error);
+  }
+}
+
+export async function archiveShow(showId: number): Promise<void> {
+  try {
+    await invoke("archive_show", { id: showId });
+    await loadTrackedShows();
+    await loadArchivedShows();
+    // Remove episodes from calendar state
+    calendarEpisodes = calendarEpisodes.filter((ep) => ep.show_id !== showId);
+  } catch (error) {
+    console.error("Failed to archive show:", error);
+  }
+}
+
+export async function unarchiveShow(showId: number): Promise<void> {
+  try {
+    await invoke("unarchive_show", { id: showId });
+    await loadTrackedShows();
+    await loadArchivedShows();
+  } catch (error) {
+    console.error("Failed to unarchive show:", error);
   }
 }
 

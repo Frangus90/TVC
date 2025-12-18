@@ -8,9 +8,11 @@
   import WeekView from "./lib/components/calendar/WeekView.svelte";
   import AgendaView from "./lib/components/calendar/AgendaView.svelte";
   import SearchModal from "./lib/components/SearchModal.svelte";
+  import MovieSearchModal from "./lib/components/MovieSearchModal.svelte";
   import EpisodePicker from "./lib/components/EpisodePicker.svelte";
   import DayDetail from "./lib/components/DayDetail.svelte";
   import ShowDetail from "./lib/components/ShowDetail.svelte";
+  import MovieDetail from "./lib/components/MovieDetail.svelte";
   import ToastContainer from "./lib/components/ToastContainer.svelte";
   import { getViewMode } from "./lib/stores/calendar.svelte";
   import { checkForUpdates } from "./lib/stores/updates.svelte";
@@ -64,7 +66,9 @@
 </div>
 
 <SearchModal />
+<MovieSearchModal />
 <EpisodePicker />
 <DayDetail />
 <ShowDetail />
+<MovieDetail />
 <ToastContainer />

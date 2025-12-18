@@ -1,6 +1,6 @@
 <script lang="ts">
   import { format, parseISO, addDays, isToday, isTomorrow, isPast } from "date-fns";
-  import { Check, Tv } from "lucide-svelte";
+  import { Check, Tv, Film } from "lucide-svelte";
   import {
     getCalendarEpisodes,
     loadEpisodesForRange,
@@ -8,33 +8,87 @@
     unscheduleEpisode,
     type Episode,
   } from "../../stores/shows.svelte";
+  import {
+    getCalendarMovies,
+    loadMoviesForRange,
+    markMovieWatched,
+    openMovieDetail,
+    type CalendarMovie,
+  } from "../../stores/movies.svelte";
 
-  // Load episodes for the next 60 days
+  // Load episodes and movies for the next 60 days
   $effect(() => {
     const today = new Date();
     const futureDate = addDays(today, 60);
-    loadEpisodesForRange(format(today, "yyyy-MM-dd"), format(futureDate, "yyyy-MM-dd"));
+    const startStr = format(today, "yyyy-MM-dd");
+    const endStr = format(futureDate, "yyyy-MM-dd");
+    loadEpisodesForRange(startStr, endStr);
+    loadMoviesForRange(startStr, endStr);
   });
 
-  // Group episodes by date
-  function groupByDate(episodes: Episode[]): Map<string, Episode[]> {
-    const grouped = new Map<string, Episode[]>();
+  // Unified calendar item type
+  interface CalendarItem {
+    type: "episode" | "movie";
+    id: number;
+    title: string;
+    subtitle: string;
+    watched: boolean;
+    hasAired: boolean;
+    posterUrl: string | null;
+    displayDate: string;
+    data: Episode | CalendarMovie;
+  }
 
-    // Sort episodes by display date
-    const sorted = [...episodes].sort((a, b) => {
-      const dateA = a.scheduled_date || a.aired || "";
-      const dateB = b.scheduled_date || b.aired || "";
-      return dateA.localeCompare(dateB);
+  // Get all calendar items (episodes + movies) - reactive
+  let allItems = $derived.by((): CalendarItem[] => {
+    const episodes = getCalendarEpisodes().map((ep): CalendarItem => {
+      const hasAired = ep.aired ? new Date(ep.aired) <= new Date() : false;
+      return {
+        type: "episode",
+        id: ep.id,
+        title: ep.show_name,
+        subtitle: `S${String(ep.season_number).padStart(2, "0")}E${String(ep.episode_number).padStart(2, "0")}${ep.name ? ` - ${ep.name}` : ""}`,
+        watched: ep.watched,
+        hasAired,
+        posterUrl: ep.poster_url,
+        displayDate: ep.scheduled_date || ep.aired || "",
+        data: ep,
+      };
     });
 
-    for (const ep of sorted) {
-      const displayDate = ep.scheduled_date || ep.aired;
-      if (!displayDate) continue;
+    const movies = getCalendarMovies().map((movie): CalendarItem => {
+      const displayDate = movie.scheduled_date || movie.digital_release_date || "";
+      const hasReleased = displayDate ? new Date(displayDate) <= new Date() : false;
+      return {
+        type: "movie",
+        id: movie.id,
+        title: movie.title,
+        subtitle: "",
+        watched: movie.watched,
+        hasAired: hasReleased,
+        posterUrl: movie.poster_url,
+        displayDate,
+        data: movie,
+      };
+    });
 
-      if (!grouped.has(displayDate)) {
-        grouped.set(displayDate, []);
+    return [...episodes, ...movies];
+  });
+
+  // Group items by date
+  function groupByDate(items: CalendarItem[]): Map<string, CalendarItem[]> {
+    const grouped = new Map<string, CalendarItem[]>();
+
+    // Sort items by display date
+    const sorted = [...items].sort((a, b) => a.displayDate.localeCompare(b.displayDate));
+
+    for (const item of sorted) {
+      if (!item.displayDate) continue;
+
+      if (!grouped.has(item.displayDate)) {
+        grouped.set(item.displayDate, []);
       }
-      grouped.get(displayDate)!.push(ep);
+      grouped.get(item.displayDate)!.push(item);
     }
 
     return grouped;
@@ -51,9 +105,16 @@
     return isPast(parseISO(dateStr)) && !isToday(parseISO(dateStr));
   }
 
-  async function handleToggleWatched(event: MouseEvent, episode: Episode) {
-    event.stopPropagation();
-    await toggleEpisodeWatched(episode.id, !episode.watched);
+  async function handleItemClick(item: CalendarItem) {
+    if (item.type === "episode") {
+      await toggleEpisodeWatched(item.id, !item.watched);
+    } else {
+      await markMovieWatched(item.id, !item.watched);
+    }
+  }
+
+  function handleMovieClick(movie: CalendarMovie) {
+    openMovieDetail(movie.id);
   }
 
   async function handleUnschedule(event: MouseEvent, episode: Episode) {
@@ -66,14 +127,14 @@
 
 <div class="h-full overflow-auto">
   <div class="max-w-3xl mx-auto py-4 space-y-6">
-    {#if getCalendarEpisodes().length === 0}
+    {#if allItems.length === 0}
       <div class="text-center py-12">
         <Tv class="w-12 h-12 text-text-muted mx-auto mb-4" />
-        <p class="text-text-muted">No upcoming episodes</p>
-        <p class="text-text-muted text-sm mt-1">Add some shows to start tracking!</p>
+        <p class="text-text-muted">No upcoming episodes or movies</p>
+        <p class="text-text-muted text-sm mt-1">Add shows or movies to start tracking!</p>
       </div>
     {:else}
-      {#each [...groupByDate(getCalendarEpisodes())] as [dateStr, episodes]}
+      {#each [...groupByDate(allItems)] as [dateStr, items]}
         {@const isPastDate = isDatePast(dateStr)}
         <div class="space-y-2">
           <!-- Date header -->
@@ -81,53 +142,66 @@
             {formatDateHeader(dateStr)}
           </h2>
 
-          <!-- Episodes for this date -->
+          <!-- Items for this date -->
           <div class="space-y-2">
-            {#each episodes as episode}
-              {@const hasAired = episode.aired && new Date(episode.aired) <= new Date()}
+            {#each items as item}
               <button
-                onclick={(e) => handleToggleWatched(e, episode)}
-                oncontextmenu={(e) => { e.preventDefault(); handleUnschedule(e, episode); }}
+                onclick={(e) => { e.stopPropagation(); handleItemClick(item); }}
+                ondblclick={() => item.type === "movie" && handleMovieClick(item.data as CalendarMovie)}
+                oncontextmenu={(e) => {
+                  e.preventDefault();
+                  if (item.type === "episode") {
+                    const ep = item.data as Episode;
+                    if (ep.scheduled_date) handleUnschedule(e, ep);
+                  }
+                }}
                 class="w-full flex items-center gap-4 p-4 rounded-xl border transition-colors text-left
-                  {episode.watched
+                  {item.watched
                     ? 'bg-watched/10 border-watched/30 text-watched'
-                    : hasAired
+                    : item.hasAired
                       ? 'bg-premiere/10 border-premiere/30 hover:bg-premiere/20'
                       : 'bg-surface border-border hover:bg-surface-hover'}"
-                title={episode.watched ? "Watched" : hasAired ? "Click to mark watched" : "Upcoming"}
+                title={item.watched ? "Watched" : item.hasAired ? "Click to mark watched" : "Upcoming"}
               >
                 <!-- Poster -->
-                {#if episode.poster_url}
+                {#if item.posterUrl}
                   <img
-                    src={episode.poster_url}
+                    src={item.posterUrl}
                     alt=""
-                    class="w-12 h-18 rounded object-cover flex-shrink-0 {episode.watched ? 'opacity-50' : ''}"
+                    class="w-12 h-18 rounded object-cover flex-shrink-0 {item.watched ? 'opacity-50' : ''}"
                   />
                 {:else}
-                  <div class="w-12 h-18 rounded bg-border flex-shrink-0"></div>
-                {/if}
-
-                <!-- Episode info -->
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2">
-                    <span class="font-semibold truncate {episode.watched ? 'line-through opacity-75' : 'text-text'}">
-                      {episode.show_name}
-                    </span>
-                  </div>
-                  <div class="text-sm {episode.watched ? 'opacity-75' : 'text-text-muted'}">
-                    <span class="font-mono">
-                      S{String(episode.season_number).padStart(2, "0")}E{String(episode.episode_number).padStart(2, "0")}
-                    </span>
-                    {#if episode.name}
-                      <span class="mx-1">-</span>
-                      <span class="{episode.watched ? 'line-through' : ''}">{episode.name}</span>
+                  <div class="w-12 h-18 rounded bg-border flex items-center justify-center flex-shrink-0">
+                    {#if item.type === "movie"}
+                      <Film class="w-5 h-5 text-text-muted" />
+                    {:else}
+                      <Tv class="w-5 h-5 text-text-muted" />
                     {/if}
                   </div>
+                {/if}
+
+                <!-- Item info -->
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    {#if item.type === "movie"}
+                      <Film class="w-4 h-4 text-accent flex-shrink-0" />
+                    {:else}
+                      <Tv class="w-4 h-4 text-accent flex-shrink-0" />
+                    {/if}
+                    <span class="font-semibold truncate {item.watched ? 'line-through opacity-75' : 'text-text'}">
+                      {item.title}
+                    </span>
+                  </div>
+                  {#if item.subtitle}
+                    <div class="text-sm {item.watched ? 'opacity-75 line-through' : 'text-text-muted'}">
+                      {item.subtitle}
+                    </div>
+                  {/if}
                 </div>
 
                 <!-- Status indicator -->
                 <div class="flex-shrink-0">
-                  {#if episode.watched}
+                  {#if item.watched}
                     <div class="w-8 h-8 rounded-full bg-watched/20 flex items-center justify-center">
                       <Check class="w-5 h-5 text-watched" />
                     </div>

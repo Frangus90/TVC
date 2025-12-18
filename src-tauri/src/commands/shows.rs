@@ -76,6 +76,7 @@ pub async fn get_tracked_shows(app: AppHandle) -> Result<Vec<TrackedShow>, Strin
         r#"
         SELECT id, name, poster_url, status, color, notes, tags, rating
         FROM shows
+        WHERE archived = 0 OR archived IS NULL
         ORDER BY name
         "#,
     )
@@ -84,6 +85,54 @@ pub async fn get_tracked_shows(app: AppHandle) -> Result<Vec<TrackedShow>, Strin
     .map_err(|e| format!("Failed to get tracked shows: {}", e))?;
 
     Ok(shows)
+}
+
+#[tauri::command]
+pub async fn get_archived_shows(app: AppHandle) -> Result<Vec<TrackedShow>, String> {
+    let pool = connection::get_pool(&app).await
+        .map_err(|e| format!("Database error: {}", e))?;
+
+    let shows = sqlx::query_as::<_, TrackedShow>(
+        r#"
+        SELECT id, name, poster_url, status, color, notes, tags, rating
+        FROM shows
+        WHERE archived = 1
+        ORDER BY name
+        "#,
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| format!("Failed to get archived shows: {}", e))?;
+
+    Ok(shows)
+}
+
+#[tauri::command]
+pub async fn archive_show(app: AppHandle, id: i64) -> Result<(), String> {
+    let pool = connection::get_pool(&app).await
+        .map_err(|e| format!("Database error: {}", e))?;
+
+    sqlx::query("UPDATE shows SET archived = 1 WHERE id = ?")
+        .bind(id)
+        .execute(&pool)
+        .await
+        .map_err(|e| format!("Failed to archive show: {}", e))?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn unarchive_show(app: AppHandle, id: i64) -> Result<(), String> {
+    let pool = connection::get_pool(&app).await
+        .map_err(|e| format!("Database error: {}", e))?;
+
+    sqlx::query("UPDATE shows SET archived = 0 WHERE id = ?")
+        .bind(id)
+        .execute(&pool)
+        .await
+        .map_err(|e| format!("Failed to unarchive show: {}", e))?;
+
+    Ok(())
 }
 
 #[tauri::command]

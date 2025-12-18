@@ -1,6 +1,3 @@
-import Toast from "../components/common/Toast.svelte";
-import type { ComponentProps } from "svelte";
-
 type ToastType = "success" | "error" | "info";
 
 interface ToastItem {
