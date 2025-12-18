@@ -7,3 +7,4 @@ ALTER TABLE episodes ADD COLUMN rating INTEGER;
 ALTER TABLE episodes ADD COLUMN tags TEXT;
 
 
+

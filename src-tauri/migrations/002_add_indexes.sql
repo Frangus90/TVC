@@ -19,3 +19,4 @@ CREATE INDEX IF NOT EXISTS idx_episodes_show_season_ep ON episodes(show_id, seas
 CREATE INDEX IF NOT EXISTS idx_shows_name ON shows(name);
 
 
+

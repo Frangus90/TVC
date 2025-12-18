@@ -10,3 +10,4 @@ ALTER TABLE shows ADD COLUMN notes TEXT;
 ALTER TABLE shows ADD COLUMN tags TEXT;
 
 
+

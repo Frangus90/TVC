@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Plus, Tv, Trash2, RefreshCw, Check, Film, Archive, RotateCcw } from "lucide-svelte";
+  import { Plus, Tv, Trash2, RefreshCw, Check, Film, Archive, RotateCcw, CalendarX } from "lucide-svelte";
   import { onMount } from "svelte";
   import {
     getTrackedShows,
@@ -18,6 +18,7 @@
     getArchivedMovies,
     loadArchivedMovies,
     unarchiveMovie,
+    unscheduleMovie,
     openMovieDetail,
   } from "../../stores/movies.svelte";
   import { openShowDetail } from "../../stores/showDetail.svelte";
@@ -52,6 +53,11 @@
   async function handleRemoveMovie(event: MouseEvent, movieId: number) {
     event.stopPropagation();
     await removeMovie(movieId);
+  }
+
+  async function handleUnscheduleMovie(event: MouseEvent, movieId: number) {
+    event.stopPropagation();
+    await unscheduleMovie(movieId);
   }
 
   function toggleItemSelection(itemId: number) {
@@ -337,14 +343,27 @@
                       <span class="text-sm truncate">{movie.title}</span>
                     </div>
                   </button>
-                  <button
-                    type="button"
-                    onclick={(e) => { e.stopPropagation(); handleRemoveMovie(e, movie.id); }}
-                    class="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-red-500/20 text-red-400 transition-all"
-                    aria-label="Remove movie"
-                  >
-                    <Trash2 class="w-4 h-4" />
-                  </button>
+                  <div class="flex items-center gap-1">
+                    {#if movie.scheduled_date}
+                      <button
+                        type="button"
+                        onclick={(e) => handleUnscheduleMovie(e, movie.id)}
+                        class="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-orange-500/20 text-orange-400 transition-all"
+                        aria-label="Remove from schedule"
+                        title="Remove from schedule"
+                      >
+                        <CalendarX class="w-4 h-4" />
+                      </button>
+                    {/if}
+                    <button
+                      type="button"
+                      onclick={(e) => { e.stopPropagation(); handleRemoveMovie(e, movie.id); }}
+                      class="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-red-500/20 text-red-400 transition-all"
+                      aria-label="Remove movie"
+                    >
+                      <Trash2 class="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               {/if}
             </li>
@@ -432,6 +451,6 @@
       <RefreshCw class="w-3 h-3 {isCheckingForUpdates() ? 'animate-spin' : ''}" />
       {isCheckingForUpdates() ? "Checking..." : "Check for Updates"}
     </button>
-    <p class="text-xs text-text-muted text-center mt-2">v0.6.0</p>
+    <p class="text-xs text-text-muted text-center mt-2">v0.6.1</p>
   </div>
 </aside>

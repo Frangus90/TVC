@@ -238,6 +238,13 @@ export async function scheduleMovie(
 ): Promise<void> {
   try {
     await invoke("schedule_movie", { id: movieId, date });
+    // Update local state
+    trackedMovies = trackedMovies.map((m) =>
+      m.id === movieId ? { ...m, scheduled_date: date } : m
+    );
+    if (currentMovie && currentMovie.id === movieId) {
+      currentMovie = { ...currentMovie, scheduled_date: date };
+    }
     // Refresh calendar
     if (currentCalendarRange) {
       await loadMoviesForRange(currentCalendarRange.start, currentCalendarRange.end);
@@ -250,6 +257,16 @@ export async function scheduleMovie(
 export async function unscheduleMovie(movieId: number): Promise<void> {
   try {
     await invoke("unschedule_movie", { id: movieId });
+    // Update local state
+    trackedMovies = trackedMovies.map((m) =>
+      m.id === movieId ? { ...m, scheduled_date: null } : m
+    );
+    calendarMovies = calendarMovies.map((m) =>
+      m.id === movieId ? { ...m, scheduled_date: null } : m
+    );
+    if (currentMovie && currentMovie.id === movieId) {
+      currentMovie = { ...currentMovie, scheduled_date: null };
+    }
     // Refresh calendar
     if (currentCalendarRange) {
       await loadMoviesForRange(currentCalendarRange.start, currentCalendarRange.end);
