@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fade, scale } from "svelte/transition";
   import { X, Trash2, RefreshCw, ExternalLink, Star, Eye, EyeOff, Calendar, Archive, Play, Users, FileText } from "lucide-svelte";
   import { invoke } from "@tauri-apps/api/core";
   import {
@@ -156,6 +157,7 @@
   <!-- Backdrop -->
   <button
     type="button"
+    transition:fade={{ duration: 150 }}
     class="fixed inset-0 bg-black/60 z-50"
     onclick={closeMovieDetail}
     aria-label="Close modal"
@@ -163,6 +165,7 @@
 
   <!-- Modal -->
   <div
+    transition:scale={{ duration: 200, start: 0.95, opacity: 0 }}
     class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-surface rounded-xl border border-border shadow-2xl w-[700px] max-w-[95vw] max-h-[90vh] flex flex-col"
   >
     {#if isMovieDetailLoading()}
@@ -369,6 +372,8 @@
 
       <!-- Tab Content -->
       <div class="flex-1 overflow-auto">
+        {#key activeTab}
+        <div in:fade={{ duration: 150 }}>
         {#if activeTab === "overview"}
           <!-- Overview Tab -->
           <div class="p-6">
@@ -434,6 +439,8 @@
             />
           </div>
         {/if}
+        </div>
+        {/key}
       </div>
 
       <!-- Footer with Scheduling -->

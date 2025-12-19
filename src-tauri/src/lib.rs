@@ -108,6 +108,7 @@ pub fn run() {
             commands::shows::update_show_rating,
             // Episode commands
             commands::episodes::sync_show_episodes,
+            commands::episodes::sync_all_shows,
             commands::episodes::mark_episode_watched,
             commands::episodes::mark_season_watched,
             commands::episodes::mark_show_watched,

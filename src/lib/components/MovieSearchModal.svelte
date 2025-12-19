@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fade, scale } from "svelte/transition";
   import { X, Search, Plus, Loader2, Film, Star } from "lucide-svelte";
   import {
     isMovieSearchModalOpen,
@@ -65,6 +66,7 @@
 {#if isMovieSearchModalOpen()}
   <!-- Backdrop -->
   <button
+    transition:fade={{ duration: 150 }}
     class="fixed inset-0 bg-black/60 z-50"
     onclick={closeMovieSearchModal}
     aria-label="Close modal"
@@ -72,6 +74,7 @@
 
   <!-- Modal -->
   <div
+    transition:scale={{ duration: 200, start: 0.95, opacity: 0 }}
     class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl z-50 bg-surface rounded-xl border border-border shadow-2xl"
   >
     <!-- Header -->

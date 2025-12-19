@@ -104,7 +104,7 @@ export async function openShowDetail(showId: number): Promise<void> {
 
     // Get all episodes for this show
     const episodes = await database.select<Episode[]>(
-      `SELECT e.id, e.show_id, s.name as show_name, 
+      `SELECT e.id, e.show_id, s.name as show_name, s.network,
        COALESCE(e.season_number, 0) as season_number,
        COALESCE(e.episode_number, 0) as episode_number,
        e.name, e.aired, e.scheduled_date, e.watched = 1 as watched,
@@ -120,6 +120,7 @@ export async function openShowDetail(showId: number): Promise<void> {
       id: ep.id,
       show_id: ep.show_id,
       show_name: ep.show_name,
+      network: ep.network,
       season_number: ep.season_number,
       episode_number: ep.episode_number,
       name: ep.name,

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fade } from "svelte/transition";
   import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { getCurrentWebview } from "@tauri-apps/api/webview";
@@ -57,13 +58,17 @@
     <Header />
 
     <div class="flex-1 overflow-auto p-6">
-      {#if getViewMode() === "month"}
-        <MonthView />
-      {:else if getViewMode() === "week"}
-        <WeekView />
-      {:else}
-        <AgendaView />
-      {/if}
+      {#key getViewMode()}
+        <div in:fade={{ duration: 150, delay: 50 }} out:fade={{ duration: 100 }}>
+          {#if getViewMode() === "month"}
+            <MonthView />
+          {:else if getViewMode() === "week"}
+            <WeekView />
+          {:else}
+            <AgendaView />
+          {/if}
+        </div>
+      {/key}
     </div>
   </main>
 </div>

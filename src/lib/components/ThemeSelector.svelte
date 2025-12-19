@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fade, scale } from "svelte/transition";
   import { Settings, X } from "lucide-svelte";
   import { onMount } from "svelte";
   import {
@@ -50,6 +51,7 @@
 {#if open}
   <!-- Backdrop -->
   <div
+    transition:fade={{ duration: 150 }}
     class="fixed inset-0 bg-black/60 z-50"
     onclick={() => open = false}
     role="button"
@@ -60,6 +62,7 @@
 
   <!-- Modal -->
   <div
+    transition:scale={{ duration: 200, start: 0.95, opacity: 0 }}
     class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[60] bg-surface rounded-xl border border-border shadow-2xl w-[500px] max-w-[95vw] max-h-[85vh] flex flex-col"
     role="dialog"
     aria-modal="true"

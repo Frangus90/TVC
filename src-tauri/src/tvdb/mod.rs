@@ -7,6 +7,16 @@ use std::sync::OnceLock;
 use std::time::Duration;
 use tokio::sync::RwLock;
 
+/// Invalidate cache for a specific show (call before sync to force fresh data)
+pub async fn invalidate_show_cache(id: i64) {
+    get_cache().invalidate_show(id).await;
+}
+
+/// Clear all caches (call before full resync)
+pub async fn clear_all_caches() {
+    get_cache().clear_all().await;
+}
+
 const API_BASE: &str = "https://api4.thetvdb.com/v4";
 const API_KEY: &str = "a3ceb063-8688-4916-9c1d-8f8039e87307";
 
@@ -77,6 +87,13 @@ pub struct SeriesExtended {
     pub airs_time: Option<String>,
     pub airs_days: Option<AirsDays>,
     pub average_runtime: Option<i32>,
+    pub original_network: Option<NetworkInfo>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NetworkInfo {
+    pub name: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

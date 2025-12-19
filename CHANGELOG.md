@@ -2,6 +2,17 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.6.5]
+
+### Network Display
+- TV shows now display their network in calendar views (e.g., "Fallout | Prime Video")
+- Network info shown in Month, Week, and Agenda views
+
+### Sync Improvements
+- Fixed refresh button only working once per session
+- Added "Sync All Shows" button in Data Management to refresh all shows from TVDB
+- Syncing now properly updates network information from TVDB
+
 ## [0.6.4]
 
 ### Improved Updates

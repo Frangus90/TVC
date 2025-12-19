@@ -83,10 +83,11 @@
   function getItemsForDay(day: Date): CalendarItem[] {
     const episodes = getEpisodesForDay(day).map((ep): CalendarItem => {
       const hasAired = ep.aired ? new Date(ep.aired) <= new Date() : false;
+      const title = ep.network ? `${ep.show_name} | ${ep.network}` : ep.show_name;
       return {
         type: "episode",
         id: ep.id,
-        title: ep.show_name,
+        title,
         subtitle: `S${String(ep.season_number).padStart(2, "0")}E${String(ep.episode_number).padStart(2, "0")}${ep.name ? ` - ${ep.name}` : ""}`,
         watched: ep.watched,
         hasAired,

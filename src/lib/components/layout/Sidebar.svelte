@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Plus, Tv, Trash2, RefreshCw, Check, Film, Archive, RotateCcw, CalendarX, BarChart3, Database } from "lucide-svelte";
+  import { Plus, Tv, Trash2, RefreshCw, Check, Film, Archive, RotateCcw, CalendarX, BarChart3, Database, PanelLeftClose, PanelLeft } from "lucide-svelte";
   import { onMount } from "svelte";
   import {
     getTrackedShows,
@@ -28,6 +28,7 @@
   } from "../../stores/updates.svelte";
   import { openStatisticsModal } from "../../stores/statistics.svelte";
   import { openDataManagement } from "../../stores/dataManagement.svelte";
+  import { isSidebarCollapsed, toggleSidebar } from "../../stores/sidebar.svelte";
 
   type SidebarTab = "shows" | "movies" | "archive";
   let activeTab = $state<SidebarTab>("shows");
@@ -133,48 +134,84 @@
   }
 </script>
 
-<aside class="w-64 bg-surface border-r border-border flex flex-col">
+<aside class="bg-surface border-r border-border flex flex-col transition-all duration-200 {isSidebarCollapsed() ? 'w-16' : 'w-64'}">
   <!-- Logo -->
   <div class="p-4 border-b border-border">
-    <div class="flex items-center gap-2 text-xl font-semibold">
-      <Tv class="w-6 h-6 text-accent" />
-      <span>TVC</span>
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2 text-xl font-semibold {isSidebarCollapsed() ? 'justify-center w-full' : ''}">
+        <Tv class="w-6 h-6 text-accent flex-shrink-0" />
+        {#if !isSidebarCollapsed()}
+          <span>TVC</span>
+        {/if}
+      </div>
+      {#if !isSidebarCollapsed()}
+        <button
+          type="button"
+          onclick={toggleSidebar}
+          class="p-1.5 rounded hover:bg-surface-hover transition-colors"
+          title="Collapse sidebar"
+        >
+          <PanelLeftClose class="w-4 h-4 text-text-muted" />
+        </button>
+      {/if}
     </div>
+    {#if isSidebarCollapsed()}
+      <button
+        type="button"
+        onclick={toggleSidebar}
+        class="w-full mt-2 p-1.5 rounded hover:bg-surface-hover transition-colors flex justify-center"
+        title="Expand sidebar"
+      >
+        <PanelLeft class="w-4 h-4 text-text-muted" />
+      </button>
+    {/if}
   </div>
 
   <!-- Tab Row -->
-  <div class="flex border-b border-border">
+  <div class="flex {isSidebarCollapsed() ? 'flex-col' : ''} border-b border-border">
     <button
       type="button"
       onclick={() => switchTab("shows")}
       class="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 text-xs font-medium transition-colors
-        {activeTab === 'shows' ? 'text-accent border-b-2 border-accent bg-accent/5' : 'text-text-muted hover:text-text hover:bg-surface-hover'}"
+        {activeTab === 'shows' ? 'text-accent border-b-2 border-accent bg-accent/5' : 'text-text-muted hover:text-text hover:bg-surface-hover'}
+        {isSidebarCollapsed() ? 'border-b-0 border-l-2' : ''}"
+      title="TV Shows"
     >
       <Tv class="w-3.5 h-3.5" />
-      <span>TV Shows</span>
+      {#if !isSidebarCollapsed()}
+        <span>TV Shows</span>
+      {/if}
     </button>
     <button
       type="button"
       onclick={() => switchTab("movies")}
       class="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 text-xs font-medium transition-colors
-        {activeTab === 'movies' ? 'text-accent border-b-2 border-accent bg-accent/5' : 'text-text-muted hover:text-text hover:bg-surface-hover'}"
+        {activeTab === 'movies' ? 'text-accent border-b-2 border-accent bg-accent/5' : 'text-text-muted hover:text-text hover:bg-surface-hover'}
+        {isSidebarCollapsed() ? 'border-b-0 border-l-2' : ''}"
+      title="Movies"
     >
       <Film class="w-3.5 h-3.5" />
-      <span>Movies</span>
+      {#if !isSidebarCollapsed()}
+        <span>Movies</span>
+      {/if}
     </button>
     <button
       type="button"
       onclick={() => switchTab("archive")}
       class="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 text-xs font-medium transition-colors
-        {activeTab === 'archive' ? 'text-accent border-b-2 border-accent bg-accent/5' : 'text-text-muted hover:text-text hover:bg-surface-hover'}"
+        {activeTab === 'archive' ? 'text-accent border-b-2 border-accent bg-accent/5' : 'text-text-muted hover:text-text hover:bg-surface-hover'}
+        {isSidebarCollapsed() ? 'border-b-0 border-l-2' : ''}"
+      title="Archive"
     >
       <Archive class="w-3.5 h-3.5" />
-      <span>Archive</span>
+      {#if !isSidebarCollapsed()}
+        <span>Archive</span>
+      {/if}
     </button>
   </div>
 
-  <!-- Selection Controls Row (only for shows/movies tabs) -->
-  {#if activeTab !== "archive"}
+  <!-- Selection Controls Row (only for shows/movies tabs, hidden when collapsed) -->
+  {#if activeTab !== "archive" && !isSidebarCollapsed()}
     <div class="flex items-center justify-end gap-2 px-3 py-2 border-b border-border bg-surface/50">
       {#if bulkMode}
         <button
@@ -205,8 +242,8 @@
     </div>
   {/if}
 
-  <!-- Content Area -->
-  <div class="flex-1 overflow-auto p-3">
+  <!-- Content Area (hidden when collapsed) -->
+  <div class="flex-1 overflow-auto p-3 {isSidebarCollapsed() ? 'hidden' : ''}">
     <!-- TV Shows Tab -->
     {#if activeTab === "shows"}
       {#if getTrackedShows().length === 0}
@@ -433,44 +470,55 @@
   </div>
 
   <!-- Footer -->
-  <div class="p-3 border-t border-border">
+  <div class="p-3 border-t border-border {isSidebarCollapsed() ? 'px-2' : ''}">
     {#if activeTab !== "archive"}
       <button
         type="button"
         onclick={handleAddClick}
-        class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-white rounded-lg transition-colors font-medium"
+        class="w-full flex items-center justify-center gap-2 {isSidebarCollapsed() ? 'p-2' : 'px-4 py-2.5'} bg-accent hover:bg-accent-hover text-white rounded-lg transition-colors font-medium"
+        title={activeTab === "shows" ? "Add Show" : "Add Movie"}
       >
         <Plus class="w-4 h-4" />
-        {activeTab === "shows" ? "Add Show" : "Add Movie"}
+        {#if !isSidebarCollapsed()}
+          {activeTab === "shows" ? "Add Show" : "Add Movie"}
+        {/if}
       </button>
     {/if}
-    <div class="flex gap-2 {activeTab !== 'archive' ? 'mt-2' : ''}">
+    <div class="flex {isSidebarCollapsed() ? 'flex-col' : ''} gap-2 {activeTab !== 'archive' ? 'mt-2' : ''}">
       <button
         type="button"
         onclick={openStatisticsModal}
         class="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-text-muted hover:text-text hover:bg-surface-hover rounded transition-colors"
+        title="Statistics"
       >
         <BarChart3 class="w-3 h-3" />
-        Stats
+        {#if !isSidebarCollapsed()}
+          Stats
+        {/if}
       </button>
       <button
         type="button"
         onclick={openDataManagement}
         class="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-text-muted hover:text-text hover:bg-surface-hover rounded transition-colors"
+        title="Data Management"
       >
         <Database class="w-3 h-3" />
-        Data
+        {#if !isSidebarCollapsed()}
+          Data
+        {/if}
       </button>
     </div>
-    <button
-      type="button"
-      onclick={triggerUpdateCheck}
-      disabled={isCheckingForUpdates()}
-      class="w-full flex items-center justify-center gap-2 mt-1 px-3 py-1.5 text-xs text-text-muted hover:text-text hover:bg-surface-hover rounded transition-colors disabled:opacity-50"
-    >
-      <RefreshCw class="w-3 h-3 {isCheckingForUpdates() ? 'animate-spin' : ''}" />
-      {isCheckingForUpdates() ? "Checking..." : "Check for Updates"}
-    </button>
-    <p class="text-xs text-text-muted text-center mt-2">v0.6.4</p>
+    {#if !isSidebarCollapsed()}
+      <button
+        type="button"
+        onclick={triggerUpdateCheck}
+        disabled={isCheckingForUpdates()}
+        class="w-full flex items-center justify-center gap-2 mt-1 px-3 py-1.5 text-xs text-text-muted hover:text-text hover:bg-surface-hover rounded transition-colors disabled:opacity-50"
+      >
+        <RefreshCw class="w-3 h-3 {isCheckingForUpdates() ? 'animate-spin' : ''}" />
+        {isCheckingForUpdates() ? "Checking..." : "Check for Updates"}
+      </button>
+      <p class="text-xs text-text-muted text-center mt-2">v0.6.5</p>
+    {/if}
   </div>
 </aside>

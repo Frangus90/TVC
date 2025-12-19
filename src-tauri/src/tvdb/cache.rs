@@ -48,6 +48,19 @@ impl ApiCache {
     pub async fn set_episodes(&self, id: i64, episodes: Vec<crate::tvdb::EpisodeBase>) {
         self.episodes_cache.insert(id, episodes).await;
     }
+
+    /// Clear cache for a specific show (used when syncing to force fresh data)
+    pub async fn invalidate_show(&self, id: i64) {
+        self.show_cache.invalidate(&id).await;
+        self.episodes_cache.invalidate(&id).await;
+    }
+
+    /// Clear all caches (used for full resync)
+    pub async fn clear_all(&self) {
+        self.search_cache.invalidate_all();
+        self.show_cache.invalidate_all();
+        self.episodes_cache.invalidate_all();
+    }
 }
 
 impl Default for ApiCache {

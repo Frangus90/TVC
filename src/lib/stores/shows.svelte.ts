@@ -32,6 +32,7 @@ export interface Episode {
   id: number;
   show_id: number;
   show_name: string;
+  network: string | null;
   season_number: number;
   episode_number: number;
   name: string | null;
@@ -333,11 +334,12 @@ export async function loadEpisodesForRange(
           scheduled_date: string | null;
           watched: number;
           show_name: string;
+          network: string | null;
           poster_url: string | null;
         }[]
       >(
         `SELECT e.id, e.show_id, e.name, e.season_number, e.episode_number, e.aired, e.scheduled_date, e.watched,
-                s.name as show_name, s.poster_url
+                s.name as show_name, s.network, s.poster_url
          FROM episodes e
          JOIN shows s ON e.show_id = s.id
          WHERE (e.aired >= $1 AND e.aired <= $2) OR (e.scheduled_date >= $1 AND e.scheduled_date <= $2)
@@ -349,6 +351,7 @@ export async function loadEpisodesForRange(
         id: row.id,
         show_id: row.show_id,
         show_name: row.show_name,
+        network: row.network,
         season_number: row.season_number,
         episode_number: row.episode_number,
         name: row.name,

@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { X, Database, History, Copy, Trash2, RefreshCw, AlertTriangle, Check } from "lucide-svelte";
+  import { fade, scale } from "svelte/transition";
+  import { X, Database, History, Copy, Trash2, RefreshCw, AlertTriangle, Check, CloudDownload } from "lucide-svelte";
+  import { invoke } from "@tauri-apps/api/core";
   import {
     isModalOpen,
     getActiveTab,
@@ -24,6 +26,21 @@
   } from "../stores/dataManagement.svelte";
 
   let cleanupMessage = $state<string | null>(null);
+  let syncingAll = $state(false);
+
+  async function handleSyncAllShows() {
+    syncingAll = true;
+    try {
+      const synced = await invoke<number>("sync_all_shows");
+      cleanupMessage = `Synced ${synced} show${synced !== 1 ? "s" : ""} from TVDB`;
+      setTimeout(() => (cleanupMessage = null), 3000);
+    } catch (err) {
+      cleanupMessage = `Sync failed: ${err}`;
+      setTimeout(() => (cleanupMessage = null), 5000);
+    } finally {
+      syncingAll = false;
+    }
+  }
 
   async function handleCleanupOrphaned() {
     try {
@@ -106,13 +123,17 @@
   <!-- Backdrop -->
   <button
     type="button"
+    transition:fade={{ duration: 150 }}
     class="fixed inset-0 bg-black/60 z-50"
     onclick={closeDataManagement}
     aria-label="Close modal"
   ></button>
 
   <!-- Modal -->
-  <div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-surface rounded-xl border border-border shadow-2xl w-[800px] max-w-[95vw] max-h-[85vh] flex flex-col">
+  <div
+    transition:scale={{ duration: 200, start: 0.95, opacity: 0 }}
+    class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-surface rounded-xl border border-border shadow-2xl w-[800px] max-w-[95vw] max-h-[85vh] flex flex-col"
+  >
     <!-- Header -->
     <div class="flex items-center justify-between p-4 border-b border-border">
       <div class="flex items-center gap-3">
@@ -430,6 +451,32 @@
                   class="px-3 py-1.5 text-sm bg-accent/20 hover:bg-accent/30 text-accent rounded transition-colors"
                 >
                   Optimize
+                </button>
+              </div>
+            </div>
+
+            <!-- Sync All Shows -->
+            <div class="bg-background rounded-lg p-4 border border-accent/30">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <CloudDownload class="w-5 h-5 text-accent" />
+                  <div>
+                    <h3 class="font-medium">Sync All Shows</h3>
+                    <p class="text-sm text-text-muted">Refresh all show data from TVDB (network, episodes, etc.)</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onclick={handleSyncAllShows}
+                  disabled={syncingAll}
+                  class="px-3 py-1.5 text-sm bg-accent/20 hover:bg-accent/30 text-accent rounded transition-colors flex items-center gap-2 disabled:opacity-50"
+                >
+                  {#if syncingAll}
+                    <RefreshCw class="w-4 h-4 animate-spin" />
+                    Syncing...
+                  {:else}
+                    Sync All
+                  {/if}
                 </button>
               </div>
             </div>

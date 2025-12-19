@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fade, scale } from "svelte/transition";
   import { format, parseISO } from "date-fns";
   import { X, Check, Calendar, CalendarX, Eye, EyeOff, Trash2 } from "lucide-svelte";
   import {
@@ -109,13 +110,17 @@
 {#if isDayDetailOpen() && getDayDetailDate()}
   <!-- Backdrop -->
   <button
+    transition:fade={{ duration: 150 }}
     class="fixed inset-0 bg-black/50 z-40"
     onclick={closeDayDetail}
     aria-label="Close"
   ></button>
 
   <!-- Modal -->
-  <div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-surface rounded-xl border border-border shadow-2xl w-[600px] max-w-[95vw] max-h-[85vh] flex flex-col">
+  <div
+    transition:scale={{ duration: 200, start: 0.95, opacity: 0 }}
+    class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-surface rounded-xl border border-border shadow-2xl w-[600px] max-w-[95vw] max-h-[85vh] flex flex-col"
+  >
     <!-- Header -->
     <div class="flex items-center justify-between p-5 border-b border-border">
       <div>

@@ -94,10 +94,11 @@
   function getItemsForDay(day: Date): CalendarItem[] {
     const episodes = getEpisodesForDay(day).map((ep): CalendarItem => {
       const hasAired = ep.aired ? new Date(ep.aired) <= new Date() : false;
+      const title = ep.network ? `${ep.show_name} | ${ep.network}` : ep.show_name;
       return {
         type: "episode",
         id: ep.id,
-        title: ep.show_name,
+        title,
         subtitle: `S${String(ep.season_number).padStart(2, "0")}E${String(ep.episode_number).padStart(2, "0")}${ep.name ? ` - ${ep.name}` : ""}`,
         watched: ep.watched,
         hasAired,
@@ -172,14 +173,16 @@
   }
 
   const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const weekdaysShort = ["M", "T", "W", "T", "F", "S", "S"];
 </script>
 
 <div class="h-full flex flex-col">
   <!-- Weekday headers -->
   <div class="grid grid-cols-7 border-b border-border">
-    {#each weekdays as day}
+    {#each weekdays as day, i}
       <div class="py-2 text-center text-sm font-medium text-text-muted">
-        {day}
+        <span class="hidden sm:inline">{day}</span>
+        <span class="sm:hidden">{weekdaysShort[i]}</span>
       </div>
     {/each}
   </div>

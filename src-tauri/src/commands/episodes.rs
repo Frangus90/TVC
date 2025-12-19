@@ -9,6 +9,7 @@ pub struct Episode {
     pub show_id: i64,
     #[sqlx(rename = "show_name")]
     pub show_name: String,
+    pub network: Option<String>,
     pub season_number: i32,
     pub episode_number: i32,
     pub name: Option<String>,
@@ -57,10 +58,11 @@ pub async fn get_episodes_for_range(
 
     let rows = sqlx::query(
         r#"
-        SELECT 
+        SELECT
             e.id,
             e.show_id,
             s.name as show_name,
+            s.network,
             COALESCE(e.season_number, 0) as season_number,
             COALESCE(e.episode_number, 0) as episode_number,
             e.name,
@@ -70,7 +72,7 @@ pub async fn get_episodes_for_range(
             s.poster_url
         FROM episodes e
         JOIN shows s ON e.show_id = s.id
-        WHERE (e.aired >= ? AND e.aired <= ?) 
+        WHERE (e.aired >= ? AND e.aired <= ?)
            OR (e.scheduled_date >= ? AND e.scheduled_date <= ?)
         ORDER BY COALESCE(e.scheduled_date, e.aired), s.name
         "#,
@@ -89,6 +91,7 @@ pub async fn get_episodes_for_range(
             id: row.get("id"),
             show_id: row.get("show_id"),
             show_name: row.get("show_name"),
+            network: row.get("network"),
             season_number: row.get("season_number"),
             episode_number: row.get("episode_number"),
             name: row.get("name"),
@@ -104,6 +107,9 @@ pub async fn get_episodes_for_range(
 
 #[tauri::command]
 pub async fn sync_show_episodes(app: AppHandle, show_id: i64) -> Result<(), String> {
+    // Clear cache first to force fresh data from TVDB
+    crate::tvdb::invalidate_show_cache(show_id).await;
+
     // Fetch show details from TVDB
     let show_details = crate::tvdb::get_series_extended(show_id)
         .await
@@ -125,6 +131,11 @@ pub async fn sync_show_episodes(app: AppHandle, show_id: i64) -> Result<(), Stri
         .as_ref()
         .and_then(|days| serde_json::to_string(days).ok());
 
+    // Extract network name from originalNetwork
+    let network_name = show_details.original_network
+        .as_ref()
+        .and_then(|n| n.name.as_ref());
+
     sqlx::query(
         r#"
         UPDATE shows SET
@@ -133,6 +144,7 @@ pub async fn sync_show_episodes(app: AppHandle, show_id: i64) -> Result<(), Stri
             status = ?,
             poster_url = ?,
             first_aired = ?,
+            network = ?,
             overview = ?,
             airs_time = ?,
             airs_days = ?,
@@ -146,6 +158,7 @@ pub async fn sync_show_episodes(app: AppHandle, show_id: i64) -> Result<(), Stri
     .bind(show_details.status.as_ref().and_then(|s| s.name.as_ref()))
     .bind(show_details.image.as_ref())
     .bind(show_details.first_aired.as_ref())
+    .bind(network_name)
     .bind(show_details.overview.as_ref())
     .bind(show_details.airs_time.as_ref())
     .bind(airs_days_json.as_deref())
@@ -196,6 +209,34 @@ pub async fn sync_show_episodes(app: AppHandle, show_id: i64) -> Result<(), Stri
         .map_err(|e| format!("Failed to commit transaction: {}", e))?;
 
     Ok(())
+}
+
+/// Sync all tracked shows - fetches fresh data from TVDB for all shows
+#[tauri::command]
+pub async fn sync_all_shows(app: AppHandle) -> Result<u32, String> {
+    // Clear all caches first
+    crate::tvdb::clear_all_caches().await;
+
+    let pool = connection::get_pool(&app).await
+        .map_err(|e| format!("Database error: {}", e))?;
+
+    // Get all tracked show IDs
+    let show_ids: Vec<i64> = sqlx::query_scalar("SELECT id FROM shows")
+        .fetch_all(&pool)
+        .await
+        .map_err(|e| format!("Failed to get shows: {}", e))?;
+
+    let total = show_ids.len() as u32;
+    let mut synced = 0u32;
+
+    for show_id in show_ids {
+        match sync_show_episodes(app.clone(), show_id).await {
+            Ok(_) => synced += 1,
+            Err(e) => eprintln!("Failed to sync show {}: {}", show_id, e),
+        }
+    }
+
+    Ok(synced)
 }
 
 #[tauri::command]
