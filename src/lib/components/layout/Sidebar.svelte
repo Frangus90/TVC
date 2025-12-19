@@ -471,6 +471,6 @@
       <RefreshCw class="w-3 h-3 {isCheckingForUpdates() ? 'animate-spin' : ''}" />
       {isCheckingForUpdates() ? "Checking..." : "Check for Updates"}
     </button>
-    <p class="text-xs text-text-muted text-center mt-2">v0.6.3</p>
+    <p class="text-xs text-text-muted text-center mt-2">v0.6.4</p>
   </div>
 </aside>
