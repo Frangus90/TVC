@@ -11,3 +11,4 @@ ALTER TABLE shows ADD COLUMN tags TEXT;
 
 
 
+

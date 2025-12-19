@@ -380,3 +380,64 @@ pub async fn get_series_episodes(
 
     Ok(all_episodes)
 }
+
+// Character/cast member from TVDB
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Character {
+    pub id: i64,
+    pub name: Option<String>,
+    pub people_id: Option<i64>,
+    pub person_name: Option<String>,
+    pub image: Option<String>,
+    pub sort: Option<i32>,
+}
+
+// Show characters response
+#[allow(dead_code)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShowCharacters {
+    pub characters: Vec<Character>,
+}
+
+/// Get characters/cast for a show
+pub async fn get_series_characters(
+    id: i64,
+) -> Result<Vec<Character>, Box<dyn std::error::Error + Send + Sync>> {
+    // Rate limiting
+    get_rate_limiter().wait_if_needed().await;
+
+    let token = get_token().await?;
+    let client = Client::new();
+
+    // Get series extended with characters
+    let response = client
+        .get(format!("{}/series/{}/extended", API_BASE, id))
+        .query(&[("meta", "characters")])
+        .bearer_auth(&token)
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(format!("TVDB API error: {}", response.status()).into());
+    }
+
+    #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct SeriesWithCharacters {
+        characters: Option<Vec<Character>>,
+    }
+
+    #[derive(Deserialize)]
+    struct CharactersApiResponse {
+        data: SeriesWithCharacters,
+    }
+
+    let api_response: CharactersApiResponse = response.json().await?;
+    let mut characters = api_response.data.characters.unwrap_or_default();
+
+    // Sort by sort order
+    characters.sort_by_key(|c| c.sort.unwrap_or(999));
+
+    Ok(characters)
+}

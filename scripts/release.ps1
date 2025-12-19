@@ -18,10 +18,12 @@ function Write-Info { param($msg) Write-Host $msg -ForegroundColor Yellow }
 # Check latest GitHub release
 Write-Step "Checking GitHub releases..."
 $latestRelease = $null
-$allReleases = @()
+$latestReleaseVersion = $null
 try {
     $latestRelease = gh release view --json tagName,publishedAt,name 2>$null | ConvertFrom-Json
-    $allReleases = gh release list --limit 5 --json tagName,publishedAt 2>$null | ConvertFrom-Json
+    if ($latestRelease) {
+        $latestReleaseVersion = $latestRelease.tagName -replace '^v', ''
+    }
 } catch {
     Write-Info "Could not fetch GitHub releases (this is OK for first release)"
 }
@@ -30,20 +32,68 @@ if ($latestRelease) {
     Write-Host "Latest GitHub release: " -NoNewline
     Write-Host $latestRelease.tagName -ForegroundColor Green -NoNewline
     Write-Host " (published: $($latestRelease.publishedAt.Substring(0,10)))"
-
-    if ($allReleases.Count -gt 1) {
-        Write-Host "Recent releases: $($allReleases.tagName -join ', ')" -ForegroundColor DarkGray
-    }
 } else {
     Write-Info "No existing releases found on GitHub"
 }
 
-# Get version if not provided
+# Auto-detect version from CHANGELOG.md
+$changelogPath = "$ProjectRoot\CHANGELOG.md"
+$detectedVersion = $null
+$changelogVersions = @()
+
+if (Test-Path $changelogPath) {
+    Write-Step "Scanning CHANGELOG.md for versions..."
+    $changelogLines = Get-Content $changelogPath
+
+    # Extract all versions from changelog
+    foreach ($line in $changelogLines) {
+        if ($line -match "^## \[([0-9]+\.[0-9]+\.[0-9]+)\]") {
+            $changelogVersions += $Matches[1]
+        }
+    }
+
+    if ($changelogVersions.Count -gt 0) {
+        Write-Host "  Found versions: $($changelogVersions -join ', ')" -ForegroundColor DarkGray
+
+        # Find the first version that's newer than the latest release
+        if ($latestReleaseVersion) {
+            foreach ($v in $changelogVersions) {
+                if ($v -ne $latestReleaseVersion) {
+                    # Simple version comparison - assumes versions are in order in changelog
+                    $detectedVersion = $v
+                    break
+                } else {
+                    # Hit the already-released version, stop looking
+                    break
+                }
+            }
+        } else {
+            # No releases yet, use the first version in changelog
+            $detectedVersion = $changelogVersions[0]
+        }
+    }
+}
+
+# Get version - auto-detected or manual
 if (-not $Version) {
-    $currentVersion = (Get-Content "$ProjectRoot\package.json" | ConvertFrom-Json).version
-    Write-Host "`nCurrent local version: " -NoNewline
-    Write-Host $currentVersion -ForegroundColor Yellow
-    $Version = Read-Host "Enter version to release"
+    if ($detectedVersion) {
+        Write-Host "`nDetected unreleased version: " -NoNewline
+        Write-Host $detectedVersion -ForegroundColor Green
+        Write-Host "Press Enter to use this version, or type a different one: " -NoNewline
+        $input = Read-Host
+        if ($input -eq "") {
+            $Version = $detectedVersion
+        } else {
+            $Version = $input
+        }
+    } else {
+        $currentVersion = (Get-Content "$ProjectRoot\package.json" | ConvertFrom-Json).version
+        Write-Host "`nCurrent local version: " -NoNewline
+        Write-Host $currentVersion -ForegroundColor Yellow
+        Write-Info "No unreleased version found in CHANGELOG.md"
+        $Version = Read-Host "Enter version to release"
+    }
+
     if (-not $Version) {
         Write-Err "Version is required"
         exit 1
@@ -91,9 +141,9 @@ if ($releaseExists) {
     Write-Host "The release will be uploaded to the existing tag."
 }
 
-# Get release notes if not provided
-if (-not $Notes) {
-    Write-Host "`nEnter release notes (press Enter twice to finish):" -ForegroundColor Yellow
+# Helper function for manual notes entry
+function Get-ManualNotes {
+    Write-Host "Enter release notes (press Enter twice to finish):" -ForegroundColor Yellow
     $notesLines = @()
     while ($true) {
         $line = Read-Host
@@ -102,9 +152,88 @@ if (-not $Notes) {
         }
         $notesLines += $line
     }
-    $Notes = ($notesLines | Where-Object { $_ -ne "" }) -join "`n"
+    return ($notesLines | Where-Object { $_ -ne "" }) -join "`n"
+}
+
+# Get release notes from CHANGELOG.md
+$changelogPath = "$ProjectRoot\CHANGELOG.md"
+$changelogNotes = $null
+
+if (-not $Notes -and (Test-Path $changelogPath)) {
+    Write-Step "Reading release notes from CHANGELOG.md..."
+
+    $changelogLines = Get-Content $changelogPath
+    $inVersionSection = $false
+    $notesLines = @()
+
+    # Parse line by line - more reliable than regex
+    foreach ($line in $changelogLines) {
+        # Check if this is the start of our version section
+        if ($line -match "^## \[$Version\]") {
+            $inVersionSection = $true
+            continue
+        }
+        # Check if we hit the next version section
+        if ($inVersionSection -and $line -match "^## \[") {
+            break
+        }
+        # Collect lines while in our version section
+        if ($inVersionSection) {
+            $notesLines += $line
+        }
+    }
+
+    if ($notesLines.Count -gt 0) {
+        $changelogNotes = ($notesLines -join "`n").Trim()
+    }
+
+    if ($changelogNotes -and $changelogNotes.Length -ge 10) {
+        Write-Success "  Found changelog entry for v$Version"
+        Write-Host "`n--- Changelog Preview ---" -ForegroundColor DarkGray
+        Write-Host $changelogNotes -ForegroundColor White
+        Write-Host "--- End Preview ---`n" -ForegroundColor DarkGray
+
+        # Ask user to confirm or override
+        Write-Host "Use this changelog? " -NoNewline
+        Write-Host "(y)es / (n)o, enter manually / (c)ancel" -ForegroundColor Yellow
+        $choice = Read-Host
+
+        switch ($choice.ToLower()) {
+            "y" { $Notes = $changelogNotes }
+            "n" {
+                Write-Host ""
+                $Notes = Get-ManualNotes
+            }
+            "c" {
+                Write-Host "Cancelled."
+                exit 0
+            }
+            default {
+                # Default to yes if just pressed enter
+                if ($choice -eq "") {
+                    $Notes = $changelogNotes
+                } else {
+                    Write-Err "Invalid choice. Cancelled."
+                    exit 1
+                }
+            }
+        }
+    } elseif ($changelogNotes) {
+        Write-Info "  Changelog entry found but seems too short ($($changelogNotes.Length) chars)"
+    } else {
+        Write-Info "  No changelog entry found for version $Version in CHANGELOG.md"
+    }
+} elseif (-not $Notes -and -not (Test-Path $changelogPath)) {
+    Write-Info "CHANGELOG.md not found at $changelogPath"
+}
+
+# Fallback to manual entry if still no notes
+if (-not $Notes) {
+    Write-Host "`n"
+    $Notes = Get-ManualNotes
     if (-not $Notes) {
-        $Notes = "v$Version release"
+        Write-Err "Release notes are required. Cancelled."
+        exit 1
     }
 }
 
@@ -226,7 +355,12 @@ Write-Step "Creating GitHub release v$Version..."
 
 # Write release notes to a temp file to avoid escaping issues
 $releaseNotesFile = "$env:TEMP\tvc-release-notes.md"
-$releaseNotesContent = "## What's New`r`n`r`n$Notes"
+# If notes already have markdown headers (from CHANGELOG.md), use as-is; otherwise add header
+if ($Notes -match "^###") {
+    $releaseNotesContent = $Notes
+} else {
+    $releaseNotesContent = "## What's New`r`n`r`n$Notes"
+}
 Set-Content -Path $releaseNotesFile -Value $releaseNotesContent -Encoding UTF8
 
 Push-Location $ProjectRoot

@@ -28,8 +28,9 @@ Thumbs.db
 *.key
 %USERPROFILE%/
 
-#Claude AI files
+#AI files
 .claude/
+.cursor/
 
 # Plans
 plans/

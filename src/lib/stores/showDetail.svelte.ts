@@ -5,6 +5,15 @@ import type { Episode } from "./shows.svelte";
 // Use separate database in dev mode to avoid breaking production data
 const DB_NAME = import.meta.env.DEV ? "sqlite:tvc_dev.db" : "sqlite:tvc.db";
 
+export interface CastMember {
+  id: number;
+  person_id: number | null;
+  name: string;
+  character_name: string | null;
+  image_url: string | null;
+  order_index: number;
+}
+
 export interface ShowDetail {
   id: number;
   name: string;
@@ -38,6 +47,8 @@ async function getDb(): Promise<Database> {
 let showDetailOpen = $state(false);
 let currentShow = $state<ShowDetail | null>(null);
 let showEpisodes = $state<Episode[]>([]);
+let showCast = $state<CastMember[]>([]);
+let castLoading = $state(false);
 let loading = $state(false);
 let error = $state<string | null>(null);
 
@@ -59,6 +70,14 @@ export function isLoading() {
 
 export function getError() {
   return error;
+}
+
+export function getShowCast() {
+  return showCast;
+}
+
+export function isCastLoading() {
+  return castLoading;
 }
 
 export async function openShowDetail(showId: number): Promise<void> {
@@ -121,7 +140,22 @@ export function closeShowDetail() {
   showDetailOpen = false;
   currentShow = null;
   showEpisodes = [];
+  showCast = [];
   error = null;
+}
+
+export async function fetchShowCast(showId: number): Promise<void> {
+  castLoading = true;
+
+  try {
+    const cast = await invoke<CastMember[]>("get_show_cast", { showId });
+    showCast = cast;
+  } catch (err) {
+    console.error("Failed to fetch show cast:", err);
+    // Don't set error state for cast - it's optional
+  } finally {
+    castLoading = false;
+  }
 }
 
 export async function syncShowEpisodes(showId: number): Promise<void> {
@@ -195,6 +229,25 @@ export async function markShowWatched(
   } catch (err) {
     console.error("Failed to mark show watched:", err);
     error = err instanceof Error ? err.message : "Failed to mark show watched";
+  }
+}
+
+export async function markEpisodeWatched(
+  episodeId: number,
+  watched: boolean
+): Promise<void> {
+  try {
+    await invoke("mark_episode_watched", { episodeId, watched });
+    // Update local state immediately
+    showEpisodes = showEpisodes.map((ep) =>
+      ep.id === episodeId ? { ...ep, watched } : ep
+    );
+    // Update calendar episodes as well
+    const { updateEpisodeWatched } = await import("./shows.svelte");
+    updateEpisodeWatched(episodeId, watched);
+  } catch (err) {
+    console.error("Failed to mark episode watched:", err);
+    error = err instanceof Error ? err.message : "Failed to mark episode watched";
   }
 }
 

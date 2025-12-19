@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { X, Trash2, RefreshCw, ExternalLink, Star, Eye, EyeOff, Calendar, Archive } from "lucide-svelte";
+  import { X, Trash2, RefreshCw, ExternalLink, Star, Eye, EyeOff, Calendar, Archive, Play, Users, FileText } from "lucide-svelte";
+  import { invoke } from "@tauri-apps/api/core";
   import {
     isMovieDetailOpen,
     getCurrentMovie,
@@ -13,8 +14,77 @@
     removeMovie,
     syncMovie,
     formatRuntime,
+    type MovieCastMember,
+    type MovieCrewMember,
+    type TrailerData,
   } from "../stores/movies.svelte";
   import { openUrl } from "@tauri-apps/plugin-opener";
+  import CastCrew from "./CastCrew.svelte";
+
+  type Tab = "overview" | "info";
+  let activeTab = $state<Tab>("overview");
+
+  // Cast/crew state managed locally
+  let localCast = $state<MovieCastMember[]>([]);
+  let localCrew = $state<MovieCrewMember[]>([]);
+  let localCastLoading = $state(false);
+
+  // Trailer state
+  let localTrailer = $state<TrailerData | null>(null);
+  let localTrailerLoading = $state(false);
+  let localTrailerError = $state<string | null>(null);
+
+  // Reset state when modal opens/closes
+  $effect(() => {
+    if (isMovieDetailOpen()) {
+      activeTab = "overview";
+      localCast = [];
+      localCrew = [];
+      localCastLoading = false;
+      localTrailer = null;
+      localTrailerLoading = false;
+      localTrailerError = null;
+    }
+  });
+
+  async function handleFetchCastCrew() {
+    const movie = getCurrentMovie();
+    if (!movie) return;
+
+    localCastLoading = true;
+    try {
+      const result = await invoke<{ cast: MovieCastMember[]; crew: MovieCrewMember[] }>(
+        "fetch_movie_cast_crew",
+        { movieId: movie.id }
+      );
+      localCast = result.cast;
+      localCrew = result.crew;
+    } catch (err) {
+      console.error("Failed to fetch cast/crew:", err);
+    } finally {
+      localCastLoading = false;
+    }
+  }
+
+  async function handleFetchTrailer() {
+    const movie = getCurrentMovie();
+    if (!movie) return;
+
+    localTrailerLoading = true;
+    localTrailerError = null;
+    try {
+      const trailer = await invoke<TrailerData | null>("get_movie_trailer", { movieId: movie.id });
+      localTrailer = trailer;
+      if (!trailer) {
+        localTrailerError = "No trailer found for this movie.";
+      }
+    } catch (err) {
+      console.error("Failed to fetch trailer:", err);
+      localTrailerError = err instanceof Error ? err.message : String(err);
+    } finally {
+      localTrailerLoading = false;
+    }
+  }
 
   async function handleRatingChange(newRating: number) {
     const movie = getCurrentMovie();
@@ -273,13 +343,98 @@
         </button>
       </div>
 
-      <!-- Overview -->
-      {#if movie.overview}
-        <div class="flex-1 overflow-auto p-6">
-          <h3 class="font-semibold text-text mb-3">Overview</h3>
-          <p class="text-text-muted leading-relaxed">{movie.overview}</p>
-        </div>
-      {/if}
+      <!-- Tabs -->
+      <div class="flex border-b border-border">
+        <button
+          type="button"
+          onclick={() => (activeTab = "overview")}
+          class="flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors border-b-2 {activeTab === 'overview'
+            ? 'text-accent border-accent'
+            : 'text-text-muted border-transparent hover:text-text hover:border-border'}"
+        >
+          <FileText class="w-4 h-4" />
+          Overview
+        </button>
+        <button
+          type="button"
+          onclick={() => (activeTab = "info")}
+          class="flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors border-b-2 {activeTab === 'info'
+            ? 'text-accent border-accent'
+            : 'text-text-muted border-transparent hover:text-text hover:border-border'}"
+        >
+          <Users class="w-4 h-4" />
+          Extra Info
+        </button>
+      </div>
+
+      <!-- Tab Content -->
+      <div class="flex-1 overflow-auto">
+        {#if activeTab === "overview"}
+          <!-- Overview Tab -->
+          <div class="p-6">
+            {#if movie.overview}
+              <h3 class="font-semibold text-text mb-3">Synopsis</h3>
+              <p class="text-text-muted leading-relaxed">{movie.overview}</p>
+            {:else}
+              <p class="text-text-muted text-center py-8">No synopsis available.</p>
+            {/if}
+          </div>
+        {:else if activeTab === "info"}
+          <!-- Extra Info Tab with Trailer and Cast & Crew -->
+          <div class="p-6 space-y-6">
+            <!-- Trailer Section -->
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="font-semibold text-text">Trailer</h3>
+                <button
+                  type="button"
+                  onclick={handleFetchTrailer}
+                  disabled={localTrailerLoading}
+                  class="px-2 py-1 text-xs bg-surface-hover hover:bg-surface-hover/80 rounded transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <RefreshCw class="w-3 h-3 {localTrailerLoading ? 'animate-spin' : ''}" />
+                  {localTrailer ? "Refresh" : "Load Trailer"}
+                </button>
+              </div>
+              {#if localTrailerLoading}
+                <div class="flex items-center justify-center py-6">
+                  <RefreshCw class="w-5 h-5 text-accent animate-spin" />
+                </div>
+              {:else if localTrailer}
+                <button
+                  type="button"
+                  onclick={() => localTrailer && openUrl(localTrailer.url)}
+                  class="flex items-center gap-3 w-full p-3 bg-background rounded-lg hover:bg-surface-hover transition-colors"
+                >
+                  <div class="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0">
+                    <Play class="w-5 h-5 text-white fill-white" />
+                  </div>
+                  <div class="text-left">
+                    <p class="text-sm font-medium text-text">{localTrailer.name}</p>
+                    <p class="text-xs text-text-muted">Watch on {localTrailer.site}</p>
+                  </div>
+                </button>
+              {:else if localTrailerError}
+                <p class="text-sm text-red-400 text-center py-4 bg-red-500/10 rounded-lg">
+                  {localTrailerError}
+                </p>
+              {:else}
+                <p class="text-sm text-text-muted text-center py-4 bg-background rounded-lg">
+                  Click "Load Trailer" to fetch trailer from TMDB.
+                </p>
+              {/if}
+            </div>
+
+            <!-- Cast & Crew Section -->
+            <CastCrew
+              cast={localCast}
+              crew={localCrew}
+              loading={localCastLoading}
+              onFetch={handleFetchCastCrew}
+            />
+          </div>
+        {/if}
+      </div>
 
       <!-- Footer with Scheduling -->
       {#if movie.scheduled_date}

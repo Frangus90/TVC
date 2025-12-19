@@ -8,3 +8,4 @@ ALTER TABLE episodes ADD COLUMN tags TEXT;
 
 
 
+

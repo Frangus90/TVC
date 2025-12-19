@@ -62,6 +62,31 @@ export interface MovieDetail {
   last_synced: string | null;
 }
 
+export interface MovieCastMember {
+  id: number;
+  person_id: number | null;
+  name: string;
+  character_name: string | null;
+  image_url: string | null;
+  order_index: number;
+}
+
+export interface MovieCrewMember {
+  id: number;
+  person_id: number | null;
+  name: string;
+  job: string | null;
+  department: string | null;
+  image_url: string | null;
+}
+
+export interface TrailerData {
+  name: string;
+  url: string;
+  embed_url: string | null;
+  site: string;
+}
+
 // Application state
 let trackedMovies = $state<TrackedMovie[]>([]);
 let archivedMovies = $state<TrackedMovie[]>([]);
@@ -77,6 +102,11 @@ let movieDetailOpen = $state(false);
 let currentMovie = $state<MovieDetail | null>(null);
 let movieDetailLoading = $state(false);
 let movieDetailError = $state<string | null>(null);
+let movieCast = $state<MovieCastMember[]>([]);
+let movieCrew = $state<MovieCrewMember[]>([]);
+let movieCastLoading = $state(false);
+let movieTrailer = $state<TrailerData | null>(null);
+let movieTrailerLoading = $state(false);
 
 // Getters
 export function getTrackedMovies() {
@@ -121,6 +151,26 @@ export function isMovieDetailLoading() {
 
 export function getMovieDetailError() {
   return movieDetailError;
+}
+
+export function getMovieCast() {
+  return movieCast;
+}
+
+export function getMovieCrew() {
+  return movieCrew;
+}
+
+export function isMovieCastLoading() {
+  return movieCastLoading;
+}
+
+export function getMovieTrailer() {
+  return movieTrailer;
+}
+
+export function isMovieTrailerLoading() {
+  return movieTrailerLoading;
 }
 
 // Actions
@@ -351,6 +401,39 @@ export function closeMovieDetail() {
   movieDetailOpen = false;
   currentMovie = null;
   movieDetailError = null;
+  movieCast = [];
+  movieCrew = [];
+  movieTrailer = null;
+}
+
+export async function fetchMovieCastCrew(movieId: number): Promise<void> {
+  movieCastLoading = true;
+
+  try {
+    const result = await invoke<{ cast: MovieCastMember[]; crew: MovieCrewMember[] }>(
+      "get_movie_cast_crew",
+      { movieId }
+    );
+    movieCast = result.cast;
+    movieCrew = result.crew;
+  } catch (err) {
+    console.error("Failed to fetch movie cast/crew:", err);
+  } finally {
+    movieCastLoading = false;
+  }
+}
+
+export async function fetchMovieTrailer(movieId: number): Promise<void> {
+  movieTrailerLoading = true;
+
+  try {
+    const trailer = await invoke<TrailerData | null>("get_movie_trailer", { movieId });
+    movieTrailer = trailer;
+  } catch (err) {
+    console.error("Failed to fetch movie trailer:", err);
+  } finally {
+    movieTrailerLoading = false;
+  }
 }
 
 // Helper to get movies for a specific date

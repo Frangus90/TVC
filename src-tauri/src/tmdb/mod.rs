@@ -293,3 +293,210 @@ pub async fn get_movie_with_release_dates(
 
     Ok((movie?, release_dates?))
 }
+
+// Cast member from TMDB credits
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CastMember {
+    pub id: i64,
+    pub name: String,
+    pub character: Option<String>,
+    pub profile_path: Option<String>,
+    pub order: Option<i32>,
+}
+
+impl CastMember {
+    pub fn image_url(&self) -> Option<String> {
+        self.profile_path.as_ref().map(|p| format!("{}{}", IMAGE_BASE, p))
+    }
+}
+
+// Crew member from TMDB credits
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CrewMember {
+    pub id: i64,
+    pub name: String,
+    pub job: Option<String>,
+    pub department: Option<String>,
+    pub profile_path: Option<String>,
+}
+
+impl CrewMember {
+    pub fn image_url(&self) -> Option<String> {
+        self.profile_path.as_ref().map(|p| format!("{}{}", IMAGE_BASE, p))
+    }
+}
+
+// Credits response from TMDB
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MovieCredits {
+    pub id: i64,
+    pub cast: Vec<CastMember>,
+    pub crew: Vec<CrewMember>,
+}
+
+/// Get cast and crew for a movie
+pub async fn get_movie_credits(
+    id: i64,
+) -> Result<MovieCredits, Box<dyn std::error::Error + Send + Sync>> {
+    let client = Client::new();
+    let response = client
+        .get(format!("{}/movie/{}/credits", API_BASE, id))
+        .bearer_auth(READ_ACCESS_TOKEN)
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(format!("TMDB API error: {}", response.status()).into());
+    }
+
+    let credits: MovieCredits = response.json().await?;
+    Ok(credits)
+}
+
+// Video/trailer from TMDB
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Video {
+    pub id: String,
+    pub key: String,
+    pub name: String,
+    pub site: String,
+    #[serde(rename = "type")]
+    pub video_type: String,
+    pub official: Option<bool>,
+}
+
+impl Video {
+    pub fn youtube_url(&self) -> Option<String> {
+        if self.site == "YouTube" {
+            Some(format!("https://www.youtube.com/watch?v={}", self.key))
+        } else {
+            None
+        }
+    }
+
+    pub fn youtube_embed_url(&self) -> Option<String> {
+        if self.site == "YouTube" {
+            Some(format!("https://www.youtube.com/embed/{}", self.key))
+        } else {
+            None
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct VideosResponse {
+    results: Vec<Video>,
+}
+
+/// Get videos/trailers for a movie
+pub async fn get_movie_videos(
+    id: i64,
+) -> Result<Vec<Video>, Box<dyn std::error::Error + Send + Sync>> {
+    let client = Client::new();
+    let response = client
+        .get(format!("{}/movie/{}/videos", API_BASE, id))
+        .bearer_auth(READ_ACCESS_TOKEN)
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(format!("TMDB API error: {}", response.status()).into());
+    }
+
+    let videos: VideosResponse = response.json().await?;
+    Ok(videos.results)
+}
+
+/// Get the main trailer for a movie (prefers official trailers)
+pub async fn get_movie_trailer(
+    id: i64,
+) -> Result<Option<Video>, Box<dyn std::error::Error + Send + Sync>> {
+    let videos = get_movie_videos(id).await?;
+
+    // Prefer official trailers from YouTube
+    let trailer = videos
+        .iter()
+        .filter(|v| v.site == "YouTube" && v.video_type == "Trailer")
+        .max_by_key(|v| v.official.unwrap_or(false) as i32)
+        .cloned();
+
+    // Fallback to any YouTube video
+    if trailer.is_some() {
+        return Ok(trailer);
+    }
+
+    Ok(videos.iter().find(|v| v.site == "YouTube").cloned())
+}
+
+// TV Show search result from TMDB
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TvSearchResult {
+    pub id: i64,
+    pub name: String,
+    pub first_air_date: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct TvSearchResponse {
+    results: Vec<TvSearchResult>,
+}
+
+/// Search for a TV show on TMDB by name
+pub async fn search_tv_show(
+    query: &str,
+) -> Result<Vec<TvSearchResult>, Box<dyn std::error::Error + Send + Sync>> {
+    let client = Client::new();
+    let response = client
+        .get(format!("{}/search/tv", API_BASE))
+        .query(&[("query", query)])
+        .bearer_auth(READ_ACCESS_TOKEN)
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(format!("TMDB API error: {}", response.status()).into());
+    }
+
+    let search: TvSearchResponse = response.json().await?;
+    Ok(search.results)
+}
+
+/// Get videos/trailers for a TV show
+pub async fn get_tv_videos(
+    id: i64,
+) -> Result<Vec<Video>, Box<dyn std::error::Error + Send + Sync>> {
+    let client = Client::new();
+    let response = client
+        .get(format!("{}/tv/{}/videos", API_BASE, id))
+        .bearer_auth(READ_ACCESS_TOKEN)
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(format!("TMDB API error: {}", response.status()).into());
+    }
+
+    let videos: VideosResponse = response.json().await?;
+    Ok(videos.results)
+}
+
+/// Get the main trailer for a TV show (prefers official trailers)
+pub async fn get_tv_trailer(
+    id: i64,
+) -> Result<Option<Video>, Box<dyn std::error::Error + Send + Sync>> {
+    let videos = get_tv_videos(id).await?;
+
+    // Prefer official trailers from YouTube
+    let trailer = videos
+        .iter()
+        .filter(|v| v.site == "YouTube" && v.video_type == "Trailer")
+        .max_by_key(|v| v.official.unwrap_or(false) as i32)
+        .cloned();
+
+    if trailer.is_some() {
+        return Ok(trailer);
+    }
+
+    // Fallback to any YouTube video (teaser, featurette, etc.)
+    Ok(videos.iter().find(|v| v.site == "YouTube").cloned())
+}

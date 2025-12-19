@@ -14,6 +14,9 @@
   import ShowDetail from "./lib/components/ShowDetail.svelte";
   import MovieDetail from "./lib/components/MovieDetail.svelte";
   import ToastContainer from "./lib/components/ToastContainer.svelte";
+  import StatisticsDashboard from "./lib/components/StatisticsDashboard.svelte";
+  import DataManagement from "./lib/components/DataManagement.svelte";
+  import UpdateModal from "./lib/components/UpdateModal.svelte";
   import { getViewMode } from "./lib/stores/calendar.svelte";
   import { checkForUpdates } from "./lib/stores/updates.svelte";
 
@@ -71,4 +74,7 @@
 <DayDetail />
 <ShowDetail />
 <MovieDetail />
+<StatisticsDashboard />
+<DataManagement />
+<UpdateModal />
 <ToastContainer />

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Plus, Tv, Trash2, RefreshCw, Check, Film, Archive, RotateCcw, CalendarX } from "lucide-svelte";
+  import { Plus, Tv, Trash2, RefreshCw, Check, Film, Archive, RotateCcw, CalendarX, BarChart3, Database } from "lucide-svelte";
   import { onMount } from "svelte";
   import {
     getTrackedShows,
@@ -26,6 +26,8 @@
     triggerUpdateCheck,
     isCheckingForUpdates,
   } from "../../stores/updates.svelte";
+  import { openStatisticsModal } from "../../stores/statistics.svelte";
+  import { openDataManagement } from "../../stores/dataManagement.svelte";
 
   type SidebarTab = "shows" | "movies" | "archive";
   let activeTab = $state<SidebarTab>("shows");
@@ -442,15 +444,33 @@
         {activeTab === "shows" ? "Add Show" : "Add Movie"}
       </button>
     {/if}
+    <div class="flex gap-2 {activeTab !== 'archive' ? 'mt-2' : ''}">
+      <button
+        type="button"
+        onclick={openStatisticsModal}
+        class="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-text-muted hover:text-text hover:bg-surface-hover rounded transition-colors"
+      >
+        <BarChart3 class="w-3 h-3" />
+        Stats
+      </button>
+      <button
+        type="button"
+        onclick={openDataManagement}
+        class="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-text-muted hover:text-text hover:bg-surface-hover rounded transition-colors"
+      >
+        <Database class="w-3 h-3" />
+        Data
+      </button>
+    </div>
     <button
       type="button"
       onclick={triggerUpdateCheck}
       disabled={isCheckingForUpdates()}
-      class="w-full flex items-center justify-center gap-2 {activeTab !== 'archive' ? 'mt-2' : ''} px-3 py-1.5 text-xs text-text-muted hover:text-text hover:bg-surface-hover rounded transition-colors disabled:opacity-50"
+      class="w-full flex items-center justify-center gap-2 mt-1 px-3 py-1.5 text-xs text-text-muted hover:text-text hover:bg-surface-hover rounded transition-colors disabled:opacity-50"
     >
       <RefreshCw class="w-3 h-3 {isCheckingForUpdates() ? 'animate-spin' : ''}" />
       {isCheckingForUpdates() ? "Checking..." : "Check for Updates"}
     </button>
-    <p class="text-xs text-text-muted text-center mt-2">v0.6.1</p>
+    <p class="text-xs text-text-muted text-center mt-2">v0.6.3</p>
   </div>
 </aside>

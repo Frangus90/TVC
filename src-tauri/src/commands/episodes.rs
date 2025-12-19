@@ -27,13 +27,16 @@ pub async fn mark_episode_watched(
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    sqlx::query(
+    let watched_at = if watched { "datetime('now')" } else { "NULL" };
+
+    sqlx::query(&format!(
         r#"
         UPDATE episodes
-        SET watched = ?
+        SET watched = ?, watched_at = {}
         WHERE id = ?
         "#,
-    )
+        watched_at
+    ))
     .bind(if watched { 1 } else { 0 })
     .bind(episode_id)
     .execute(&pool)
@@ -250,13 +253,16 @@ pub async fn mark_season_watched(
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    sqlx::query(
+    let watched_at = if watched { "datetime('now')" } else { "NULL" };
+
+    sqlx::query(&format!(
         r#"
         UPDATE episodes
-        SET watched = ?
+        SET watched = ?, watched_at = {}
         WHERE show_id = ? AND season_number = ?
         "#,
-    )
+        watched_at
+    ))
     .bind(if watched { 1 } else { 0 })
     .bind(show_id)
     .bind(season_number)
@@ -276,13 +282,16 @@ pub async fn mark_show_watched(
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    sqlx::query(
+    let watched_at = if watched { "datetime('now')" } else { "NULL" };
+
+    sqlx::query(&format!(
         r#"
         UPDATE episodes
-        SET watched = ?
+        SET watched = ?, watched_at = {}
         WHERE show_id = ?
         "#,
-    )
+        watched_at
+    ))
     .bind(if watched { 1 } else { 0 })
     .bind(show_id)
     .execute(&pool)

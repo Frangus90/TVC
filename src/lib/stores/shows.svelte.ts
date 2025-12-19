@@ -391,6 +391,16 @@ export function updateCalendarEpisodesWatched(
   });
 }
 
+// Update a single episode's watched status in calendar
+export function updateEpisodeWatched(
+  episodeId: number,
+  watched: boolean
+): void {
+  calendarEpisodes = calendarEpisodes.map((ep) =>
+    ep.id === episodeId ? { ...ep, watched } : ep
+  );
+}
+
 // Episode scheduling functions
 export async function openEpisodePicker(show: TrackedShow, date: string): Promise<void> {
   episodePickerShow = show;

@@ -1,13 +1,18 @@
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
-import { ask, message } from "@tauri-apps/plugin-dialog";
+import { message } from "@tauri-apps/plugin-dialog";
 
+// State
 let updateAvailable = $state(false);
 let updateVersion = $state<string | null>(null);
+let updateBody = $state<string | null>(null);
 let isChecking = $state(false);
 let isDownloading = $state(false);
 let downloadProgress = $state(0);
+let modalOpen = $state(false);
+let currentUpdate = $state<Update | null>(null);
 
+// Getters
 export function isUpdateAvailable() {
   return updateAvailable;
 }
@@ -28,6 +33,28 @@ export function getDownloadProgress() {
   return downloadProgress;
 }
 
+export function isUpdateModalOpen() {
+  return modalOpen;
+}
+
+export function getUpdateInfo() {
+  return {
+    version: updateVersion,
+    body: updateBody,
+  };
+}
+
+// Actions
+export function openUpdateModal() {
+  modalOpen = true;
+}
+
+export function closeUpdateModal() {
+  if (!isDownloading) {
+    modalOpen = false;
+  }
+}
+
 export async function checkForUpdates(silent = true): Promise<void> {
   console.log("[TVC Update] checkForUpdates called, silent:", silent);
   if (isChecking) {
@@ -45,23 +72,12 @@ export async function checkForUpdates(silent = true): Promise<void> {
       console.log("[TVC Update] Update available! Version:", update.version);
       updateAvailable = true;
       updateVersion = update.version;
+      updateBody = update.body || null;
+      currentUpdate = update;
 
       if (!silent) {
-        console.log("[TVC Update] Showing update dialog...");
-        const confirmed = await ask(
-          `A new version (${update.version}) is available!\n\n${update.body || "No release notes available."}\n\nWould you like to download and install it now?`,
-          {
-            title: "Update Available",
-            kind: "info",
-            okLabel: "Update Now",
-            cancelLabel: "Later",
-          }
-        );
-
-        console.log("[TVC Update] User response:", confirmed);
-        if (confirmed) {
-          await downloadAndInstall(update);
-        }
+        console.log("[TVC Update] Opening update modal...");
+        openUpdateModal();
       }
     } else {
       console.log("[TVC Update] No update available or update is null");
@@ -78,11 +94,15 @@ export async function downloadAndInstall(update?: Update): Promise<void> {
   if (isDownloading) return;
 
   try {
-    // If no update passed, check for one
+    // If no update passed, use the stored one or check for one
     if (!update) {
-      const checked = await check();
-      if (!checked?.available) return;
-      update = checked;
+      if (currentUpdate) {
+        update = currentUpdate;
+      } else {
+        const checked = await check();
+        if (!checked?.available) return;
+        update = checked;
+      }
     }
 
     isDownloading = true;
@@ -115,6 +135,11 @@ export async function downloadAndInstall(update?: Update): Promise<void> {
     isDownloading = false;
     downloadProgress = 0;
   }
+}
+
+// Called from the update modal
+export async function downloadAndInstallUpdate(): Promise<void> {
+  await downloadAndInstall(currentUpdate || undefined);
 }
 
 // Manual update trigger (for settings or menu)

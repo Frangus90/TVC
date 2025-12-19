@@ -1,0 +1,465 @@
+<script lang="ts">
+  import { X, Database, History, Copy, Trash2, RefreshCw, AlertTriangle, Check } from "lucide-svelte";
+  import {
+    isModalOpen,
+    getActiveTab,
+    isLoading,
+    getError,
+    getDatabaseStats,
+    getChangeHistory,
+    getHistoryStats,
+    getDuplicates,
+    closeDataManagement,
+    setActiveTab,
+    cleanupOrphaned,
+    cleanupUnaired,
+    optimizeDatabase,
+    runFullCleanup,
+    clearHistory,
+    mergeDuplicates,
+    formatBytes,
+    formatChangeType,
+    formatRelativeDate,
+    type DuplicatePair,
+  } from "../stores/dataManagement.svelte";
+
+  let cleanupMessage = $state<string | null>(null);
+
+  async function handleCleanupOrphaned() {
+    try {
+      const count = await cleanupOrphaned();
+      cleanupMessage = `Removed ${count} orphaned episode${count !== 1 ? "s" : ""}`;
+      setTimeout(() => (cleanupMessage = null), 3000);
+    } catch {
+      // Error handled in store
+    }
+  }
+
+  async function handleCleanupUnaired() {
+    try {
+      const count = await cleanupUnaired();
+      cleanupMessage = `Removed ${count} unaired episode${count !== 1 ? "s" : ""}`;
+      setTimeout(() => (cleanupMessage = null), 3000);
+    } catch {
+      // Error handled in store
+    }
+  }
+
+  async function handleOptimize() {
+    try {
+      await optimizeDatabase();
+      cleanupMessage = "Database optimized successfully";
+      setTimeout(() => (cleanupMessage = null), 3000);
+    } catch {
+      // Error handled in store
+    }
+  }
+
+  async function handleFullCleanup() {
+    try {
+      const result = await runFullCleanup();
+      cleanupMessage = `Cleanup complete: ${result.orphaned_episodes_removed} orphaned, ${result.unaired_episodes_removed} unaired, ${result.history_entries_removed} history entries removed`;
+      setTimeout(() => (cleanupMessage = null), 5000);
+    } catch {
+      // Error handled in store
+    }
+  }
+
+  async function handleClearHistory() {
+    if (confirm("Are you sure you want to clear all change history?")) {
+      try {
+        const count = await clearHistory();
+        cleanupMessage = `Cleared ${count} history entries`;
+        setTimeout(() => (cleanupMessage = null), 3000);
+      } catch {
+        // Error handled in store
+      }
+    }
+  }
+
+  async function handleMerge(pair: DuplicatePair, keepFirst: boolean) {
+    const keepId = keepFirst ? pair.show1_id : pair.show2_id;
+    const mergeId = keepFirst ? pair.show2_id : pair.show1_id;
+    const keepName = keepFirst ? pair.show1_name : pair.show2_name;
+
+    if (confirm(`Merge into "${keepName}"? The other show will be deleted.`)) {
+      try {
+        const result = await mergeDuplicates(keepId, mergeId);
+        cleanupMessage = `Merged: ${result.episodes_moved} moved, ${result.episodes_merged} merged`;
+        setTimeout(() => (cleanupMessage = null), 3000);
+      } catch {
+        // Error handled in store
+      }
+    }
+  }
+</script>
+
+{#if isModalOpen()}
+  {@const activeTab = getActiveTab()}
+  {@const loading = isLoading()}
+  {@const error = getError()}
+  {@const stats = getDatabaseStats()}
+  {@const history = getChangeHistory()}
+  {@const historyStats = getHistoryStats()}
+  {@const duplicates = getDuplicates()}
+
+  <!-- Backdrop -->
+  <button
+    type="button"
+    class="fixed inset-0 bg-black/60 z-50"
+    onclick={closeDataManagement}
+    aria-label="Close modal"
+  ></button>
+
+  <!-- Modal -->
+  <div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-surface rounded-xl border border-border shadow-2xl w-[800px] max-w-[95vw] max-h-[85vh] flex flex-col">
+    <!-- Header -->
+    <div class="flex items-center justify-between p-4 border-b border-border">
+      <div class="flex items-center gap-3">
+        <Database class="w-5 h-5 text-accent" />
+        <h2 class="text-lg font-semibold">Data Management</h2>
+      </div>
+      <button
+        type="button"
+        onclick={closeDataManagement}
+        class="p-2 rounded-lg hover:bg-surface-hover transition-colors"
+        aria-label="Close"
+      >
+        <X class="w-5 h-5 text-text-muted" />
+      </button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex border-b border-border">
+      <button
+        type="button"
+        onclick={() => setActiveTab("overview")}
+        class="px-4 py-3 text-sm font-medium transition-colors {activeTab === 'overview'
+          ? 'text-accent border-b-2 border-accent'
+          : 'text-text-muted hover:text-text'}"
+      >
+        Overview
+      </button>
+      <button
+        type="button"
+        onclick={() => setActiveTab("history")}
+        class="px-4 py-3 text-sm font-medium transition-colors {activeTab === 'history'
+          ? 'text-accent border-b-2 border-accent'
+          : 'text-text-muted hover:text-text'}"
+      >
+        History
+      </button>
+      <button
+        type="button"
+        onclick={() => setActiveTab("duplicates")}
+        class="px-4 py-3 text-sm font-medium transition-colors {activeTab === 'duplicates'
+          ? 'text-accent border-b-2 border-accent'
+          : 'text-text-muted hover:text-text'}"
+      >
+        Duplicates
+      </button>
+      <button
+        type="button"
+        onclick={() => setActiveTab("cleanup")}
+        class="px-4 py-3 text-sm font-medium transition-colors {activeTab === 'cleanup'
+          ? 'text-accent border-b-2 border-accent'
+          : 'text-text-muted hover:text-text'}"
+      >
+        Cleanup
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div class="flex-1 overflow-auto p-4">
+      {#if loading}
+        <div class="flex items-center justify-center py-12">
+          <RefreshCw class="w-6 h-6 text-accent animate-spin" />
+        </div>
+      {:else if error}
+        <div class="text-center py-8">
+          <AlertTriangle class="w-8 h-8 text-red-400 mx-auto mb-2" />
+          <p class="text-red-400">{error}</p>
+        </div>
+      {:else if activeTab === "overview"}
+        <!-- Overview Tab -->
+        {#if stats}
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div class="bg-background rounded-lg p-4">
+              <p class="text-2xl font-bold text-text">{stats.total_shows}</p>
+              <p class="text-sm text-text-muted">Shows</p>
+            </div>
+            <div class="bg-background rounded-lg p-4">
+              <p class="text-2xl font-bold text-text">{stats.total_episodes}</p>
+              <p class="text-sm text-text-muted">Episodes</p>
+            </div>
+            <div class="bg-background rounded-lg p-4">
+              <p class="text-2xl font-bold text-text">{stats.total_movies}</p>
+              <p class="text-sm text-text-muted">Movies</p>
+            </div>
+            <div class="bg-background rounded-lg p-4">
+              <p class="text-2xl font-bold text-text">{formatBytes(stats.database_size_bytes)}</p>
+              <p class="text-sm text-text-muted">Database Size</p>
+            </div>
+            <div class="bg-background rounded-lg p-4">
+              <p class="text-2xl font-bold text-text">{stats.change_history_count}</p>
+              <p class="text-sm text-text-muted">History Entries</p>
+            </div>
+            <div class="bg-background rounded-lg p-4">
+              <p class="text-2xl font-bold {stats.orphaned_episodes > 0 ? 'text-yellow-400' : 'text-text'}">
+                {stats.orphaned_episodes}
+              </p>
+              <p class="text-sm text-text-muted">Orphaned Episodes</p>
+            </div>
+          </div>
+
+          {#if stats.orphaned_episodes > 0 || stats.unaired_unscheduled_episodes > 0}
+            <div class="mt-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+              <div class="flex items-start gap-3">
+                <AlertTriangle class="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p class="text-sm text-yellow-200">
+                    {#if stats.orphaned_episodes > 0}
+                      {stats.orphaned_episodes} orphaned episode{stats.orphaned_episodes !== 1 ? "s" : ""} found.
+                    {/if}
+                    {#if stats.unaired_unscheduled_episodes > 0}
+                      {stats.unaired_unscheduled_episodes} unaired/unscheduled episode{stats.unaired_unscheduled_episodes !== 1 ? "s" : ""} found.
+                    {/if}
+                  </p>
+                  <button
+                    type="button"
+                    onclick={() => setActiveTab("cleanup")}
+                    class="text-sm text-yellow-400 hover:text-yellow-300 underline mt-1"
+                  >
+                    Go to Cleanup
+                  </button>
+                </div>
+              </div>
+            </div>
+          {/if}
+        {/if}
+      {:else if activeTab === "history"}
+        <!-- History Tab -->
+        <div class="space-y-4">
+          {#if historyStats}
+            <div class="flex items-center justify-between">
+              <div class="flex gap-4 text-sm text-text-muted">
+                <span>{historyStats.total_changes} total</span>
+                <span>{historyStats.watched_changes} watched</span>
+                <span>{historyStats.schedule_changes} scheduled</span>
+                <span>{historyStats.rating_changes} ratings</span>
+              </div>
+              {#if historyStats.total_changes > 0}
+                <button
+                  type="button"
+                  onclick={handleClearHistory}
+                  class="text-sm text-red-400 hover:text-red-300 flex items-center gap-1"
+                >
+                  <Trash2 class="w-3 h-3" />
+                  Clear All
+                </button>
+              {/if}
+            </div>
+          {/if}
+
+          {#if history.length === 0}
+            <div class="text-center py-12 text-text-muted">
+              <History class="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>No change history yet</p>
+              <p class="text-sm mt-1">Changes will be tracked as you use the app</p>
+            </div>
+          {:else}
+            <div class="space-y-2">
+              {#each history as item}
+                <div class="flex items-center gap-3 p-3 bg-background rounded-lg">
+                  {#if item.poster_url}
+                    <img src={item.poster_url} alt="" class="w-10 h-14 rounded object-cover" />
+                  {:else}
+                    <div class="w-10 h-14 rounded bg-surface-hover"></div>
+                  {/if}
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm text-text truncate">
+                      {item.entity_name || "Unknown"}
+                      {#if item.show_name}
+                        <span class="text-text-muted">({item.show_name})</span>
+                      {/if}
+                    </p>
+                    <p class="text-xs text-text-muted">
+                      {formatChangeType(item.change_type)}
+                      {#if item.old_value || item.new_value}
+                        : {item.old_value || "none"} → {item.new_value || "none"}
+                      {/if}
+                    </p>
+                  </div>
+                  <span class="text-xs text-text-muted">{formatRelativeDate(item.changed_at)}</span>
+                </div>
+              {/each}
+            </div>
+          {/if}
+        </div>
+      {:else if activeTab === "duplicates"}
+        <!-- Duplicates Tab -->
+        {#if duplicates.length === 0}
+          <div class="text-center py-12 text-text-muted">
+            <Check class="w-12 h-12 mx-auto mb-3 text-available opacity-50" />
+            <p>No duplicates found</p>
+            <p class="text-sm mt-1">Your library is clean!</p>
+          </div>
+        {:else}
+          <div class="space-y-4">
+            <p class="text-sm text-text-muted">
+              Found {duplicates.length} potential duplicate{duplicates.length !== 1 ? "s" : ""}
+            </p>
+            {#each duplicates as pair}
+              <div class="bg-background rounded-lg p-4">
+                <div class="flex items-center gap-2 mb-3">
+                  <Copy class="w-4 h-4 text-yellow-400" />
+                  <span class="text-sm text-yellow-400">{pair.similarity_reason}</span>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <!-- Show 1 -->
+                  <div class="border border-border rounded-lg p-3">
+                    <div class="flex gap-3">
+                      {#if pair.show1_poster_url}
+                        <img src={pair.show1_poster_url} alt="" class="w-12 h-16 rounded object-cover" />
+                      {:else}
+                        <div class="w-12 h-16 rounded bg-surface-hover"></div>
+                      {/if}
+                      <div class="flex-1">
+                        <p class="font-medium text-sm truncate">{pair.show1_name}</p>
+                        <p class="text-xs text-text-muted">
+                          {pair.show1_episode_count} episodes, {pair.show1_watched_count} watched
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onclick={() => handleMerge(pair, true)}
+                      class="w-full mt-3 px-3 py-1.5 text-xs bg-accent/20 hover:bg-accent/30 text-accent rounded transition-colors"
+                    >
+                      Keep This One
+                    </button>
+                  </div>
+                  <!-- Show 2 -->
+                  <div class="border border-border rounded-lg p-3">
+                    <div class="flex gap-3">
+                      {#if pair.show2_poster_url}
+                        <img src={pair.show2_poster_url} alt="" class="w-12 h-16 rounded object-cover" />
+                      {:else}
+                        <div class="w-12 h-16 rounded bg-surface-hover"></div>
+                      {/if}
+                      <div class="flex-1">
+                        <p class="font-medium text-sm truncate">{pair.show2_name}</p>
+                        <p class="text-xs text-text-muted">
+                          {pair.show2_episode_count} episodes, {pair.show2_watched_count} watched
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onclick={() => handleMerge(pair, false)}
+                      class="w-full mt-3 px-3 py-1.5 text-xs bg-accent/20 hover:bg-accent/30 text-accent rounded transition-colors"
+                    >
+                      Keep This One
+                    </button>
+                  </div>
+                </div>
+              </div>
+            {/each}
+          </div>
+        {/if}
+      {:else if activeTab === "cleanup"}
+        <!-- Cleanup Tab -->
+        {#if stats}
+          <div class="space-y-4">
+            <!-- Orphaned Episodes -->
+            <div class="bg-background rounded-lg p-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="font-medium">Orphaned Episodes</h3>
+                  <p class="text-sm text-text-muted">Episodes whose show has been deleted</p>
+                </div>
+                <div class="flex items-center gap-3">
+                  <span class="text-lg font-bold {stats.orphaned_episodes > 0 ? 'text-yellow-400' : 'text-text-muted'}">
+                    {stats.orphaned_episodes}
+                  </span>
+                  <button
+                    type="button"
+                    onclick={handleCleanupOrphaned}
+                    disabled={stats.orphaned_episodes === 0}
+                    class="px-3 py-1.5 text-sm bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Clean
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Unaired Episodes -->
+            <div class="bg-background rounded-lg p-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="font-medium">Unaired & Unscheduled Episodes</h3>
+                  <p class="text-sm text-text-muted">Episodes with no air date and not scheduled</p>
+                </div>
+                <div class="flex items-center gap-3">
+                  <span class="text-lg font-bold {stats.unaired_unscheduled_episodes > 0 ? 'text-yellow-400' : 'text-text-muted'}">
+                    {stats.unaired_unscheduled_episodes}
+                  </span>
+                  <button
+                    type="button"
+                    onclick={handleCleanupUnaired}
+                    disabled={stats.unaired_unscheduled_episodes === 0}
+                    class="px-3 py-1.5 text-sm bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Clean
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Optimize -->
+            <div class="bg-background rounded-lg p-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="font-medium">Optimize Database</h3>
+                  <p class="text-sm text-text-muted">VACUUM and rebuild indexes for better performance</p>
+                </div>
+                <button
+                  type="button"
+                  onclick={handleOptimize}
+                  class="px-3 py-1.5 text-sm bg-accent/20 hover:bg-accent/30 text-accent rounded transition-colors"
+                >
+                  Optimize
+                </button>
+              </div>
+            </div>
+
+            <!-- Full Cleanup -->
+            <div class="bg-background rounded-lg p-4 border border-red-500/30">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="font-medium text-red-400">Full Cleanup</h3>
+                  <p class="text-sm text-text-muted">Remove all orphaned data and optimize database</p>
+                </div>
+                <button
+                  type="button"
+                  onclick={handleFullCleanup}
+                  class="px-3 py-1.5 text-sm bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded transition-colors"
+                >
+                  Run Full Cleanup
+                </button>
+              </div>
+            </div>
+          </div>
+        {/if}
+      {/if}
+    </div>
+
+    <!-- Footer message -->
+    {#if cleanupMessage}
+      <div class="p-3 border-t border-border bg-available/10 text-available text-sm text-center">
+        {cleanupMessage}
+      </div>
+    {/if}
+  </div>
+{/if}

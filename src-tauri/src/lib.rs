@@ -15,6 +15,8 @@ const MIGRATION_003: &str = include_str!("../migrations/003_add_show_metadata.sq
 const MIGRATION_004: &str = include_str!("../migrations/004_add_episode_metadata.sql");
 const MIGRATION_005: &str = include_str!("../migrations/005_add_show_rating.sql");
 const MIGRATION_006: &str = include_str!("../migrations/006_add_movies.sql");
+const MIGRATION_007: &str = include_str!("../migrations/007_add_change_history.sql");
+const MIGRATION_008: &str = include_str!("../migrations/008_add_cast_crew.sql");
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -27,6 +29,8 @@ pub fn run() {
         MigrationDef { version: 4, sql: MIGRATION_004 },
         MigrationDef { version: 5, sql: MIGRATION_005 },
         MigrationDef { version: 6, sql: MIGRATION_006 },
+        MigrationDef { version: 7, sql: MIGRATION_007 },
+        MigrationDef { version: 8, sql: MIGRATION_008 },
     ]);
 
     let migrations = vec![
@@ -64,6 +68,18 @@ pub fn run() {
             version: 6,
             description: "add movies table and archive support",
             sql: MIGRATION_006,
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 7,
+            description: "add change history table",
+            sql: MIGRATION_007,
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 8,
+            description: "add cast and crew tables",
+            sql: MIGRATION_008,
             kind: MigrationKind::Up,
         },
     ];
@@ -113,6 +129,31 @@ pub fn run() {
             commands::movies::unarchive_movie,
             commands::movies::sync_movie,
             commands::movies::get_movies_for_range,
+            // Statistics commands
+            commands::statistics::get_watch_statistics,
+            commands::statistics::get_episodes_watched_by_period,
+            commands::statistics::get_completion_rates,
+            commands::statistics::get_watch_history,
+            // History commands
+            commands::history::get_change_history,
+            commands::history::get_change_history_stats,
+            commands::history::clear_change_history,
+            // Duplicates commands
+            commands::duplicates::find_duplicates,
+            commands::duplicates::merge_duplicates,
+            // Maintenance commands
+            commands::maintenance::get_database_stats,
+            commands::maintenance::cleanup_orphaned_episodes,
+            commands::maintenance::cleanup_unaired_episodes,
+            commands::maintenance::optimize_database,
+            commands::maintenance::run_full_cleanup,
+            // Metadata commands
+            commands::metadata::fetch_movie_cast_crew,
+            commands::metadata::fetch_show_cast,
+            commands::metadata::get_movie_cast_crew,
+            commands::metadata::get_show_cast,
+            commands::metadata::get_movie_trailer,
+            commands::metadata::get_show_trailer,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

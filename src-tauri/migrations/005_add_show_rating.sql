@@ -3,3 +3,4 @@ ALTER TABLE shows ADD COLUMN rating INTEGER;
 
 
 
+
