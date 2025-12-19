@@ -2,6 +2,12 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.6.7]
+
+### Bug Fixes
+- Fixed release notes not displaying properly in update modal
+- Markdown formatting (headers, bullet points) now renders correctly
+
 ## [0.6.6]
 
 ### Backup & Restore
