@@ -226,7 +226,6 @@ pub async fn sync_all_shows(app: AppHandle) -> Result<u32, String> {
         .await
         .map_err(|e| format!("Failed to get shows: {}", e))?;
 
-    let total = show_ids.len() as u32;
     let mut synced = 0u32;
 
     for show_id in show_ids {

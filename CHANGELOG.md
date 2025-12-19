@@ -2,6 +2,13 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.6.6]
+
+### Backup & Restore
+- Export all your data (shows, episodes, movies) to a JSON file
+- Import from a backup to restore your data
+- Find in Data Management → Overview tab
+
 ## [0.6.5]
 
 ### Network Display

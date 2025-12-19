@@ -1,7 +1,9 @@
 <script lang="ts">
   import { fade, scale } from "svelte/transition";
-  import { X, Database, History, Copy, Trash2, RefreshCw, AlertTriangle, Check, CloudDownload } from "lucide-svelte";
+  import { X, Database, History, Copy, Trash2, RefreshCw, AlertTriangle, Check, CloudDownload, Download, Upload } from "lucide-svelte";
   import { invoke } from "@tauri-apps/api/core";
+  import { save, open } from "@tauri-apps/plugin-dialog";
+  import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
   import {
     isModalOpen,
     getActiveTab,
@@ -27,6 +29,85 @@
 
   let cleanupMessage = $state<string | null>(null);
   let syncingAll = $state(false);
+  let exporting = $state(false);
+  let importing = $state(false);
+
+  interface BackupData {
+    version: string;
+    exported_at: string;
+    shows: unknown[];
+    episodes: unknown[];
+    movies: unknown[];
+  }
+
+  interface ImportResult {
+    shows_imported: number;
+    episodes_imported: number;
+    movies_imported: number;
+  }
+
+  async function handleExport() {
+    exporting = true;
+    try {
+      // Get backup data from backend
+      const data = await invoke<BackupData>("export_database");
+
+      // Ask user where to save
+      const filePath = await save({
+        defaultPath: `tvc-backup-${new Date().toISOString().split("T")[0]}.json`,
+        filters: [{ name: "JSON", extensions: ["json"] }],
+      });
+
+      if (filePath) {
+        await writeTextFile(filePath, JSON.stringify(data, null, 2));
+        cleanupMessage = `Exported ${data.shows.length} shows, ${data.episodes.length} episodes, ${data.movies.length} movies`;
+        setTimeout(() => (cleanupMessage = null), 5000);
+      }
+    } catch (err) {
+      cleanupMessage = `Export failed: ${err}`;
+      setTimeout(() => (cleanupMessage = null), 5000);
+    } finally {
+      exporting = false;
+    }
+  }
+
+  async function handleImport() {
+    // Ask user to select file
+    const filePath = await open({
+      filters: [{ name: "JSON", extensions: ["json"] }],
+      multiple: false,
+    });
+
+    if (!filePath || typeof filePath !== "string") return;
+
+    // Confirm before proceeding
+    if (!confirm("This will REPLACE all your current data with the backup. Are you sure?")) {
+      return;
+    }
+
+    importing = true;
+    try {
+      // Read and parse the file
+      const content = await readTextFile(filePath);
+      const data = JSON.parse(content) as BackupData;
+
+      // Validate structure
+      if (!data.version || !data.shows || !data.episodes || !data.movies) {
+        throw new Error("Invalid backup file format");
+      }
+
+      // Import via backend
+      const result = await invoke<ImportResult>("import_database", { data });
+
+      cleanupMessage = `Imported ${result.shows_imported} shows, ${result.episodes_imported} episodes, ${result.movies_imported} movies. Please restart the app.`;
+      setTimeout(() => (cleanupMessage = null), 10000);
+    } catch (err) {
+      cleanupMessage = `Import failed: ${err}`;
+      setTimeout(() => (cleanupMessage = null), 5000);
+    } finally {
+      importing = false;
+    }
+  }
 
   async function handleSyncAllShows() {
     syncingAll = true;
@@ -257,6 +338,44 @@
               </div>
             </div>
           {/if}
+
+          <!-- Export / Import Section -->
+          <div class="mt-6 p-4 bg-background rounded-lg border border-border">
+            <h3 class="text-sm font-medium text-text mb-3">Backup & Restore</h3>
+            <p class="text-xs text-text-muted mb-4">
+              Export your data to a JSON file for backup, or import from a previous backup.
+            </p>
+            <div class="flex gap-3">
+              <button
+                type="button"
+                onclick={handleExport}
+                disabled={exporting}
+                class="flex-1 px-3 py-2 text-sm bg-accent/20 hover:bg-accent/30 text-accent rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {#if exporting}
+                  <RefreshCw class="w-4 h-4 animate-spin" />
+                  Exporting...
+                {:else}
+                  <Download class="w-4 h-4" />
+                  Export Data
+                {/if}
+              </button>
+              <button
+                type="button"
+                onclick={handleImport}
+                disabled={importing}
+                class="flex-1 px-3 py-2 text-sm bg-surface-hover hover:bg-surface-hover/80 text-text rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {#if importing}
+                  <RefreshCw class="w-4 h-4 animate-spin" />
+                  Importing...
+                {:else}
+                  <Upload class="w-4 h-4" />
+                  Import Data
+                {/if}
+              </button>
+            </div>
+          </div>
         {/if}
       {:else if activeTab === "history"}
         <!-- History Tab -->

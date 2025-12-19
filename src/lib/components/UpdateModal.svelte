@@ -14,25 +14,74 @@
   function parseMarkdown(text: string): string {
     if (!text) return "";
 
-    return text
-      .split("\n")
-      .map((line) => {
-        // Headers: ### Title
-        if (line.startsWith("### ")) {
-          return `<h3 class="text-base font-semibold text-text mt-4 mb-2">${line.slice(4)}</h3>`;
+    // Normalize line endings
+    let normalized = text
+      .replace(/\r\n/g, "\n")
+      .replace(/\r/g, "\n");
+
+    // Handle various flattened/malformed formats from GitHub releases
+    // Pattern: "v0.6.6 - ### Header - - bullet - - bullet"
+    // Or: lines with " - " prefix before content
+
+    // First, split by common separator patterns
+    normalized = normalized
+      // Split "### " headers that come after " - "
+      .replace(/\s+-\s+###\s*/g, "\n### ")
+      // Split consecutive bullets " - - " into separate lines
+      .replace(/\s+-\s+-\s+/g, "\n- ")
+      // Handle any remaining " - " that precedes content
+      .replace(/^\s*-\s+/gm, "- ")
+      // Clean up multiple consecutive newlines
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+
+    const lines = normalized.split("\n");
+    const result: string[] = [];
+
+    for (const line of lines) {
+      // Remove leading " - " prefix that GitHub sometimes adds
+      let trimmed = line.trim().replace(/^-\s+/, "");
+
+      // Skip empty lines
+      if (trimmed === "" || trimmed === "-") {
+        continue;
+      }
+
+      // Skip version lines like "v0.6.5" or "[0.6.5]"
+      if (/^v?\[?\d+\.\d+\.\d+\]?$/.test(trimmed)) {
+        continue;
+      }
+
+      // Headers: ### Title (with or without leading dash)
+      if (trimmed.startsWith("### ")) {
+        result.push(`<h3 class="text-base font-semibold text-text mt-4 mb-2">${trimmed.slice(4)}</h3>`);
+        continue;
+      }
+
+      // Check if line is a header hidden behind "### " pattern
+      const headerMatch = trimmed.match(/^###\s*(.+)/);
+      if (headerMatch) {
+        result.push(`<h3 class="text-base font-semibold text-text mt-4 mb-2">${headerMatch[1]}</h3>`);
+        continue;
+      }
+
+      // Bullets: - Item (after our cleanup, should start with text)
+      // Original line started with "- " or was cleaned from " - - "
+      if (line.trim().startsWith("- ") || line.trim().startsWith("- -")) {
+        const content = trimmed.replace(/^-\s*/, "");
+        if (content) {
+          result.push(`<li class="text-sm text-text-muted ml-4">${content}</li>`);
         }
-        // Bullets: - Item
-        if (line.startsWith("- ")) {
-          return `<li class="text-sm text-text-muted ml-4">${line.slice(2)}</li>`;
-        }
-        // Empty lines
-        if (line.trim() === "") {
-          return "";
-        }
-        // Regular text
-        return `<p class="text-sm text-text-muted">${line}</p>`;
-      })
-      .join("\n");
+        continue;
+      }
+
+      // Regular text (non-empty)
+      if (trimmed) {
+        result.push(`<p class="text-sm text-text-muted">${trimmed}</p>`);
+      }
+    }
+
+    return result.join("\n");
   }
 </script>
 

@@ -6,6 +6,7 @@ pub mod history;
 pub mod duplicates;
 pub mod maintenance;
 pub mod metadata;
+pub mod backup;
 
 use crate::tvdb::{self, EpisodeBase, SearchResult, SeriesExtended};
 
