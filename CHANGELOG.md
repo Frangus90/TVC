@@ -2,6 +2,13 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.6.8]
+
+### Data Management
+- Cleanup tab now shows which episodes will be deleted before cleaning
+- Expandable lists display show name, season/episode, and episode title
+- Preview available for both orphaned and unaired/unscheduled episodes
+
 ## [0.6.7]
 
 ### Bug Fixes

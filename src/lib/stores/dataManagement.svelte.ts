@@ -58,6 +58,14 @@ export interface CleanupResult {
   history_entries_removed: number;
 }
 
+export interface CleanupEpisodePreview {
+  id: number;
+  show_name: string;
+  season_number: number;
+  episode_number: number;
+  name: string | null;
+}
+
 // State
 let modalOpen = $state(false);
 let activeTab = $state<"overview" | "history" | "duplicates" | "cleanup">("overview");
@@ -69,6 +77,8 @@ let databaseStats = $state<DatabaseStats | null>(null);
 let changeHistory = $state<ChangeHistoryItem[]>([]);
 let historyStats = $state<ChangeHistoryStats | null>(null);
 let duplicates = $state<DuplicatePair[]>([]);
+let orphanedEpisodes = $state<CleanupEpisodePreview[]>([]);
+let unairedEpisodes = $state<CleanupEpisodePreview[]>([]);
 
 // Getters
 export function isModalOpen() {
@@ -103,6 +113,14 @@ export function getDuplicates() {
   return duplicates;
 }
 
+export function getOrphanedEpisodes() {
+  return orphanedEpisodes;
+}
+
+export function getUnairedEpisodes() {
+  return unairedEpisodes;
+}
+
 // Actions
 export function openDataManagement() {
   modalOpen = true;
@@ -119,8 +137,11 @@ export function setActiveTab(tab: "overview" | "history" | "duplicates" | "clean
   activeTab = tab;
 
   // Load data for the tab
-  if (tab === "overview" || tab === "cleanup") {
+  if (tab === "overview") {
     loadDatabaseStats();
+  } else if (tab === "cleanup") {
+    loadDatabaseStats();
+    loadCleanupPreviews();
   } else if (tab === "history") {
     loadChangeHistory();
   } else if (tab === "duplicates") {
@@ -176,6 +197,19 @@ export async function loadDuplicates() {
   }
 }
 
+export async function loadCleanupPreviews() {
+  try {
+    const [orphaned, unaired] = await Promise.all([
+      invoke<CleanupEpisodePreview[]>("get_orphaned_episodes_preview"),
+      invoke<CleanupEpisodePreview[]>("get_unaired_episodes_preview"),
+    ]);
+    orphanedEpisodes = orphaned;
+    unairedEpisodes = unaired;
+  } catch (err) {
+    console.error("Failed to load cleanup previews:", err);
+  }
+}
+
 // Cleanup actions
 export async function cleanupOrphaned(): Promise<number> {
   loading = true;
@@ -184,6 +218,7 @@ export async function cleanupOrphaned(): Promise<number> {
   try {
     const count = await invoke<number>("cleanup_orphaned_episodes");
     await loadDatabaseStats();
+    await loadCleanupPreviews();
     return count;
   } catch (err) {
     console.error("Failed to cleanup orphaned episodes:", err);
@@ -201,6 +236,7 @@ export async function cleanupUnaired(): Promise<number> {
   try {
     const count = await invoke<number>("cleanup_unaired_episodes");
     await loadDatabaseStats();
+    await loadCleanupPreviews();
     return count;
   } catch (err) {
     console.error("Failed to cleanup unaired episodes:", err);

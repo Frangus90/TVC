@@ -21,6 +21,15 @@ pub struct CleanupResult {
     pub history_entries_removed: i64,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CleanupEpisodePreview {
+    pub id: i64,
+    pub show_name: String,
+    pub season_number: i32,
+    pub episode_number: i32,
+    pub name: Option<String>,
+}
+
 /// Get database statistics
 #[tauri::command]
 pub async fn get_database_stats(app: AppHandle) -> Result<DatabaseStats, String> {
@@ -125,6 +134,71 @@ pub async fn cleanup_unaired_episodes(app: AppHandle) -> Result<i64, String> {
     .map_err(|e| format!("Failed to cleanup unaired episodes: {}", e))?;
 
     Ok(result.rows_affected() as i64)
+}
+
+/// Get preview of orphaned episodes (episodes whose show no longer exists)
+#[tauri::command]
+pub async fn get_orphaned_episodes_preview(app: AppHandle) -> Result<Vec<CleanupEpisodePreview>, String> {
+    let pool = connection::get_pool(&app).await
+        .map_err(|e| format!("Database error: {}", e))?;
+
+    let rows = sqlx::query(
+        r#"SELECT e.id, e.show_id, e.season_number, e.episode_number, e.name
+           FROM episodes e
+           WHERE NOT EXISTS (SELECT 1 FROM shows s WHERE s.id = e.show_id)
+           ORDER BY e.show_id, e.season_number, e.episode_number
+           LIMIT 50"#
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| format!("Failed to get orphaned episodes: {}", e))?;
+
+    let episodes: Vec<CleanupEpisodePreview> = rows.iter().map(|row| {
+        let show_id: i64 = row.get("show_id");
+        CleanupEpisodePreview {
+            id: row.get("id"),
+            show_name: format!("Unknown Show (ID: {})", show_id),
+            season_number: row.get("season_number"),
+            episode_number: row.get("episode_number"),
+            name: row.get("name"),
+        }
+    }).collect();
+
+    Ok(episodes)
+}
+
+/// Get preview of unaired/unscheduled episodes
+#[tauri::command]
+pub async fn get_unaired_episodes_preview(app: AppHandle) -> Result<Vec<CleanupEpisodePreview>, String> {
+    let pool = connection::get_pool(&app).await
+        .map_err(|e| format!("Database error: {}", e))?;
+
+    let rows = sqlx::query(
+        r#"SELECT e.id, COALESCE(s.name, 'Unknown Show') as show_name,
+                  e.season_number, e.episode_number, e.name
+           FROM episodes e
+           LEFT JOIN shows s ON s.id = e.show_id
+           WHERE (e.aired IS NULL OR e.aired = '')
+           AND (e.scheduled_date IS NULL OR e.scheduled_date = '')
+           AND e.watched = 0
+           ORDER BY show_name, e.season_number, e.episode_number
+           LIMIT 50"#
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| format!("Failed to get unaired episodes: {}", e))?;
+
+    let episodes: Vec<CleanupEpisodePreview> = rows.iter().map(|row| {
+        CleanupEpisodePreview {
+            id: row.get("id"),
+            show_name: row.get("show_name"),
+            season_number: row.get("season_number"),
+            episode_number: row.get("episode_number"),
+            name: row.get("name"),
+        }
+    }).collect();
+
+    Ok(episodes)
 }
 
 /// Optimize database (VACUUM and rebuild indexes)

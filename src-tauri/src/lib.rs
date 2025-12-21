@@ -147,6 +147,8 @@ pub fn run() {
             commands::maintenance::get_database_stats,
             commands::maintenance::cleanup_orphaned_episodes,
             commands::maintenance::cleanup_unaired_episodes,
+            commands::maintenance::get_orphaned_episodes_preview,
+            commands::maintenance::get_unaired_episodes_preview,
             commands::maintenance::optimize_database,
             commands::maintenance::run_full_cleanup,
             // Metadata commands

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { fade, scale } from "svelte/transition";
-  import { X, Database, History, Copy, Trash2, RefreshCw, AlertTriangle, Check, CloudDownload, Download, Upload } from "lucide-svelte";
+  import { X, Database, History, Copy, Trash2, RefreshCw, AlertTriangle, Check, CloudDownload, Download, Upload, ChevronDown } from "lucide-svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { save, open } from "@tauri-apps/plugin-dialog";
   import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
@@ -13,6 +13,8 @@
     getChangeHistory,
     getHistoryStats,
     getDuplicates,
+    getOrphanedEpisodes,
+    getUnairedEpisodes,
     closeDataManagement,
     setActiveTab,
     cleanupOrphaned,
@@ -25,12 +27,15 @@
     formatChangeType,
     formatRelativeDate,
     type DuplicatePair,
+    type CleanupEpisodePreview,
   } from "../stores/dataManagement.svelte";
 
   let cleanupMessage = $state<string | null>(null);
   let syncingAll = $state(false);
   let exporting = $state(false);
   let importing = $state(false);
+  let orphanedExpanded = $state(false);
+  let unairedExpanded = $state(false);
 
   interface BackupData {
     version: string;
@@ -200,6 +205,8 @@
   {@const history = getChangeHistory()}
   {@const historyStats = getHistoryStats()}
   {@const duplicates = getDuplicates()}
+  {@const orphanedEpisodesList = getOrphanedEpisodes()}
+  {@const unairedEpisodesList = getUnairedEpisodes()}
 
   <!-- Backdrop -->
   <button
@@ -532,6 +539,36 @@
                   </button>
                 </div>
               </div>
+              {#if orphanedEpisodesList.length > 0}
+                <button
+                  type="button"
+                  onclick={() => orphanedExpanded = !orphanedExpanded}
+                  class="mt-3 flex items-center gap-2 text-sm text-text-muted hover:text-text transition-colors"
+                >
+                  <ChevronDown class="w-4 h-4 transition-transform {orphanedExpanded ? 'rotate-180' : ''}" />
+                  {orphanedExpanded ? 'Hide' : 'Show'} affected episodes
+                </button>
+                {#if orphanedExpanded}
+                  <div class="mt-2 p-3 bg-surface rounded-lg border border-border max-h-48 overflow-y-auto">
+                    <ul class="space-y-1 text-sm">
+                      {#each orphanedEpisodesList.slice(0, 20) as ep}
+                        <li class="text-text-muted">
+                          <span class="text-text">{ep.show_name}</span>
+                          <span class="mx-1">-</span>
+                          <span>S{String(ep.season_number).padStart(2, '0')}E{String(ep.episode_number).padStart(2, '0')}</span>
+                          {#if ep.name}
+                            <span class="mx-1">-</span>
+                            <span class="text-text">{ep.name}</span>
+                          {/if}
+                        </li>
+                      {/each}
+                      {#if orphanedEpisodesList.length > 20}
+                        <li class="text-text-muted italic">...and {orphanedEpisodesList.length - 20} more</li>
+                      {/if}
+                    </ul>
+                  </div>
+                {/if}
+              {/if}
             </div>
 
             <!-- Unaired Episodes -->
@@ -555,6 +592,36 @@
                   </button>
                 </div>
               </div>
+              {#if unairedEpisodesList.length > 0}
+                <button
+                  type="button"
+                  onclick={() => unairedExpanded = !unairedExpanded}
+                  class="mt-3 flex items-center gap-2 text-sm text-text-muted hover:text-text transition-colors"
+                >
+                  <ChevronDown class="w-4 h-4 transition-transform {unairedExpanded ? 'rotate-180' : ''}" />
+                  {unairedExpanded ? 'Hide' : 'Show'} affected episodes
+                </button>
+                {#if unairedExpanded}
+                  <div class="mt-2 p-3 bg-surface rounded-lg border border-border max-h-48 overflow-y-auto">
+                    <ul class="space-y-1 text-sm">
+                      {#each unairedEpisodesList.slice(0, 20) as ep}
+                        <li class="text-text-muted">
+                          <span class="text-text">{ep.show_name}</span>
+                          <span class="mx-1">-</span>
+                          <span>S{String(ep.season_number).padStart(2, '0')}E{String(ep.episode_number).padStart(2, '0')}</span>
+                          {#if ep.name}
+                            <span class="mx-1">-</span>
+                            <span class="text-text">{ep.name}</span>
+                          {/if}
+                        </li>
+                      {/each}
+                      {#if unairedEpisodesList.length > 20}
+                        <li class="text-text-muted italic">...and {unairedEpisodesList.length - 20} more</li>
+                      {/if}
+                    </ul>
+                  </div>
+                {/if}
+              {/if}
             </div>
 
             <!-- Optimize -->
