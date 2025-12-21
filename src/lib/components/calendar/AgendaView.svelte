@@ -57,9 +57,12 @@
       };
     });
 
-    const movies = getCalendarMovies().map((movie): CalendarItem => {
-      const displayDate = movie.scheduled_date || movie.digital_release_date || "";
-      const hasReleased = displayDate ? new Date(displayDate) <= new Date() : false;
+    const movies = getCalendarMovies()
+      .filter((movie) => movie.scheduled_date) // Only include movies with scheduled_date
+      .map((movie): CalendarItem => {
+        // Only use scheduled_date (not digital_release_date)
+        const displayDate = movie.scheduled_date || "";
+        const hasReleased = displayDate ? new Date(displayDate) <= new Date() : false;
       return {
         type: "movie",
         id: movie.id,

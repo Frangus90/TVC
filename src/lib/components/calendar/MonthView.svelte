@@ -72,10 +72,9 @@
 
   function getMoviesForDay(day: Date): CalendarMovie[] {
     return getCalendarMovies().filter((movie) => {
-      // Check scheduled_date first, then digital_release_date
-      const displayDate = movie.scheduled_date || movie.digital_release_date;
-      if (!displayDate) return false;
-      return isSameDay(parseISO(displayDate), day);
+      // Only show movies with a scheduled_date (not digital_release_date)
+      if (!movie.scheduled_date) return false;
+      return isSameDay(parseISO(movie.scheduled_date), day);
     });
   }
 
@@ -108,7 +107,8 @@
     });
 
     const movies = getMoviesForDay(day).map((movie): CalendarItem => {
-      const displayDate = movie.scheduled_date || movie.digital_release_date;
+      // Only use scheduled_date (not digital_release_date)
+      const displayDate = movie.scheduled_date;
       const hasReleased = displayDate ? new Date(displayDate) <= new Date() : false;
       return {
         type: "movie",

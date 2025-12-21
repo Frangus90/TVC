@@ -436,11 +436,11 @@ export async function fetchMovieTrailer(movieId: number): Promise<void> {
   }
 }
 
-// Helper to get movies for a specific date
+// Helper to get movies for a specific date (only scheduled movies)
 export function getMoviesForDate(date: string): CalendarMovie[] {
   return calendarMovies.filter((m) => {
-    const displayDate = m.scheduled_date || m.digital_release_date;
-    return displayDate === date;
+    // Only return movies with a scheduled_date (not digital_release_date)
+    return m.scheduled_date === date;
   });
 }
 

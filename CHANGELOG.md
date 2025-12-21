@@ -2,9 +2,18 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.6.9]
+
+### Calendar Behavior
+
+- Movies no longer automatically appear on the calendar when added
+- Movies will only appear on the calendar if manually scheduled
+- Digital release dates are still stored and visible in movie details, but don't affect calendar display
+
 ## [0.6.8]
 
 ### Data Management
+
 - Cleanup tab now shows which episodes will be deleted before cleaning
 - Expandable lists display show name, season/episode, and episode title
 - Preview available for both orphaned and unaired/unscheduled episodes
@@ -12,12 +21,14 @@ All notable changes to TVC will be documented in this file.
 ## [0.6.7]
 
 ### Bug Fixes
+
 - Fixed release notes not displaying properly in update modal
 - Markdown formatting (headers, bullet points) now renders correctly
 
 ## [0.6.6]
 
 ### Backup & Restore
+
 - Export all your data (shows, episodes, movies) to a JSON file
 - Import from a backup to restore your data
 - Find in Data Management → Overview tab
@@ -25,10 +36,12 @@ All notable changes to TVC will be documented in this file.
 ## [0.6.5]
 
 ### Network Display
+
 - TV shows now display their network in calendar views (e.g., "Fallout | Prime Video")
 - Network info shown in Month, Week, and Agenda views
 
 ### Sync Improvements
+
 - Fixed refresh button only working once per session
 - Added "Sync All Shows" button in Data Management to refresh all shows from TVDB
 - Syncing now properly updates network information from TVDB
@@ -36,6 +49,7 @@ All notable changes to TVC will be documented in this file.
 ## [0.6.4]
 
 ### Improved Updates
+
 - Redesigned update notification with app-themed styling
 - Release notes now display with proper markdown formatting
 - Download progress indicator with percentage
@@ -43,27 +57,32 @@ All notable changes to TVC will be documented in this file.
 ## [0.6.3]
 
 ### Trailers
+
 - Watch trailers for movies and TV shows directly from the Extra Info tab
 - Trailers fetched from TMDB open in your browser
 
 ### Cast & Crew
+
 - View cast members for TV shows (from TVDB)
 - View cast and key crew for movies (from TMDB)
 - New "Extra Info" tab in show/movie details
 
 ### Statistics Dashboard
+
 - Total watch time tracking
 - Episodes and movies watched counts
 - Show completion rates
 - Watch history timeline
 
 ### Data Management
+
 - Find and merge duplicate shows
 - Clean up orphaned episodes
 - Database optimization tools
 - Change history tracking
 
 ### Bug Fixes
+
 - Fixed database query compatibility issue in statistics
 
 ## [0.6.1]

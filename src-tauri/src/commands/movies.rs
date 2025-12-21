@@ -365,19 +365,16 @@ pub async fn get_movies_for_range(
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    // Get movies where scheduled_date OR digital_release_date falls in range
+    // Get movies where scheduled_date falls in range (only manually scheduled movies appear on calendar)
     let rows = sqlx::query(
         r#"
         SELECT id, title, poster_url, runtime, scheduled_date, digital_release_date, watched, color
         FROM movies
         WHERE archived = 0
-          AND ((scheduled_date >= ? AND scheduled_date <= ?)
-               OR (digital_release_date >= ? AND digital_release_date <= ?))
-        ORDER BY COALESCE(scheduled_date, digital_release_date), title
+          AND scheduled_date >= ? AND scheduled_date <= ?
+        ORDER BY scheduled_date, title
         "#,
     )
-    .bind(&start_date)
-    .bind(&end_date)
     .bind(&start_date)
     .bind(&end_date)
     .fetch_all(&pool)
