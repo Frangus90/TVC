@@ -102,7 +102,7 @@
   <!-- Modal -->
   <div
     transition:scale={{ duration: 200, start: 0.95, opacity: 0 }}
-    class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-surface rounded-xl border border-border shadow-2xl w-[500px] max-w-[95vw] max-h-[80vh] flex flex-col"
+    class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-surface rounded-xl border border-border shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col"
   >
     <!-- Header -->
     <div class="flex items-center justify-between p-5 border-b border-border">
@@ -130,7 +130,7 @@
       <h3 class="text-sm font-medium text-text-muted uppercase tracking-wide mb-3">
         What's New
       </h3>
-      <div class="bg-background rounded-lg p-4 max-h-[300px] overflow-auto">
+      <div class="bg-background rounded-lg p-4 overflow-auto">
         {#if info?.body}
           {@html parseMarkdown(info.body)}
         {:else}
