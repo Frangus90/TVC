@@ -11,6 +11,7 @@
     scheduleMultipleEpisodes,
     type ShowEpisode,
   } from "../stores/shows.svelte";
+  import { getThemeSettings } from "../stores/theme.svelte";
 
   // Local UI state
   let searchQuery = $state("");
@@ -209,10 +210,12 @@
     aria-label="Close modal"
   ></button>
 
+  {@const theme = getThemeSettings()}
+  
   <!-- Modal -->
   <div
     transition:scale={{ duration: 200, start: 0.95, opacity: 0 }}
-    class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl z-50 bg-surface rounded-xl border border-border shadow-2xl max-h-[80vh] flex flex-col"
+    class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-6xl z-50 bg-surface rounded-xl border border-border shadow-2xl max-h-[90vh] flex flex-col"
   >
     <!-- Header -->
     <div class="flex items-center justify-between p-4 border-b border-border">
@@ -409,15 +412,17 @@
                         {/if}
                       </div>
                       <!-- Episode thumbnail -->
-                      {#if episode.image_url}
-                        <img
-                          src={episode.image_url}
-                          alt=""
-                          class="w-12 h-[72px] rounded object-cover flex-shrink-0"
-                          loading="lazy"
-                        />
-                      {:else}
-                        <div class="w-12 h-[72px] rounded bg-border flex-shrink-0"></div>
+                      {#if !theme.hidePosters}
+                        {#if episode.image_url}
+                          <img
+                            src={episode.image_url}
+                            alt=""
+                            class="w-12 h-[72px] rounded object-cover flex-shrink-0"
+                            loading="lazy"
+                          />
+                        {:else}
+                          <div class="w-12 h-[72px] rounded bg-border flex-shrink-0"></div>
+                        {/if}
                       {/if}
                       <span class="text-sm text-text-muted w-10 flex-shrink-0 font-mono">
                         E{formatEpisodeNumber(episode.episode_number)}

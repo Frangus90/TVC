@@ -5,7 +5,6 @@
   import {
     getThemeSettings,
     updateThemeSettings,
-    loadThemeSettings,
   } from "../stores/theme.svelte";
 
   let open = $state(false);
@@ -13,10 +12,6 @@
   function getSettings() {
     return getThemeSettings();
   }
-
-  onMount(() => {
-    loadThemeSettings();
-  });
 
   async function handleAccentColorChange(event: Event) {
     const input = event.target as HTMLInputElement;
@@ -36,6 +31,11 @@
   async function handleColorblindFriendlyChange(event: Event) {
     const input = event.target as HTMLInputElement;
     await updateThemeSettings({ colorblindFriendly: input.checked });
+  }
+
+  async function handleHidePostersChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    await updateThemeSettings({ hidePosters: input.checked });
   }
 </script>
 
@@ -139,6 +139,26 @@
             type="checkbox"
             checked={getSettings().compactSpacing}
             onchange={handleCompactSpacingChange}
+            class="sr-only peer"
+          />
+          <div class="w-11 h-6 bg-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+        </label>
+      </div>
+
+      <!-- Hide Posters -->
+      <div class="flex items-center justify-between">
+        <div>
+          <span class="block text-sm font-medium text-text-muted mb-1">
+            Hide Posters
+          </span>
+          <p class="text-xs text-text-muted">Hide TV and movie posters in the sidebar</p>
+        </div>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input
+            id="hide-posters"
+            type="checkbox"
+            checked={getSettings().hidePosters}
+            onchange={handleHidePostersChange}
             class="sr-only peer"
           />
           <div class="w-11 h-6 bg-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>

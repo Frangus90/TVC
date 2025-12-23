@@ -1,7 +1,5 @@
 <script lang="ts">
-  import { type Component } from "svelte";
-
-  export let icon: Component | null = null;
+  export let icon: any = null;
   export let title: string;
   export let message: string;
   export let action: { label: string; onclick: () => void } | null = null;
@@ -22,6 +20,8 @@
     </button>
   {/if}
 </div>
+
+
 
 
 

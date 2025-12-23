@@ -20,6 +20,7 @@
   import { type TrailerData } from "../stores/movies.svelte";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import CastCrew from "./CastCrew.svelte";
+  import { openConfirmDialog } from "../stores/confirmDialog.svelte";
 
   type Tab = "episodes" | "info";
   let activeTab = $state<Tab>("episodes");
@@ -93,7 +94,15 @@
     const show = getCurrentShow();
     if (!show) return;
 
-    if (confirm(`Are you sure you want to remove "${show.name}"?`)) {
+    const confirmed = await openConfirmDialog({
+      title: "Remove Show",
+      message: `Are you sure you want to remove "${show.name}"?`,
+      type: "danger",
+      confirmLabel: "Remove",
+      cancelLabel: "Cancel",
+    });
+
+    if (confirmed) {
       await removeShow(show.id);
       closeShowDetail();
     }

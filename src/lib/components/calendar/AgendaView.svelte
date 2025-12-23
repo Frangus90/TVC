@@ -22,8 +22,13 @@
     const futureDate = addDays(today, 60);
     const startStr = format(today, "yyyy-MM-dd");
     const endStr = format(futureDate, "yyyy-MM-dd");
-    loadEpisodesForRange(startStr, endStr);
-    loadMoviesForRange(startStr, endStr);
+    // Load episodes and movies in parallel for better performance
+    Promise.all([
+      loadEpisodesForRange(startStr, endStr),
+      loadMoviesForRange(startStr, endStr),
+    ]).catch((error) => {
+      console.error("Failed to load calendar data:", error);
+    });
   });
 
   // Unified calendar item type

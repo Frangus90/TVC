@@ -27,8 +27,8 @@
     formatChangeType,
     formatRelativeDate,
     type DuplicatePair,
-    type CleanupEpisodePreview,
   } from "../stores/dataManagement.svelte";
+  import { openConfirmDialog } from "../stores/confirmDialog.svelte";
 
   let cleanupMessage = $state<string | null>(null);
   let syncingAll = $state(false);
@@ -86,7 +86,15 @@
     if (!filePath || typeof filePath !== "string") return;
 
     // Confirm before proceeding
-    if (!confirm("This will REPLACE all your current data with the backup. Are you sure?")) {
+    const confirmed = await openConfirmDialog({
+      title: "Import Backup",
+      message: "This will REPLACE all your current data with the backup. Are you sure?",
+      type: "danger",
+      confirmLabel: "Import",
+      cancelLabel: "Cancel",
+    });
+
+    if (!confirmed) {
       return;
     }
 
@@ -114,11 +122,27 @@
     }
   }
 
-  async function handleSyncAllShows() {
+  async function handleSyncAll() {
     syncingAll = true;
     try {
-      const synced = await invoke<number>("sync_all_shows");
-      cleanupMessage = `Synced ${synced} show${synced !== 1 ? "s" : ""} from TVDB`;
+      const [showsSynced, moviesSynced] = await Promise.all([
+        invoke<number>("sync_all_shows"),
+        invoke<number>("sync_all_movies"),
+      ]);
+      
+      const parts: string[] = [];
+      if (showsSynced > 0) {
+        parts.push(`${showsSynced} show${showsSynced !== 1 ? "s" : ""} from TVDB`);
+      }
+      if (moviesSynced > 0) {
+        parts.push(`${moviesSynced} movie${moviesSynced !== 1 ? "s" : ""} from TMDB`);
+      }
+      
+      if (parts.length > 0) {
+        cleanupMessage = `Synced ${parts.join(" and ")}`;
+      } else {
+        cleanupMessage = "No shows or movies to sync";
+      }
       setTimeout(() => (cleanupMessage = null), 3000);
     } catch (err) {
       cleanupMessage = `Sync failed: ${err}`;
@@ -169,7 +193,15 @@
   }
 
   async function handleClearHistory() {
-    if (confirm("Are you sure you want to clear all change history?")) {
+    const confirmed = await openConfirmDialog({
+      title: "Clear History",
+      message: "Are you sure you want to clear all change history?",
+      type: "warning",
+      confirmLabel: "Clear",
+      cancelLabel: "Cancel",
+    });
+
+    if (confirmed) {
       try {
         const count = await clearHistory();
         cleanupMessage = `Cleared ${count} history entries`;
@@ -185,7 +217,15 @@
     const mergeId = keepFirst ? pair.show2_id : pair.show1_id;
     const keepName = keepFirst ? pair.show1_name : pair.show2_name;
 
-    if (confirm(`Merge into "${keepName}"? The other show will be deleted.`)) {
+    const confirmed = await openConfirmDialog({
+      title: "Merge Shows",
+      message: `Merge into "${keepName}"? The other show will be deleted.`,
+      type: "warning",
+      confirmLabel: "Merge",
+      cancelLabel: "Cancel",
+    });
+
+    if (confirmed) {
       try {
         const result = await mergeDuplicates(keepId, mergeId);
         cleanupMessage = `Merged: ${result.episodes_moved} moved, ${result.episodes_merged} merged`;
@@ -641,19 +681,19 @@
               </div>
             </div>
 
-            <!-- Sync All Shows -->
+            <!-- Sync All -->
             <div class="bg-background rounded-lg p-4 border border-accent/30">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
                   <CloudDownload class="w-5 h-5 text-accent" />
                   <div>
-                    <h3 class="font-medium">Sync All Shows</h3>
-                    <p class="text-sm text-text-muted">Refresh all show data from TVDB (network, episodes, etc.)</p>
+                    <h3 class="font-medium">Sync All</h3>
+                    <p class="text-sm text-text-muted">Refresh all show data from TVDB and movie data from TMDB</p>
                   </div>
                 </div>
                 <button
                   type="button"
-                  onclick={handleSyncAllShows}
+                  onclick={handleSyncAll}
                   disabled={syncingAll}
                   class="px-3 py-1.5 text-sm bg-accent/20 hover:bg-accent/30 text-accent rounded transition-colors flex items-center gap-2 disabled:opacity-50"
                 >

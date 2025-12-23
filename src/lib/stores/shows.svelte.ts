@@ -81,6 +81,8 @@ async function getDb(): Promise<Database> {
 // Application state
 let trackedShows = $state<TrackedShow[]>([]);
 let archivedShows = $state<TrackedShow[]>([]);
+let showsLoading = $state(false);
+let archivedShowsLoading = $state(false);
 let searchModalOpen = $state(false);
 let searchQuery = $state("");
 let searchResults = $state<SearchResult[]>([]);
@@ -105,6 +107,14 @@ export function getTrackedShows() {
 
 export function getArchivedShows() {
   return archivedShows;
+}
+
+export function isShowsLoading() {
+  return showsLoading;
+}
+
+export function isArchivedShowsLoading() {
+  return archivedShowsLoading;
 }
 
 export function isSearchModalOpen() {
@@ -214,6 +224,7 @@ export async function searchShows(query: string): Promise<void> {
 }
 
 export async function loadTrackedShows(): Promise<void> {
+  showsLoading = true;
   try {
     const shows = await invoke<TrackedShow[]>("get_tracked_shows");
     trackedShows = shows;
@@ -229,6 +240,8 @@ export async function loadTrackedShows(): Promise<void> {
     } catch (dbError) {
       console.error("Database fallback also failed:", dbError);
     }
+  } finally {
+    showsLoading = false;
   }
 }
 
@@ -268,11 +281,14 @@ export async function removeShow(showId: number): Promise<void> {
 }
 
 export async function loadArchivedShows(): Promise<void> {
+  archivedShowsLoading = true;
   try {
     const shows = await invoke<TrackedShow[]>("get_archived_shows");
     archivedShows = shows;
   } catch (error) {
     console.error("Failed to load archived shows:", error);
+  } finally {
+    archivedShowsLoading = false;
   }
 }
 

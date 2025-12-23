@@ -7,9 +7,10 @@
     type?: "success" | "error" | "info";
     duration?: number;
     onClose: () => void;
+    onRetry?: () => void | Promise<void>;
   }
 
-  let { message, type = "info", duration = 3000, onClose }: Props = $props();
+  let { message, type = "info", duration = 3000, onClose, onRetry }: Props = $props();
 
   let visible = $state(true);
 
@@ -44,7 +45,20 @@
     role="alert"
   >
     <IconComponent class="w-5 h-5 flex-shrink-0" />
-    <p class="text-sm font-medium">{message}</p>
+    <p class="text-sm font-medium flex-1">{message}</p>
+    {#if onRetry && type === "error"}
+      <button
+        onclick={async () => {
+          await onRetry();
+          visible = false;
+          setTimeout(onClose, 300);
+        }}
+        class="ml-2 px-3 py-1 text-xs font-medium rounded hover:bg-black/20 transition-colors border border-current/30"
+        aria-label="Retry"
+      >
+        Retry
+      </button>
+    {/if}
     <button
       onclick={() => { visible = false; setTimeout(onClose, 300); }}
       class="ml-2 p-1 rounded hover:bg-black/10 transition-colors"

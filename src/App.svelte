@@ -5,21 +5,125 @@
   import { getCurrentWebview } from "@tauri-apps/api/webview";
   import Sidebar from "./lib/components/layout/Sidebar.svelte";
   import Header from "./lib/components/layout/Header.svelte";
-  import MonthView from "./lib/components/calendar/MonthView.svelte";
-  import WeekView from "./lib/components/calendar/WeekView.svelte";
-  import AgendaView from "./lib/components/calendar/AgendaView.svelte";
-  import SearchModal from "./lib/components/SearchModal.svelte";
-  import MovieSearchModal from "./lib/components/MovieSearchModal.svelte";
-  import EpisodePicker from "./lib/components/EpisodePicker.svelte";
-  import DayDetail from "./lib/components/DayDetail.svelte";
-  import ShowDetail from "./lib/components/ShowDetail.svelte";
-  import MovieDetail from "./lib/components/MovieDetail.svelte";
   import ToastContainer from "./lib/components/ToastContainer.svelte";
-  import StatisticsDashboard from "./lib/components/StatisticsDashboard.svelte";
-  import DataManagement from "./lib/components/DataManagement.svelte";
-  import UpdateModal from "./lib/components/UpdateModal.svelte";
+  import ConfirmDialog from "./lib/components/common/ConfirmDialog.svelte";
   import { getViewMode } from "./lib/stores/calendar.svelte";
   import { checkForUpdates } from "./lib/stores/updates.svelte";
+  import { isSearchModalOpen } from "./lib/stores/shows.svelte";
+  import { isMovieSearchModalOpen } from "./lib/stores/movies.svelte";
+  import { isEpisodePickerOpen } from "./lib/stores/shows.svelte";
+  import { isDayDetailOpen } from "./lib/stores/shows.svelte";
+  import { isShowDetailOpen } from "./lib/stores/showDetail.svelte";
+  import { isMovieDetailOpen } from "./lib/stores/movies.svelte";
+  import { isStatisticsModalOpen } from "./lib/stores/statistics.svelte";
+  import { isModalOpen as isDataManagementOpen } from "./lib/stores/dataManagement.svelte";
+  import { isUpdateModalOpen } from "./lib/stores/updates.svelte";
+
+  // Lazy load modal components only when they're opened
+  let SearchModalComponent = $state<any>(null);
+  let MovieSearchModalComponent = $state<any>(null);
+  let EpisodePickerComponent = $state<any>(null);
+  let DayDetailComponent = $state<any>(null);
+  let ShowDetailComponent = $state<any>(null);
+  let MovieDetailComponent = $state<any>(null);
+  let StatisticsDashboardComponent = $state<any>(null);
+  let DataManagementComponent = $state<any>(null);
+  let UpdateModalComponent = $state<any>(null);
+
+  // Load components when modals open
+  $effect(() => {
+    if (isSearchModalOpen() && !SearchModalComponent) {
+      import("./lib/components/SearchModal.svelte").then((mod) => {
+        SearchModalComponent = mod.default;
+      });
+    }
+  });
+
+  $effect(() => {
+    if (isMovieSearchModalOpen() && !MovieSearchModalComponent) {
+      import("./lib/components/MovieSearchModal.svelte").then((mod) => {
+        MovieSearchModalComponent = mod.default;
+      });
+    }
+  });
+
+  $effect(() => {
+    if (isEpisodePickerOpen() && !EpisodePickerComponent) {
+      import("./lib/components/EpisodePicker.svelte").then((mod) => {
+        EpisodePickerComponent = mod.default;
+      });
+    }
+  });
+
+  $effect(() => {
+    if (isDayDetailOpen() && !DayDetailComponent) {
+      import("./lib/components/DayDetail.svelte").then((mod) => {
+        DayDetailComponent = mod.default;
+      });
+    }
+  });
+
+  $effect(() => {
+    if (isShowDetailOpen() && !ShowDetailComponent) {
+      import("./lib/components/ShowDetail.svelte").then((mod) => {
+        ShowDetailComponent = mod.default;
+      });
+    }
+  });
+
+  $effect(() => {
+    if (isMovieDetailOpen() && !MovieDetailComponent) {
+      import("./lib/components/MovieDetail.svelte").then((mod) => {
+        MovieDetailComponent = mod.default;
+      });
+    }
+  });
+
+  $effect(() => {
+    if (isStatisticsModalOpen() && !StatisticsDashboardComponent) {
+      import("./lib/components/StatisticsDashboard.svelte").then((mod) => {
+        StatisticsDashboardComponent = mod.default;
+      });
+    }
+  });
+
+  $effect(() => {
+    if (isDataManagementOpen() && !DataManagementComponent) {
+      import("./lib/components/DataManagement.svelte").then((mod) => {
+        DataManagementComponent = mod.default;
+      });
+    }
+  });
+
+  $effect(() => {
+    if (isUpdateModalOpen() && !UpdateModalComponent) {
+      import("./lib/components/UpdateModal.svelte").then((mod) => {
+        UpdateModalComponent = mod.default;
+      });
+    }
+  });
+
+  // Lazy load calendar views based on current view mode
+  let MonthViewComponent = $state<any>(null);
+  let WeekViewComponent = $state<any>(null);
+  let AgendaViewComponent = $state<any>(null);
+
+  $effect(() => {
+    const viewMode = getViewMode();
+    if (viewMode === "month" && !MonthViewComponent) {
+      import("./lib/components/calendar/MonthView.svelte").then((mod) => {
+        MonthViewComponent = mod.default;
+      });
+    } else if (viewMode === "week" && !WeekViewComponent) {
+      import("./lib/components/calendar/WeekView.svelte").then((mod) => {
+        WeekViewComponent = mod.default;
+      });
+    } else if (viewMode === "agenda" && !AgendaViewComponent) {
+      import("./lib/components/calendar/AgendaView.svelte").then((mod) => {
+        AgendaViewComponent = mod.default;
+      });
+    }
+  });
 
   // Check for updates on app start
   onMount(() => {
@@ -61,11 +165,29 @@
       {#key getViewMode()}
         <div in:fade={{ duration: 150, delay: 50 }} out:fade={{ duration: 100 }}>
           {#if getViewMode() === "month"}
-            <MonthView />
+            {#if MonthViewComponent}
+              <MonthViewComponent />
+            {:else}
+              <div class="flex items-center justify-center h-full">
+                <div class="text-text-muted">Loading calendar...</div>
+              </div>
+            {/if}
           {:else if getViewMode() === "week"}
-            <WeekView />
+            {#if WeekViewComponent}
+              <WeekViewComponent />
+            {:else}
+              <div class="flex items-center justify-center h-full">
+                <div class="text-text-muted">Loading calendar...</div>
+              </div>
+            {/if}
           {:else}
-            <AgendaView />
+            {#if AgendaViewComponent}
+              <AgendaViewComponent />
+            {:else}
+              <div class="flex items-center justify-center h-full">
+                <div class="text-text-muted">Loading calendar...</div>
+              </div>
+            {/if}
           {/if}
         </div>
       {/key}
@@ -73,13 +195,32 @@
   </main>
 </div>
 
-<SearchModal />
-<MovieSearchModal />
-<EpisodePicker />
-<DayDetail />
-<ShowDetail />
-<MovieDetail />
-<StatisticsDashboard />
-<DataManagement />
-<UpdateModal />
+{#if SearchModalComponent}
+  <SearchModalComponent />
+{/if}
+{#if MovieSearchModalComponent}
+  <MovieSearchModalComponent />
+{/if}
+{#if EpisodePickerComponent}
+  <EpisodePickerComponent />
+{/if}
+{#if DayDetailComponent}
+  <DayDetailComponent />
+{/if}
+{#if ShowDetailComponent}
+  <ShowDetailComponent />
+{/if}
+{#if MovieDetailComponent}
+  <MovieDetailComponent />
+{/if}
+{#if StatisticsDashboardComponent}
+  <StatisticsDashboardComponent />
+{/if}
+{#if DataManagementComponent}
+  <DataManagementComponent />
+{/if}
+{#if UpdateModalComponent}
+  <UpdateModalComponent />
+{/if}
 <ToastContainer />
+<ConfirmDialog />

@@ -21,6 +21,7 @@
   } from "../stores/movies.svelte";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import CastCrew from "./CastCrew.svelte";
+  import { openConfirmDialog } from "../stores/confirmDialog.svelte";
 
   type Tab = "overview" | "info";
   let activeTab = $state<Tab>("overview");
@@ -99,7 +100,15 @@
     const movie = getCurrentMovie();
     if (!movie) return;
 
-    if (confirm(`Are you sure you want to remove "${movie.title}"?`)) {
+    const confirmed = await openConfirmDialog({
+      title: "Remove Movie",
+      message: `Are you sure you want to remove "${movie.title}"?`,
+      type: "danger",
+      confirmLabel: "Remove",
+      cancelLabel: "Cancel",
+    });
+
+    if (confirmed) {
       await removeMovie(movie.id);
       closeMovieDetail();
     }

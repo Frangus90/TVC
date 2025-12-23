@@ -14,9 +14,14 @@ export function getToasts() {
   return toasts;
 }
 
-export function showToast(message: string, type: ToastType = "info", duration: number = 3000) {
+export function showToast(
+  message: string,
+  type: ToastType = "info",
+  duration: number = 3000,
+  onRetry?: () => void | Promise<void>
+) {
   const id = nextId++;
-  toasts = [...toasts, { id, message, type, duration }];
+  toasts = [...toasts, { id, message, type, duration, onRetry }];
   return id;
 }
 
@@ -28,13 +33,19 @@ export function showSuccess(message: string, duration: number = 3000) {
   return showToast(message, "success", duration);
 }
 
-export function showError(message: string, duration: number = 5000) {
-  return showToast(message, "error", duration);
+export function showError(
+  message: string,
+  duration: number = 5000,
+  onRetry?: () => void | Promise<void>
+) {
+  return showToast(message, "error", duration, onRetry);
 }
 
 export function showInfo(message: string, duration: number = 3000) {
   return showToast(message, "info", duration);
 }
+
+
 
 
 

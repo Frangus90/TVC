@@ -14,6 +14,7 @@
   } from "../stores/movies.svelte";
 
   let searchInput: HTMLInputElement | undefined = $state();
+  let debounceTimer: ReturnType<typeof setTimeout> | null = $state(null);
 
   // Auto-focus when modal opens
   $effect(() => {
@@ -22,9 +23,34 @@
     }
   });
 
+  // Cleanup debounce timer
+  $effect(() => {
+    return () => {
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
+    };
+  });
+
   function handleInput(event: Event) {
     const target = event.target as HTMLInputElement;
-    setMovieSearchQuery(target.value);
+    const value = target.value;
+    setMovieSearchQuery(value);
+
+    // Clear existing timer
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+
+    // Debounce search - auto-search after 400ms of no typing
+    if (value.trim()) {
+      debounceTimer = setTimeout(() => {
+        searchMovies(value);
+      }, 400);
+    } else {
+      // Clear results immediately if query is empty
+      searchMovies("");
+    }
   }
 
   function handleKeyDown(event: KeyboardEvent) {
@@ -72,10 +98,19 @@
     aria-label="Close modal"
   ></button>
 
+  {@const resultCount = getMovieSearchResults().length}
+  {@const hasResults = resultCount > 0}
+  {@const estimatedItemHeight = 120}
+  {@const baseHeight = 200}
+  {@const minHeight = 400}
+  {@const maxHeight = 800}
+  {@const calculatedHeight = hasResults ? Math.min(Math.max(resultCount * estimatedItemHeight + baseHeight, minHeight), maxHeight) : minHeight}
+
   <!-- Modal -->
   <div
     transition:scale={{ duration: 200, start: 0.95, opacity: 0 }}
-    class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl z-50 bg-surface rounded-xl border border-border shadow-2xl"
+    class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-5xl z-50 bg-surface rounded-xl border border-border shadow-2xl flex flex-col"
+    style="max-height: {calculatedHeight}px;"
   >
     <!-- Header -->
     <form onsubmit={handleSubmit} class="flex items-center gap-3 p-4 border-b border-border">
@@ -99,22 +134,30 @@
     </form>
 
     <!-- Results -->
-    <div class="max-h-96 overflow-auto">
+    <div class="flex-1 overflow-auto min-h-0">
       {#if isMovieSearchLoading()}
         <div class="flex items-center justify-center py-12">
           <Loader2 class="w-8 h-8 text-accent animate-spin" />
+          <span class="ml-3 text-sm text-text-muted">Searching...</span>
         </div>
       {:else if getMovieSearchResults().length === 0}
         {#if getMovieSearchQuery().trim()}
-          <div class="py-12 text-center text-text-muted">
-            Press Enter to search for "{getMovieSearchQuery()}"
+          <div class="py-12 text-center">
+            <p class="text-text-muted mb-2">No results found for "{getMovieSearchQuery()}"</p>
+            <p class="text-xs text-text-muted">Try a different search term</p>
           </div>
         {:else}
           <div class="py-12 text-center text-text-muted">
-            Type a movie name and press Enter to search
+            <p class="mb-2">Type a movie name to search</p>
+            <p class="text-xs">Search will start automatically as you type</p>
           </div>
         {/if}
       {:else}
+        <div class="px-4 py-2 border-b border-border">
+          <p class="text-xs text-text-muted">
+            Found {getMovieSearchResults().length} result{getMovieSearchResults().length !== 1 ? 's' : ''}
+          </p>
+        </div>
         <ul class="divide-y divide-border">
           {#each getMovieSearchResults() as movie}
             <li class="flex items-start gap-4 p-4 hover:bg-surface-hover transition-colors">

@@ -9,6 +9,8 @@
     getArchivedShows,
     loadArchivedShows,
     unarchiveShow,
+    isShowsLoading,
+    isArchivedShowsLoading,
   } from "../../stores/shows.svelte";
   import {
     getTrackedMovies,
@@ -20,6 +22,8 @@
     unarchiveMovie,
     unscheduleMovie,
     openMovieDetail,
+    isMoviesLoading,
+    isArchivedMoviesLoading,
   } from "../../stores/movies.svelte";
   import { openShowDetail } from "../../stores/showDetail.svelte";
   import {
@@ -29,17 +33,29 @@
   import { openStatisticsModal } from "../../stores/statistics.svelte";
   import { openDataManagement } from "../../stores/dataManagement.svelte";
   import { isSidebarCollapsed, toggleSidebar } from "../../stores/sidebar.svelte";
+  import { getThemeSettings } from "../../stores/theme.svelte";
+  import { openConfirmDialog } from "../../stores/confirmDialog.svelte";
+  import SkeletonLoader from "../common/SkeletonLoader.svelte";
+  import EmptyState from "../common/EmptyState.svelte";
 
   type SidebarTab = "shows" | "movies" | "archive";
   let activeTab = $state<SidebarTab>("shows");
   let selectedItems = $state<Set<number>>(new Set());
   let bulkMode = $state(false);
+  
+  const theme = $derived(getThemeSettings());
+  const isCompactList = $derived(theme.compactSpacing && theme.hidePosters);
 
   onMount(() => {
-    loadTrackedShows();
-    loadTrackedMovies();
-    loadArchivedShows();
-    loadArchivedMovies();
+    // Load all data in parallel for faster startup
+    Promise.all([
+      loadTrackedShows(),
+      loadTrackedMovies(),
+      loadArchivedShows(),
+      loadArchivedMovies(),
+    ]).catch((error) => {
+      console.error("Failed to load sidebar data:", error);
+    });
   });
 
   function switchTab(tab: SidebarTab) {
@@ -77,7 +93,15 @@
     if (selectedItems.size === 0) return;
 
     const itemType = activeTab === "shows" ? "show" : "movie";
-    if (confirm(`Are you sure you want to remove ${selectedItems.size} ${itemType}${selectedItems.size > 1 ? 's' : ''}?`)) {
+    const confirmed = await openConfirmDialog({
+      title: "Remove Items",
+      message: `Are you sure you want to remove ${selectedItems.size} ${itemType}${selectedItems.size > 1 ? 's' : ''}?`,
+      type: "danger",
+      confirmLabel: "Remove",
+      cancelLabel: "Cancel",
+    });
+
+    if (confirmed) {
       for (const itemId of selectedItems) {
         if (activeTab === "shows") {
           await removeShow(itemId);
@@ -149,6 +173,7 @@
           type="button"
           onclick={toggleSidebar}
           class="p-1.5 rounded hover:bg-surface-hover transition-colors"
+          aria-label="Collapse sidebar"
           title="Collapse sidebar"
         >
           <PanelLeftClose class="w-4 h-4 text-text-muted" />
@@ -160,6 +185,7 @@
         type="button"
         onclick={toggleSidebar}
         class="w-full mt-2 p-1.5 rounded hover:bg-surface-hover transition-colors flex justify-center"
+        aria-label="Expand sidebar"
         title="Expand sidebar"
       >
         <PanelLeft class="w-4 h-4 text-text-muted" />
@@ -175,6 +201,8 @@
       class="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 text-xs font-medium transition-colors
         {activeTab === 'shows' ? 'text-accent border-b-2 border-accent bg-accent/5' : 'text-text-muted hover:text-text hover:bg-surface-hover'}
         {isSidebarCollapsed() ? 'border-b-0 border-l-2' : ''}"
+      aria-label="TV Shows"
+      aria-pressed={activeTab === 'shows'}
       title="TV Shows"
     >
       <Tv class="w-3.5 h-3.5" />
@@ -188,6 +216,8 @@
       class="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 text-xs font-medium transition-colors
         {activeTab === 'movies' ? 'text-accent border-b-2 border-accent bg-accent/5' : 'text-text-muted hover:text-text hover:bg-surface-hover'}
         {isSidebarCollapsed() ? 'border-b-0 border-l-2' : ''}"
+      aria-label="Movies"
+      aria-pressed={activeTab === 'movies'}
       title="Movies"
     >
       <Film class="w-3.5 h-3.5" />
@@ -201,6 +231,8 @@
       class="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 text-xs font-medium transition-colors
         {activeTab === 'archive' ? 'text-accent border-b-2 border-accent bg-accent/5' : 'text-text-muted hover:text-text hover:bg-surface-hover'}
         {isSidebarCollapsed() ? 'border-b-0 border-l-2' : ''}"
+      aria-label="Archive"
+      aria-pressed={activeTab === 'archive'}
       title="Archive"
     >
       <Archive class="w-3.5 h-3.5" />
@@ -246,12 +278,24 @@
   <div class="flex-1 overflow-auto p-3 {isSidebarCollapsed() ? 'hidden' : ''}">
     <!-- TV Shows Tab -->
     {#if activeTab === "shows"}
-      {#if getTrackedShows().length === 0}
-        <p class="text-sm text-text-muted py-4 text-center">
-          No shows tracked yet.
-          <br />
-          Click "Add Show" to get started.
-        </p>
+      {#if isShowsLoading()}
+        <div class="space-y-2 py-2">
+          {#each Array(5) as _}
+            <div class="flex items-center gap-3 px-3 py-2">
+              {#if !theme.hidePosters}
+                <SkeletonLoader width="2rem" height="3rem" />
+              {/if}
+              <SkeletonLoader width="60%" height="1rem" />
+            </div>
+          {/each}
+        </div>
+      {:else if getTrackedShows().length === 0}
+        <EmptyState
+          icon={Tv}
+          title="No shows tracked"
+          message="Start tracking your favorite TV shows to see them here."
+          action={{ label: "Add Show", onclick: openSearchModal }}
+        />
       {:else}
         <ul class="space-y-1">
           {#each getTrackedShows() as show}
@@ -261,7 +305,7 @@
                 <button
                   type="button"
                   onclick={() => toggleItemSelection(show.id)}
-                  class="group w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-hover transition-colors text-left"
+                  class="group w-full flex items-center gap-3 {isCompactList ? 'px-2 py-1' : 'px-3 py-2'} rounded-lg hover:bg-surface-hover transition-colors text-left"
                 >
                   <span
                     class="w-5 h-5 rounded border flex-shrink-0 flex items-center justify-center
@@ -271,28 +315,32 @@
                       <Check class="w-3 h-3 text-white" />
                     {/if}
                   </span>
-                  {#if show.poster_url}
-                    <img src={show.poster_url} alt="" class="w-8 h-12 rounded object-cover" loading="lazy" decoding="async" />
-                  {:else}
-                    <div class="w-8 h-12 rounded bg-border flex items-center justify-center">
-                      <Tv class="w-4 h-4 text-text-muted" />
-                    </div>
-                  {/if}
-                  <span class="flex-1 text-sm truncate">{show.name}</span>
-                </button>
-              {:else}
-                <div class="group w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-hover transition-colors">
-                  <button
-                    type="button"
-                    class="flex-1 flex items-center gap-3 text-left"
-                    onclick={() => openShowDetail(show.id)}
-                  >
+                  {#if !theme.hidePosters}
                     {#if show.poster_url}
                       <img src={show.poster_url} alt="" class="w-8 h-12 rounded object-cover" loading="lazy" decoding="async" />
                     {:else}
                       <div class="w-8 h-12 rounded bg-border flex items-center justify-center">
                         <Tv class="w-4 h-4 text-text-muted" />
                       </div>
+                    {/if}
+                  {/if}
+                  <span class="flex-1 text-sm truncate">{show.name}</span>
+                </button>
+              {:else}
+                <div class="group w-full flex items-center {isCompactList ? 'gap-2 px-2 py-1' : 'gap-3 px-3 py-2'} rounded-lg hover:bg-surface-hover transition-colors">
+                  <button
+                    type="button"
+                    class="flex-1 flex items-center {isCompactList ? 'gap-2' : 'gap-3'} text-left"
+                    onclick={() => openShowDetail(show.id)}
+                  >
+                    {#if !theme.hidePosters}
+                      {#if show.poster_url}
+                        <img src={show.poster_url} alt="" class="w-8 h-12 rounded object-cover" loading="lazy" decoding="async" />
+                      {:else}
+                        <div class="w-8 h-12 rounded bg-border flex items-center justify-center">
+                          <Tv class="w-4 h-4 text-text-muted" />
+                        </div>
+                      {/if}
                     {/if}
                     <div class="flex-1 flex items-center gap-2 min-w-0">
                       {#if show.color}
@@ -323,12 +371,24 @@
 
     <!-- Movies Tab -->
     {#if activeTab === "movies"}
-      {#if getTrackedMovies().length === 0}
-        <p class="text-sm text-text-muted py-4 text-center">
-          No movies tracked yet.
-          <br />
-          Click "Add Movie" to get started.
-        </p>
+      {#if isMoviesLoading()}
+        <div class="space-y-2 py-2">
+          {#each Array(5) as _}
+            <div class="flex items-center gap-3 px-3 py-2">
+              {#if !theme.hidePosters}
+                <SkeletonLoader width="2rem" height="3rem" />
+              {/if}
+              <SkeletonLoader width="60%" height="1rem" />
+            </div>
+          {/each}
+        </div>
+      {:else if getTrackedMovies().length === 0}
+        <EmptyState
+          icon={Film}
+          title="No movies tracked"
+          message="Start tracking movies you want to watch."
+          action={{ label: "Add Movie", onclick: openMovieSearchModal }}
+        />
       {:else}
         <ul class="space-y-1">
           {#each getTrackedMovies() as movie}
@@ -338,7 +398,7 @@
                 <button
                   type="button"
                   onclick={() => toggleItemSelection(movie.id)}
-                  class="group w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-hover transition-colors text-left"
+                  class="group w-full flex items-center gap-3 {isCompactList ? 'px-2 py-1' : 'px-3 py-2'} rounded-lg hover:bg-surface-hover transition-colors text-left"
                 >
                   <span
                     class="w-5 h-5 rounded border flex-shrink-0 flex items-center justify-center
@@ -348,28 +408,32 @@
                       <Check class="w-3 h-3 text-white" />
                     {/if}
                   </span>
-                  {#if movie.poster_url}
-                    <img src={movie.poster_url} alt="" class="w-8 h-12 rounded object-cover" loading="lazy" decoding="async" />
-                  {:else}
-                    <div class="w-8 h-12 rounded bg-border flex items-center justify-center">
-                      <Film class="w-4 h-4 text-text-muted" />
-                    </div>
-                  {/if}
-                  <span class="flex-1 text-sm truncate">{movie.title}</span>
-                </button>
-              {:else}
-                <div class="group w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-hover transition-colors">
-                  <button
-                    type="button"
-                    class="flex-1 flex items-center gap-3 text-left"
-                    onclick={() => openMovieDetail(movie.id)}
-                  >
+                  {#if !theme.hidePosters}
                     {#if movie.poster_url}
                       <img src={movie.poster_url} alt="" class="w-8 h-12 rounded object-cover" loading="lazy" decoding="async" />
                     {:else}
                       <div class="w-8 h-12 rounded bg-border flex items-center justify-center">
                         <Film class="w-4 h-4 text-text-muted" />
                       </div>
+                    {/if}
+                  {/if}
+                  <span class="flex-1 text-sm truncate">{movie.title}</span>
+                </button>
+              {:else}
+                <div class="group w-full flex items-center {isCompactList ? 'gap-2 px-2 py-1' : 'gap-3 px-3 py-2'} rounded-lg hover:bg-surface-hover transition-colors">
+                  <button
+                    type="button"
+                    class="flex-1 flex items-center {isCompactList ? 'gap-2' : 'gap-3'} text-left"
+                    onclick={() => openMovieDetail(movie.id)}
+                  >
+                    {#if !theme.hidePosters}
+                      {#if movie.poster_url}
+                        <img src={movie.poster_url} alt="" class="w-8 h-12 rounded object-cover" loading="lazy" decoding="async" />
+                      {:else}
+                        <div class="w-8 h-12 rounded bg-border flex items-center justify-center">
+                          <Film class="w-4 h-4 text-text-muted" />
+                        </div>
+                      {/if}
                     {/if}
                     <div class="flex-1 flex items-center gap-2 min-w-0">
                       {#if movie.color}
@@ -414,28 +478,41 @@
     <!-- Archive Tab -->
     {#if activeTab === "archive"}
       {@const archiveItems = getArchiveItems()}
-      {#if archiveItems.length === 0}
-        <p class="text-sm text-text-muted py-4 text-center">
-          No archived items.
-          <br />
-          Archive shows or movies to see them here.
-        </p>
+      {#if isArchivedShowsLoading() || isArchivedMoviesLoading()}
+        <div class="space-y-2 py-2">
+          {#each Array(5) as _}
+            <div class="flex items-center gap-3 px-3 py-2">
+              {#if !theme.hidePosters}
+                <SkeletonLoader width="2rem" height="3rem" />
+              {/if}
+              <SkeletonLoader width="60%" height="1rem" />
+            </div>
+          {/each}
+        </div>
+      {:else if archiveItems.length === 0}
+        <EmptyState
+          icon={Archive}
+          title="No archived items"
+          message="Archive shows or movies you're done with to keep your list clean."
+        />
       {:else}
         <ul class="space-y-1">
           {#each archiveItems as item}
             <li>
-              <div class="group w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-hover transition-colors">
-                <div class="flex-1 flex items-center gap-3">
-                  {#if item.poster_url}
-                    <img src={item.poster_url} alt="" class="w-8 h-12 rounded object-cover" loading="lazy" decoding="async" />
-                  {:else}
-                    <div class="w-8 h-12 rounded bg-border flex items-center justify-center">
-                      {#if item.type === "show"}
-                        <Tv class="w-4 h-4 text-text-muted" />
-                      {:else}
-                        <Film class="w-4 h-4 text-text-muted" />
-                      {/if}
-                    </div>
+              <div class="group w-full flex items-center {isCompactList ? 'gap-2 px-2 py-1' : 'gap-3 px-3 py-2'} rounded-lg hover:bg-surface-hover transition-colors">
+                <div class="flex-1 flex items-center {isCompactList ? 'gap-2' : 'gap-3'}">
+                  {#if !theme.hidePosters}
+                    {#if item.poster_url}
+                      <img src={item.poster_url} alt="" class="w-8 h-12 rounded object-cover" loading="lazy" decoding="async" />
+                    {:else}
+                      <div class="w-8 h-12 rounded bg-border flex items-center justify-center">
+                        {#if item.type === "show"}
+                          <Tv class="w-4 h-4 text-text-muted" />
+                        {:else}
+                          <Film class="w-4 h-4 text-text-muted" />
+                        {/if}
+                      </div>
+                    {/if}
                   {/if}
                   <div class="flex-1 flex flex-col min-w-0">
                     <div class="flex items-center gap-2">
@@ -447,9 +524,11 @@
                       {/if}
                       <span class="text-sm truncate">{item.name}</span>
                     </div>
-                    <span class="text-xs text-text-muted">
-                      {item.type === "show" ? "TV Show" : "Movie"}
-                    </span>
+                    {#if !isCompactList}
+                      <span class="text-xs text-text-muted">
+                        {item.type === "show" ? "TV Show" : "Movie"}
+                      </span>
+                    {/if}
                   </div>
                 </div>
                 <button
@@ -489,6 +568,7 @@
         type="button"
         onclick={openStatisticsModal}
         class="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-text-muted hover:text-text hover:bg-surface-hover rounded transition-colors"
+        aria-label="Statistics"
         title="Statistics"
       >
         <BarChart3 class="w-3 h-3" />
@@ -500,6 +580,7 @@
         type="button"
         onclick={openDataManagement}
         class="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-text-muted hover:text-text hover:bg-surface-hover rounded transition-colors"
+        aria-label="Data Management"
         title="Data Management"
       >
         <Database class="w-3 h-3" />
@@ -518,7 +599,7 @@
         <RefreshCw class="w-3 h-3 {isCheckingForUpdates() ? 'animate-spin' : ''}" />
         {isCheckingForUpdates() ? "Checking..." : "Check for Updates"}
       </button>
-      <p class="text-xs text-text-muted text-center mt-2">v0.6.9</p>
+      <p class="text-xs text-text-muted text-center mt-2">v0.7.0</p>
     {/if}
   </div>
 </aside>

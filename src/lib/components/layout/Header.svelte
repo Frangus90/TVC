@@ -33,6 +33,7 @@
         onclick={previousPeriod}
         class="p-1.5 rounded-lg hover:bg-surface-hover transition-colors"
         aria-label="Previous {getViewMode()}"
+        title="Previous {getViewMode()}"
       >
         <ChevronLeft class="w-5 h-5" />
       </button>
@@ -41,6 +42,7 @@
         onclick={nextPeriod}
         class="p-1.5 rounded-lg hover:bg-surface-hover transition-colors"
         aria-label="Next {getViewMode()}"
+        title="Next {getViewMode()}"
       >
         <ChevronRight class="w-5 h-5" />
       </button>
@@ -48,6 +50,8 @@
       <button
         onclick={goToToday}
         class="px-3 py-1.5 text-sm rounded-lg hover:bg-surface-hover transition-colors"
+        aria-label="Go to today"
+        title="Go to today"
       >
         Today
       </button>
@@ -68,6 +72,9 @@
           class="px-3 py-1 text-sm rounded-md transition-colors capitalize {getViewMode() === mode
             ? 'bg-surface text-text'
             : 'text-text-muted hover:text-text'}"
+          aria-label="Switch to {mode} view"
+          aria-pressed={getViewMode() === mode}
+          title="Switch to {mode} view"
         >
           {mode}
         </button>

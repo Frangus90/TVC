@@ -356,6 +356,30 @@ pub async fn sync_movie(app: AppHandle, id: i64) -> Result<(), String> {
     Ok(())
 }
 
+/// Sync all tracked movies - fetches fresh data from TMDB for all movies
+#[tauri::command]
+pub async fn sync_all_movies(app: AppHandle) -> Result<u32, String> {
+    let pool = connection::get_pool(&app).await
+        .map_err(|e| format!("Database error: {}", e))?;
+
+    // Get all tracked movie IDs
+    let movie_ids: Vec<i64> = sqlx::query_scalar("SELECT id FROM movies")
+        .fetch_all(&pool)
+        .await
+        .map_err(|e| format!("Failed to get movies: {}", e))?;
+
+    let mut synced = 0u32;
+
+    for movie_id in movie_ids {
+        match sync_movie(app.clone(), movie_id).await {
+            Ok(_) => synced += 1,
+            Err(e) => eprintln!("Failed to sync movie {}: {}", movie_id, e),
+        }
+    }
+
+    Ok(synced)
+}
+
 #[tauri::command]
 pub async fn get_movies_for_range(
     app: AppHandle,

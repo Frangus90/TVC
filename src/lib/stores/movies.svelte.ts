@@ -90,6 +90,8 @@ export interface TrailerData {
 // Application state
 let trackedMovies = $state<TrackedMovie[]>([]);
 let archivedMovies = $state<TrackedMovie[]>([]);
+let moviesLoading = $state(false);
+let archivedMoviesLoading = $state(false);
 let calendarMovies = $state<CalendarMovie[]>([]);
 let movieSearchModalOpen = $state(false);
 let movieSearchQuery = $state("");
@@ -115,6 +117,14 @@ export function getTrackedMovies() {
 
 export function getArchivedMovies() {
   return archivedMovies;
+}
+
+export function isMoviesLoading() {
+  return moviesLoading;
+}
+
+export function isArchivedMoviesLoading() {
+  return archivedMoviesLoading;
 }
 
 export function getCalendarMovies() {
@@ -209,20 +219,26 @@ export async function searchMovies(query: string): Promise<void> {
 }
 
 export async function loadTrackedMovies(): Promise<void> {
+  moviesLoading = true;
   try {
     const movies = await invoke<TrackedMovie[]>("get_tracked_movies");
     trackedMovies = movies;
   } catch (error) {
     console.error("Failed to load tracked movies:", error);
+  } finally {
+    moviesLoading = false;
   }
 }
 
 export async function loadArchivedMovies(): Promise<void> {
+  archivedMoviesLoading = true;
   try {
     const movies = await invoke<TrackedMovie[]>("get_archived_movies");
     archivedMovies = movies;
   } catch (error) {
     console.error("Failed to load archived movies:", error);
+  } finally {
+    archivedMoviesLoading = false;
   }
 }
 

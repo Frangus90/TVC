@@ -130,6 +130,7 @@ pub fn run() {
             commands::movies::archive_movie,
             commands::movies::unarchive_movie,
             commands::movies::sync_movie,
+            commands::movies::sync_all_movies,
             commands::movies::get_movies_for_range,
             // Statistics commands
             commands::statistics::get_watch_statistics,

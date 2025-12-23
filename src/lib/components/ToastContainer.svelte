@@ -11,10 +11,13 @@
         type={toast.type}
         duration={toast.duration}
         onClose={() => removeToast(toast.id)}
+        onRetry={toast.onRetry}
       />
     </div>
   {/each}
 </div>
+
+
 
 
 

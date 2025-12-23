@@ -33,13 +33,14 @@
     type CalendarMovie,
   } from "../../stores/movies.svelte";
   import { Tv } from "lucide-svelte";
+  import { getThemeSettings } from "../../stores/theme.svelte";
 
   let showPickerOpen = $state(false);
   let showPickerDate = $state<string | null>(null);
   type PickerTab = "shows" | "movies";
   let pickerTab = $state<PickerTab>("shows");
 
-  // Load episodes and movies when month changes
+  // Load episodes and movies when month changes (in parallel for better performance)
   $effect(() => {
     const monthStart = startOfMonth(getCurrentDate());
     const monthEnd = endOfMonth(getCurrentDate());
@@ -48,8 +49,13 @@
 
     const startStr = format(calendarStart, "yyyy-MM-dd");
     const endStr = format(calendarEnd, "yyyy-MM-dd");
-    loadEpisodesForRange(startStr, endStr);
-    loadMoviesForRange(startStr, endStr);
+    // Load episodes and movies in parallel
+    Promise.all([
+      loadEpisodesForRange(startStr, endStr),
+      loadMoviesForRange(startStr, endStr),
+    ]).catch((error) => {
+      console.error("Failed to load calendar data:", error);
+    });
   });
 
   let calendarDays = $derived.by(() => {
@@ -197,7 +203,7 @@
         role="region"
         aria-label="Calendar day {format(day, 'MMMM d, yyyy')}"
         data-date={format(day, "yyyy-MM-dd")}
-        class="border-b border-r border-border p-2 min-h-[100px] overflow-hidden group {isCurrentMonth
+        class="border-b border-r border-border p-2 min-h-[100px] overflow-hidden group hover:bg-surface-hover/30 transition-colors {isCurrentMonth
           ? ''
           : 'bg-background/50'}"
       >
@@ -244,13 +250,13 @@
                   if (ep.scheduled_date) handleUnschedule(e, ep);
                 }
               }}
-              class="w-full text-left p-1.5 rounded text-xs transition-colors relative group/item {item.watched
+              class="w-full text-left p-1.5 rounded text-xs transition-all relative group/item hover:scale-[1.02] {item.watched
                 ? 'bg-watched/20 text-watched line-through cursor-default'
                 : item.hasAired
                   ? 'bg-premiere/20 text-premiere hover:bg-premiere/30 cursor-pointer'
                   : 'bg-upcoming/20 text-upcoming hover:bg-upcoming/30 cursor-pointer'}"
               style={item.color ? `border-left: 2px solid ${item.color}` : ''}
-              title={item.watched ? "Watched" : item.hasAired ? "Click to mark watched" : "Upcoming"}
+              title="{item.title} - {item.subtitle}{item.watched ? ' (Watched)' : item.hasAired ? ' (Click to mark watched)' : ' (Upcoming)'}"
             >
               <div class="flex items-center gap-1">
                 {#if item.watched}
@@ -290,7 +296,9 @@
     onclick={closeShowPicker}
     aria-label="Close"
   ></button>
-  <div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-surface rounded-xl border border-border shadow-2xl w-[500px] max-w-[90vw]">
+  {@const theme = getThemeSettings()}
+  
+  <div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-surface rounded-xl border border-border shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col">
     <div class="p-5 pb-0">
       <h3 class="font-semibold text-lg mb-4">Schedule for {showPickerDate}</h3>
 
@@ -317,7 +325,7 @@
       </div>
     </div>
 
-    <div class="px-5 max-h-[400px] overflow-auto">
+    <div class="flex-1 overflow-auto px-5 pb-5">
       <!-- TV Shows Tab -->
       {#if pickerTab === "shows"}
         {#if getTrackedShows().length === 0}
@@ -330,12 +338,14 @@
                   onclick={() => { const date = showPickerDate!; closeShowPicker(); openEpisodePicker(show, date); }}
                   class="w-full flex items-center gap-4 p-3 rounded-lg hover:bg-surface-hover transition-colors text-left"
                 >
-                  {#if show.poster_url}
-                    <img src={show.poster_url} alt="" class="w-12 h-[72px] rounded object-cover flex-shrink-0" />
-                  {:else}
-                    <div class="w-12 h-[72px] rounded bg-border flex items-center justify-center flex-shrink-0">
-                      <Tv class="w-5 h-5 text-text-muted" />
-                    </div>
+                  {#if !theme.hidePosters}
+                    {#if show.poster_url}
+                      <img src={show.poster_url} alt="" class="w-12 h-[72px] rounded object-cover flex-shrink-0" />
+                    {:else}
+                      <div class="w-12 h-[72px] rounded bg-border flex items-center justify-center flex-shrink-0">
+                        <Tv class="w-5 h-5 text-text-muted" />
+                      </div>
+                    {/if}
                   {/if}
                   <span class="font-medium">{show.name}</span>
                 </button>
@@ -357,12 +367,14 @@
                   onclick={() => handleScheduleMovie(movie.id)}
                   class="w-full flex items-center gap-4 p-3 rounded-lg hover:bg-surface-hover transition-colors text-left"
                 >
-                  {#if movie.poster_url}
-                    <img src={movie.poster_url} alt="" class="w-12 h-[72px] rounded object-cover flex-shrink-0" />
-                  {:else}
-                    <div class="w-12 h-[72px] rounded bg-border flex items-center justify-center flex-shrink-0">
-                      <Film class="w-5 h-5 text-text-muted" />
-                    </div>
+                  {#if !theme.hidePosters}
+                    {#if movie.poster_url}
+                      <img src={movie.poster_url} alt="" class="w-12 h-[72px] rounded object-cover flex-shrink-0" />
+                    {:else}
+                      <div class="w-12 h-[72px] rounded bg-border flex items-center justify-center flex-shrink-0">
+                        <Film class="w-5 h-5 text-text-muted" />
+                      </div>
+                    {/if}
                   {/if}
                   <div class="flex-1">
                     <span class="font-medium">{movie.title}</span>

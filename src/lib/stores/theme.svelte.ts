@@ -9,6 +9,7 @@ export interface ThemeSettings {
   fontSize: number;
   compactSpacing: boolean;
   colorblindFriendly: boolean;
+  hidePosters: boolean;
 }
 
 let db: Database | null = null;
@@ -27,6 +28,7 @@ const defaultTheme: ThemeSettings = {
   fontSize: 1,
   compactSpacing: false,
   colorblindFriendly: false,
+  hidePosters: false,
 };
 
 let themeSettings = $state<ThemeSettings>(defaultTheme);
@@ -56,6 +58,8 @@ export async function loadThemeSettings(): Promise<void> {
         loaded.compactSpacing = setting.value === "true";
       } else if (key === "colorblindFriendly") {
         loaded.colorblindFriendly = setting.value === "true";
+      } else if (key === "hidePosters") {
+        loaded.hidePosters = setting.value === "true";
       }
     }
 
@@ -126,6 +130,8 @@ function adjustBrightness(color: string, percent: number): string {
 if (typeof window !== "undefined") {
   loadThemeSettings();
 }
+
+
 
 
 

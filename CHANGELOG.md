@@ -2,103 +2,133 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.7.0]
+
+### Theme Settings
+
+- You can now hide TV and movie posters in the sidebar if you prefer a cleaner look
+- When you enable both compact spacing and hidden posters, the sidebar becomes a simple text list
+- The "Hide Posters" option also works in the episode scheduler and show/movie picker
+- Find the "Hide Posters" toggle in Theme Settings
+
+### Better User Experience
+
+- **Smoother Dialogs**: Confirmation dialogs now match the app's design and look much nicer
+- **Faster Search**: Search now starts automatically as you type, so you don't need to press Enter. You'll also see how many results were found
+- **Loading Indicators**: When the app is loading your shows and movies, you'll see helpful loading animations instead of blank screens
+- **Helpful Empty States**: When you don't have any shows or movies yet, you'll see friendly messages with buttons to get started
+- **Visual Feedback**: Buttons and interactive elements now have smooth animations and better visual feedback when you hover or click them
+- **Calendar Improvements**: Hovering over calendar items shows more information, and everything feels more responsive
+- **Error Messages**: If something goes wrong, you'll see clear error messages with a "Retry" button to try again
+
+### Episode Scheduler
+
+- The episode scheduler is now much bigger, making it easier to use when you're tracking lots of shows
+- The show and movie picker is also larger, so you can see more options at once without scrolling as much
+
+### Search Improvements
+
+- Search modals are now much larger, giving you more room to browse results
+- The search window automatically adjusts its size based on how many results you get
+- More results means a bigger window (up to a reasonable limit), so you can see more at once
+
 ## [0.6.9]
 
-### Calendar Behavior
+### Calendar Changes
 
-- Movies no longer automatically appear on the calendar when added
-- Movies will only appear on the calendar if manually scheduled
-- Digital release dates are still stored and visible in movie details, but don't affect calendar display
+- Movies won't automatically show up on your calendar when you add them
+- You need to manually schedule movies for them to appear on the calendar
+- Digital release dates are still saved and shown in movie details, but they won't clutter your calendar
 
 ## [0.6.8]
 
 ### Data Management
 
-- Cleanup tab now shows which episodes will be deleted before cleaning
-- Expandable lists display show name, season/episode, and episode title
-- Preview available for both orphaned and unaired/unscheduled episodes
+- Before cleaning up episodes, you can now see exactly which ones will be deleted
+- The preview shows the show name, season, episode number, and episode title
+- You can preview both orphaned episodes and episodes that haven't aired yet
 
 ## [0.6.7]
 
 ### Bug Fixes
 
-- Fixed release notes not displaying properly in update modal
-- Markdown formatting (headers, bullet points) now renders correctly
+- Fixed update notifications not showing release notes properly
+- Release notes now display with proper formatting (headers, lists, etc.)
 
 ## [0.6.6]
 
 ### Backup & Restore
 
-- Export all your data (shows, episodes, movies) to a JSON file
-- Import from a backup to restore your data
-- Find in Data Management → Overview tab
+- You can now export all your data (shows, episodes, movies) to a backup file
+- Import from a backup file to restore your data if needed
+- Find this in Data Management → Overview tab
 
 ## [0.6.5]
 
 ### Network Display
 
-- TV shows now display their network in calendar views (e.g., "Fallout | Prime Video")
-- Network info shown in Month, Week, and Agenda views
+- TV shows now show which network they're on in the calendar (e.g., "Fallout | Prime Video")
+- This appears in all calendar views (Month, Week, and Agenda)
 
 ### Sync Improvements
 
-- Fixed refresh button only working once per session
-- Added "Sync All Shows" button in Data Management to refresh all shows from TVDB
-- Syncing now properly updates network information from TVDB
+- Fixed the refresh button so it works every time you use it
+- Added a "Sync All Shows" button in Data Management to update all your shows at once
+- Syncing now properly updates network information
 
 ## [0.6.4]
 
-### Improved Updates
+### Update Notifications
 
-- Redesigned update notification with app-themed styling
-- Release notes now display with proper markdown formatting
-- Download progress indicator with percentage
+- Update notifications now match the app's design
+- Release notes display with proper formatting
+- You can see the download progress with a percentage
 
 ## [0.6.3]
 
 ### Trailers
 
-- Watch trailers for movies and TV shows directly from the Extra Info tab
-- Trailers fetched from TMDB open in your browser
+- Watch trailers for movies and TV shows right from the app
+- Trailers open in your browser
 
 ### Cast & Crew
 
-- View cast members for TV shows (from TVDB)
-- View cast and key crew for movies (from TMDB)
-- New "Extra Info" tab in show/movie details
+- See who's in your favorite TV shows
+- See cast and crew for movies
+- All in the new "Extra Info" tab when viewing show or movie details
 
 ### Statistics Dashboard
 
-- Total watch time tracking
-- Episodes and movies watched counts
-- Show completion rates
-- Watch history timeline
+- Track your total watch time
+- See how many episodes and movies you've watched
+- Check completion rates for your shows
+- View your watch history timeline
 
 ### Data Management
 
-- Find and merge duplicate shows
-- Clean up orphaned episodes
-- Database optimization tools
-- Change history tracking
+- Find and merge duplicate shows if you accidentally added the same show twice
+- Clean up episodes that are no longer needed
+- Optimize your database to keep things running smoothly
+- See a history of all changes you've made
 
 ### Bug Fixes
 
-- Fixed database query compatibility issue in statistics
+- Fixed an issue with statistics not displaying correctly
 
 ## [0.6.1]
 
-- Refactored episode picker for improved selection logic
-- Added unschedule movie functionality
-- Updated local state management for scheduled movies
+- Improved how you select episodes in the episode picker
+- You can now unschedule movies from your calendar
+- Better handling of scheduled movies
 
 ## [0.6.0]
 
-- Initial movie support with TMDB integration
-- Movie search, tracking, and scheduling
-- Mark movies as watched
+- Added support for tracking movies
+- Search for movies, add them to your list, and schedule them
+- Mark movies as watched just like TV episodes
 
 ## [0.5.7]
 
-- Mark entire seasons as watched
-- Mark entire shows as watched
-- UI improvements for batch operations
+- Mark entire seasons as watched with one click
+- Mark entire shows as watched at once
+- Improved interface for batch operations

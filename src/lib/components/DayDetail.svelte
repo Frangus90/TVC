@@ -12,6 +12,7 @@
     getTrackedShows,
     type Episode,
   } from "../stores/shows.svelte";
+  import { openConfirmDialog } from "../stores/confirmDialog.svelte";
 
   interface GroupedEpisodes {
     showName: string;
@@ -95,7 +96,15 @@
     const scheduledCount = getScheduledCount();
     if (scheduledCount === 0) return;
 
-    if (confirm(`Are you sure you want to unschedule all ${scheduledCount} episode${scheduledCount !== 1 ? 's' : ''} for this day?`)) {
+    const confirmed = await openConfirmDialog({
+      title: "Unschedule Episodes",
+      message: `Are you sure you want to unschedule all ${scheduledCount} episode${scheduledCount !== 1 ? 's' : ''} for this day?`,
+      type: "warning",
+      confirmLabel: "Unschedule",
+      cancelLabel: "Cancel",
+    });
+
+    if (confirmed) {
       const episodes = getEpisodesForDate(date);
       const scheduledEpisodes = episodes.filter(ep => ep.scheduled_date);
       
