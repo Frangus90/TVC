@@ -11,6 +11,7 @@ let isDownloading = $state(false);
 let downloadProgress = $state(0);
 let modalOpen = $state(false);
 let currentUpdate = $state<Update | null>(null);
+let isDummyUpdate = $state(false);
 
 // Getters
 export function isUpdateAvailable() {
@@ -74,6 +75,7 @@ export async function checkForUpdates(silent = true): Promise<void> {
       updateVersion = update.version;
       updateBody = update.body || null;
       currentUpdate = update;
+      isDummyUpdate = false; // Real update, not dummy
 
       if (!silent) {
         console.log("[TVC Update] Opening update modal...");
@@ -81,9 +83,12 @@ export async function checkForUpdates(silent = true): Promise<void> {
       }
     } else {
       console.log("[TVC Update] No update available or update is null");
+      // Reset dummy update flag if no real update found
+      isDummyUpdate = false;
     }
   } catch (error) {
     console.error("[TVC Update] Failed to check for updates:", error);
+    isDummyUpdate = false; // Reset on error
   } finally {
     isChecking = false;
     console.log("[TVC Update] Check complete");
@@ -139,7 +144,24 @@ export async function downloadAndInstall(update?: Update): Promise<void> {
 
 // Called from the update modal
 export async function downloadAndInstallUpdate(): Promise<void> {
+  // Check if this is a dummy update (for development testing)
+  if (isDummyUpdate || !currentUpdate) {
+    // Import toast system dynamically to avoid circular dependencies
+    const { showError } = await import("./toast.svelte");
+    showError("This is a test update. Download is disabled in development mode.");
+    return;
+  }
   await downloadAndInstall(currentUpdate || undefined);
+}
+
+// Development-only function to simulate an update for testing
+export function simulateDummyUpdate(version: string, releaseNotes: string): void {
+  updateAvailable = true;
+  updateVersion = version;
+  updateBody = releaseNotes;
+  currentUpdate = null; // No real update object
+  isDummyUpdate = true; // Mark as dummy update
+  openUpdateModal();
 }
 
 // Manual update trigger (for settings or menu)

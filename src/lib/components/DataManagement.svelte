@@ -29,8 +29,22 @@
     type DuplicatePair,
   } from "../stores/dataManagement.svelte";
   import { openConfirmDialog } from "../stores/confirmDialog.svelte";
+  import { simulateDummyUpdate } from "../stores/updates.svelte";
 
   let cleanupMessage = $state<string | null>(null);
+  let dummyUpdateVersion = $state("0.8.0");
+  let dummyUpdateNotes = $state(`### Theme Settings
+
+- You can now hide TV and movie posters in the sidebar if you prefer a cleaner look
+- When you enable both compact spacing and hidden posters, the sidebar becomes a simple text list
+- The "Hide Posters" option also works in the episode scheduler and show/movie picker
+- Find the "Hide Posters" toggle in Theme Settings
+
+### Better User Experience
+
+- **Smoother Dialogs**: Confirmation dialogs now match the app's design and look much nicer
+- **Faster Search**: Search now starts automatically as you type, so you don't need to press Enter. You'll also see how many results were found
+- **Loading Indicators**: When the app is loading your shows and movies, you'll see helpful loading animations instead of blank screens`);
   let syncingAll = $state(false);
   let exporting = $state(false);
   let importing = $state(false);
@@ -423,6 +437,48 @@
               </button>
             </div>
           </div>
+
+          <!-- Dev-only: Dummy Update Testing -->
+          <!-- TEMP: Set to false to test production mode (hiding feature) -->
+          {@const showDummyUpdate = import.meta.env.DEV && true}
+          {#if showDummyUpdate}
+            <div class="mt-6 p-4 bg-background rounded-lg border border-border border-dashed">
+              <h3 class="text-sm font-medium text-text mb-3">Development: Test Update Modal</h3>
+              <p class="text-xs text-text-muted mb-4">
+                Simulate an update notification to test the update modal UI without requiring a real GitHub release.
+              </p>
+              <div class="space-y-3">
+                <div>
+                  <label for="dummy-version" class="block text-xs font-medium text-text-muted mb-1">Version</label>
+                  <input
+                    id="dummy-version"
+                    type="text"
+                    bind:value={dummyUpdateVersion}
+                    placeholder="0.8.0"
+                    class="w-full px-3 py-2 text-sm rounded border border-border bg-surface text-text placeholder:text-text-muted outline-none focus:ring-2 focus:ring-accent"
+                  />
+                </div>
+                <div>
+                  <label for="dummy-notes" class="block text-xs font-medium text-text-muted mb-1">Release Notes</label>
+                  <textarea
+                    id="dummy-notes"
+                    bind:value={dummyUpdateNotes}
+                    placeholder="Enter release notes here..."
+                    rows="8"
+                    class="w-full px-3 py-2 text-sm rounded border border-border bg-surface text-text placeholder:text-text-muted outline-none focus:ring-2 focus:ring-accent resize-y font-mono"
+                  ></textarea>
+                </div>
+                <button
+                  type="button"
+                  onclick={() => simulateDummyUpdate(dummyUpdateVersion, dummyUpdateNotes)}
+                  class="w-full px-3 py-2 text-sm bg-accent/20 hover:bg-accent/30 text-accent rounded-lg transition-colors flex items-center justify-center gap-2"
+                >
+                  <CloudDownload class="w-4 h-4" />
+                  Simulate Update
+                </button>
+              </div>
+            </div>
+          {/if}
         {/if}
       {:else if activeTab === "history"}
         <!-- History Tab -->
