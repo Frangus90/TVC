@@ -7,6 +7,7 @@
   import Header from "./lib/components/layout/Header.svelte";
   import ToastContainer from "./lib/components/ToastContainer.svelte";
   import ConfirmDialog from "./lib/components/common/ConfirmDialog.svelte";
+  import DragGhost from "./lib/components/common/DragGhost.svelte";
   import { getViewMode } from "./lib/stores/calendar.svelte";
   import { checkForUpdates } from "./lib/stores/updates.svelte";
   import { isSearchModalOpen } from "./lib/stores/shows.svelte";
@@ -237,3 +238,4 @@
 {/if}
 <ToastContainer />
 <ConfirmDialog />
+<DragGhost />

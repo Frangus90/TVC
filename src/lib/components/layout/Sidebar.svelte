@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Plus, Tv, Trash2, RefreshCw, Check, Film, Archive, RotateCcw, CalendarX, BarChart3, Database, PanelLeftClose, PanelLeft, Trophy } from "lucide-svelte";
   import { onMount } from "svelte";
+  import { startDrag } from "../../stores/dragDrop.svelte";
   import {
     getTrackedShows,
     loadTrackedShows,
@@ -34,6 +35,7 @@
   import { openDataManagement } from "../../stores/dataManagement.svelte";
   import { isSidebarCollapsed, toggleSidebar } from "../../stores/sidebar.svelte";
   import { getThemeSettings } from "../../stores/theme.svelte";
+  import { getViewMode } from "../../stores/calendar.svelte";
   import { openConfirmDialog } from "../../stores/confirmDialog.svelte";
   import SkeletonLoader from "../common/SkeletonLoader.svelte";
   import EmptyState from "../common/EmptyState.svelte";
@@ -397,7 +399,17 @@
                   <span class="flex-1 text-sm truncate">{show.name}</span>
                 </button>
               {:else}
-                <div class="group w-full flex items-center {isCompactList ? 'gap-2 px-2 py-1' : 'gap-3 px-3 py-2'} rounded-lg hover:bg-surface-hover transition-colors">
+                <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+                <div
+                  role="group"
+                  class="group w-full flex items-center {isCompactList ? 'gap-2 px-2 py-1' : 'gap-3 px-3 py-2'} rounded-lg hover:bg-surface-hover transition-colors {getViewMode() === 'tier' ? 'cursor-grab' : ''}"
+                  onmousedown={(e) => {
+                    if (getViewMode() === "tier") {
+                      e.preventDefault();
+                      startDrag({ type: "show", id: show.id }, e.clientX, e.clientY);
+                    }
+                  }}
+                >
                   <button
                     type="button"
                     class="flex-1 flex items-center {isCompactList ? 'gap-2' : 'gap-3'} text-left"
@@ -490,7 +502,17 @@
                   <span class="flex-1 text-sm truncate">{movie.title}</span>
                 </button>
               {:else}
-                <div class="group w-full flex items-center {isCompactList ? 'gap-2 px-2 py-1' : 'gap-3 px-3 py-2'} rounded-lg hover:bg-surface-hover transition-colors">
+                <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+                <div
+                  role="group"
+                  class="group w-full flex items-center {isCompactList ? 'gap-2 px-2 py-1' : 'gap-3 px-3 py-2'} rounded-lg hover:bg-surface-hover transition-colors {getViewMode() === 'tier' ? 'cursor-grab' : ''}"
+                  onmousedown={(e) => {
+                    if (getViewMode() === "tier") {
+                      e.preventDefault();
+                      startDrag({ type: "movie", id: movie.id }, e.clientX, e.clientY);
+                    }
+                  }}
+                >
                   <button
                     type="button"
                     class="flex-1 flex items-center {isCompactList ? 'gap-2' : 'gap-3'} text-left"
@@ -811,7 +833,7 @@
         <RefreshCw class="w-3 h-3 {isCheckingForUpdates() ? 'animate-spin' : ''}" />
         {isCheckingForUpdates() ? "Checking..." : "Check for Updates"}
       </button>
-      <p class="text-xs text-text-muted text-center mt-2">v0.7.1</p>
+      <p class="text-xs text-text-muted text-center mt-2">v0.7.2</p>
     {/if}
   </div>
 </aside>

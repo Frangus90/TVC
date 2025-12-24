@@ -2,6 +2,16 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.7.2]
+
+### Drag & Drop Rating
+
+- Drag shows and movies to rate them in the Tier view
+- Drag items from the sidebar and drop them on any tier row to set their rating
+- Drag posters between tiers to change their rating
+- Drop items on the "Unrate" zone at the bottom to remove their rating
+- Click and hold to start dragging, release to drop
+
 ## [0.7.1]
 
 ### Half-Star Ratings
