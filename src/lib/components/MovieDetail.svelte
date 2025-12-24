@@ -21,6 +21,7 @@
   } from "../stores/movies.svelte";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import CastCrew from "./CastCrew.svelte";
+  import StarRating from "./StarRating.svelte";
   import { openConfirmDialog } from "../stores/confirmDialog.svelte";
 
   type Tab = "overview" | "info";
@@ -88,12 +89,11 @@
     }
   }
 
-  async function handleRatingChange(newRating: number) {
+  async function handleRatingChange(newRating: number | null) {
     const movie = getCurrentMovie();
     if (!movie) return;
 
-    const ratingToSave = movie.rating === newRating ? null : newRating;
-    await updateMovieRating(movie.id, ratingToSave);
+    await updateMovieRating(movie.id, newRating);
   }
 
   async function handleRemove() {
@@ -262,22 +262,7 @@
           <!-- User Rating -->
           <div class="flex items-center gap-2 mt-3">
             <span class="text-sm text-text-muted">Your Rating:</span>
-            <div class="flex items-center gap-1">
-              {#each [1, 2, 3, 4, 5] as star}
-                <button
-                  onclick={() => handleRatingChange(star)}
-                  class="p-0.5 transition-colors"
-                  aria-label={`Rate ${star} stars`}
-                  type="button"
-                >
-                  <Star
-                    class="w-5 h-5 {movie.rating !== null && star <= movie.rating
-                      ? 'fill-yellow-400 text-yellow-400'
-                      : 'text-text-muted hover:text-yellow-400'}"
-                  />
-                </button>
-              {/each}
-            </div>
+            <StarRating rating={movie.rating} onRatingChange={(r) => handleRatingChange(r)} />
           </div>
         </div>
       </div>

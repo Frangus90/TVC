@@ -1,6 +1,6 @@
 <script lang="ts">
   import { fade, scale } from "svelte/transition";
-  import { X, Trash2, RefreshCw, ExternalLink, Star, Check, CheckCheck, Circle, CheckCircle, Users, List, Play } from "lucide-svelte";
+  import { X, Trash2, RefreshCw, ExternalLink, Check, CheckCheck, Circle, CheckCircle, Users, List, Play } from "lucide-svelte";
   import { invoke } from "@tauri-apps/api/core";
   import {
     isShowDetailOpen,
@@ -20,6 +20,7 @@
   import { type TrailerData } from "../stores/movies.svelte";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import CastCrew from "./CastCrew.svelte";
+  import StarRating from "./StarRating.svelte";
   import { openConfirmDialog } from "../stores/confirmDialog.svelte";
 
   type Tab = "episodes" | "info";
@@ -82,12 +83,11 @@
     }
   }
 
-  async function handleRatingChange(newRating: number) {
+  async function handleRatingChange(newRating: number | null) {
     const show = getCurrentShow();
     if (!show) return;
 
-    const ratingToSave = show.rating === newRating ? null : newRating;
-    await updateShowRating(show.id, ratingToSave);
+    await updateShowRating(show.id, newRating);
   }
 
   async function handleRemove() {
@@ -267,22 +267,7 @@
           <!-- Rating -->
           <div class="flex items-center gap-2 mt-3">
             <span class="text-sm text-text-muted">Rating:</span>
-            <div class="flex items-center gap-1">
-              {#each [1, 2, 3, 4, 5] as star}
-                <button
-                  onclick={() => handleRatingChange(star)}
-                  class="p-1 transition-colors"
-                  aria-label={`Rate ${star} stars`}
-                  type="button"
-                >
-                  <Star
-                    class="w-5 h-5 {show.rating !== null && star <= show.rating
-                      ? 'fill-yellow-400 text-yellow-400'
-                      : 'text-text-muted hover:text-yellow-400'}"
-                  />
-                </button>
-              {/each}
-            </div>
+            <StarRating rating={show.rating} onRatingChange={(r) => handleRatingChange(r)} />
           </div>
         </div>
       </div>

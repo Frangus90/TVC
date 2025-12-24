@@ -17,6 +17,7 @@ const MIGRATION_005: &str = include_str!("../migrations/005_add_show_rating.sql"
 const MIGRATION_006: &str = include_str!("../migrations/006_add_movies.sql");
 const MIGRATION_007: &str = include_str!("../migrations/007_add_change_history.sql");
 const MIGRATION_008: &str = include_str!("../migrations/008_add_cast_crew.sql");
+const MIGRATION_009: &str = include_str!("../migrations/009_rating_to_real.sql");
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -31,6 +32,7 @@ pub fn run() {
         MigrationDef { version: 6, sql: MIGRATION_006 },
         MigrationDef { version: 7, sql: MIGRATION_007 },
         MigrationDef { version: 8, sql: MIGRATION_008 },
+        MigrationDef { version: 9, sql: MIGRATION_009 },
     ]);
 
     let migrations = vec![
@@ -80,6 +82,12 @@ pub fn run() {
             version: 8,
             description: "add cast and crew tables",
             sql: MIGRATION_008,
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 9,
+            description: "convert rating to real for half-stars",
+            sql: MIGRATION_009,
             kind: MigrationKind::Up,
         },
     ];

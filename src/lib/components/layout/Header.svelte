@@ -21,6 +21,8 @@
       return `${format(weekStart, "MMM d")} - ${format(weekEnd, "MMM d, yyyy")}`;
     } else if (mode === "agenda") {
       return "Upcoming Episodes";
+    } else if (mode === "tier") {
+      return "Tier Rankings";
     }
     return format(date, "MMMM yyyy");
   }
@@ -28,7 +30,7 @@
 
 <header class="h-14 bg-surface border-b border-border flex items-center justify-between px-4">
   <div class="flex items-center gap-2">
-    {#if getViewMode() !== "agenda"}
+    {#if getViewMode() !== "agenda" && getViewMode() !== "tier"}
       <button
         onclick={previousPeriod}
         class="p-1.5 rounded-lg hover:bg-surface-hover transition-colors"
@@ -66,9 +68,9 @@
 
   <div class="flex items-center gap-2">
     <div class="flex bg-background rounded-lg p-1">
-      {#each ["month", "week", "agenda"] as mode}
+      {#each ["month", "week", "agenda", "tier"] as mode}
         <button
-          onclick={() => setViewMode(mode as "month" | "week" | "agenda")}
+          onclick={() => setViewMode(mode as "month" | "week" | "agenda" | "tier")}
           class="px-3 py-1 text-sm rounded-md transition-colors capitalize {getViewMode() === mode
             ? 'bg-surface text-text'
             : 'text-text-muted hover:text-text'}"

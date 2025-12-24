@@ -12,7 +12,7 @@ pub struct TrackedShow {
     pub color: Option<String>,
     pub notes: Option<String>,
     pub tags: Option<String>,
-    pub rating: Option<i64>,
+    pub rating: Option<f64>,
 }
 
 #[tauri::command]
@@ -139,7 +139,7 @@ pub async fn unarchive_show(app: AppHandle, id: i64) -> Result<(), String> {
 pub async fn update_show_rating(
     app: AppHandle,
     id: i64,
-    rating: Option<i64>,
+    rating: Option<f64>,
 ) -> Result<(), String> {
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;

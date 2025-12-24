@@ -1,7 +1,6 @@
 <script lang="ts">
   import { fade, scale } from "svelte/transition";
   import { Settings, X } from "lucide-svelte";
-  import { onMount } from "svelte";
   import {
     getThemeSettings,
     updateThemeSettings,

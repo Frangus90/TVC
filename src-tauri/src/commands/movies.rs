@@ -16,7 +16,7 @@ pub struct TrackedMovie {
     pub status: Option<String>,
     pub scheduled_date: Option<String>,
     pub watched: bool,
-    pub rating: Option<i64>,
+    pub rating: Option<f64>,
     pub color: Option<String>,
     pub archived: bool,
 }
@@ -204,7 +204,7 @@ pub async fn get_archived_movies(app: AppHandle) -> Result<Vec<TrackedMovie>, St
 pub async fn update_movie_rating(
     app: AppHandle,
     id: i64,
-    rating: Option<i64>,
+    rating: Option<f64>,
 ) -> Result<(), String> {
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
@@ -491,7 +491,7 @@ pub struct MovieDetail {
     pub scheduled_date: Option<String>,
     pub watched: bool,
     pub watched_at: Option<String>,
-    pub rating: Option<i64>,
+    pub rating: Option<f64>,
     pub notes: Option<String>,
     pub color: Option<String>,
     pub tags: Option<String>,

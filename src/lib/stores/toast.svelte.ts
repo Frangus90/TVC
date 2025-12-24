@@ -5,6 +5,7 @@ interface ToastItem {
   message: string;
   type: ToastType;
   duration: number;
+  onRetry?: () => void | Promise<void>;
 }
 
 let toasts = $state<ToastItem[]>([]);

@@ -107,6 +107,7 @@
   let MonthViewComponent = $state<any>(null);
   let WeekViewComponent = $state<any>(null);
   let AgendaViewComponent = $state<any>(null);
+  let TierViewComponent = $state<any>(null);
 
   $effect(() => {
     const viewMode = getViewMode();
@@ -121,6 +122,10 @@
     } else if (viewMode === "agenda" && !AgendaViewComponent) {
       import("./lib/components/calendar/AgendaView.svelte").then((mod) => {
         AgendaViewComponent = mod.default;
+      });
+    } else if (viewMode === "tier" && !TierViewComponent) {
+      import("./lib/components/calendar/TierView.svelte").then((mod) => {
+        TierViewComponent = mod.default;
       });
     }
   });
@@ -180,12 +185,20 @@
                 <div class="text-text-muted">Loading calendar...</div>
               </div>
             {/if}
-          {:else}
+          {:else if getViewMode() === "agenda"}
             {#if AgendaViewComponent}
               <AgendaViewComponent />
             {:else}
               <div class="flex items-center justify-center h-full">
                 <div class="text-text-muted">Loading calendar...</div>
+              </div>
+            {/if}
+          {:else if getViewMode() === "tier"}
+            {#if TierViewComponent}
+              <TierViewComponent />
+            {:else}
+              <div class="flex items-center justify-center h-full">
+                <div class="text-text-muted">Loading tier list...</div>
               </div>
             {/if}
           {/if}

@@ -1,7 +1,7 @@
 import { addMonths, subMonths, addWeeks, subWeeks, startOfMonth, endOfMonth, startOfWeek, endOfWeek, format } from "date-fns";
 
 let currentDate = $state(new Date());
-let viewMode = $state<"month" | "week" | "agenda">("month");
+let viewMode = $state<"month" | "week" | "agenda" | "tier">("month");
 
 export function getCurrentDate() {
   return currentDate;
@@ -11,7 +11,7 @@ export function getViewMode() {
   return viewMode;
 }
 
-export function setViewMode(mode: "month" | "week" | "agenda") {
+export function setViewMode(mode: "month" | "week" | "agenda" | "tier") {
   viewMode = mode;
 }
 

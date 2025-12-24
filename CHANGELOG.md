@@ -2,6 +2,24 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.7.1]
+
+### Half-Star Ratings
+
+- You can now give half-star ratings to shows and movies
+- Click the left half of a star for a half-star rating (0.5, 1.5, 2.5, etc.)
+- Click the right half of a star for a full-star rating (1, 2, 3, etc.)
+- Click the same rating again to clear it
+
+### Rankings & Tier List
+
+- New "Rank" tab in the sidebar shows your rated shows and movies grouped by star rating
+- See your average rating and count of rated items at a glance
+- New "Tier" view in the header alongside Month, Week, and Agenda
+- The Tier view displays a visual tier list with poster thumbnails organized by rating
+- Click any poster to open its detail page
+- Switch between Shows and Movies using sub-tabs in both views
+
 ## [0.7.0]
 
 ### Theme Settings
