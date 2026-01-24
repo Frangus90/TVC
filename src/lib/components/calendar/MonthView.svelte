@@ -13,6 +13,7 @@
   } from "date-fns";
   import { Check, Plus, Film } from "lucide-svelte";
   import { getCurrentDate } from "../../stores/calendar.svelte";
+  import { logger } from "../../utils/logger";
   import {
     getCalendarEpisodes,
     loadEpisodesForRange,
@@ -54,7 +55,7 @@
       loadEpisodesForRange(startStr, endStr),
       loadMoviesForRange(startStr, endStr),
     ]).catch((error) => {
-      console.error("Failed to load calendar data:", error);
+      logger.error("Failed to load calendar data", error);
     });
   });
 

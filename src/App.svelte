@@ -23,6 +23,8 @@
   import { isModalOpen as isArrSettingsOpen } from "./lib/stores/arr.svelte";
   import { isModalOpen as isPlexSettingsOpen } from "./lib/stores/plex.svelte";
   import { showSuccess } from "./lib/stores/toast.svelte";
+  import { logger } from "./lib/utils/logger";
+  import ErrorBoundary from "./lib/components/common/ErrorBoundary.svelte";
 
   // Lazy load modal components only when they're opened
   let SearchModalComponent = $state<any>(null);
@@ -155,18 +157,18 @@
 
   // Check for updates on app start and listen for Plex scrobble events
   onMount(() => {
-    console.log("[TVC] App mounted, will check for updates in 2s...");
+    logger.debug("[TVC] App mounted, will check for updates in 2s...");
     setTimeout(() => {
-      console.log("[TVC] Checking for updates...");
+      logger.debug("[TVC] Checking for updates...");
       checkForUpdates(false).catch((err) => {
-        console.error("[TVC] Update check failed:", err);
+        logger.error("[TVC] Update check failed", err);
       });
     }, 2000);
 
     // Listen for Plex scrobble events to refresh calendar
     let unlistenScrobble: UnlistenFn | undefined;
     listen<{ media_type: string; entity_id: number }>("plex-scrobble", (event) => {
-      console.log("[TVC] Plex scrobble event received:", event.payload);
+      logger.debug("[TVC] Plex scrobble event received", event.payload);
       const { media_type } = event.payload;
 
       // Show toast notification
@@ -191,14 +193,14 @@
   async function handleKeydown(event: KeyboardEvent) {
     if (event.ctrlKey && event.shiftKey && event.key === "I") {
       event.preventDefault();
-      console.log("[TVC] Opening dev tools...");
+      logger.debug("[TVC] Opening dev tools...");
       try {
         const webview = getCurrentWebview();
         await invoke("plugin:webview|internal_toggle_devtools", {
           label: webview.label,
         });
       } catch (err) {
-        console.error("[TVC] Failed to open dev tools:", err);
+        logger.error("[TVC] Failed to open dev tools", err);
       }
     }
   }
@@ -206,87 +208,91 @@
 
 <svelte:window on:keydown={handleKeydown} />
 
-<div class="flex h-screen bg-background text-text">
-  <Sidebar />
+<ErrorBoundary>
+  {#snippet children()}
+    <div class="flex h-screen bg-background text-text">
+      <Sidebar />
 
-  <main class="flex-1 flex flex-col overflow-hidden">
-    <Header />
+      <main class="flex-1 flex flex-col overflow-hidden">
+        <Header />
 
-    <div class="flex-1 overflow-auto p-6">
-      {#key getViewMode()}
-        <div in:fade={{ duration: 150, delay: 50 }} out:fade={{ duration: 100 }}>
-          {#if getViewMode() === "month"}
-            {#if MonthViewComponent}
-              <MonthViewComponent />
-            {:else}
-              <div class="flex items-center justify-center h-full">
-                <div class="text-text-muted">Loading calendar...</div>
-              </div>
-            {/if}
-          {:else if getViewMode() === "week"}
-            {#if WeekViewComponent}
-              <WeekViewComponent />
-            {:else}
-              <div class="flex items-center justify-center h-full">
-                <div class="text-text-muted">Loading calendar...</div>
-              </div>
-            {/if}
-          {:else if getViewMode() === "agenda"}
-            {#if AgendaViewComponent}
-              <AgendaViewComponent />
-            {:else}
-              <div class="flex items-center justify-center h-full">
-                <div class="text-text-muted">Loading calendar...</div>
-              </div>
-            {/if}
-          {:else if getViewMode() === "tier"}
-            {#if TierViewComponent}
-              <TierViewComponent />
-            {:else}
-              <div class="flex items-center justify-center h-full">
-                <div class="text-text-muted">Loading tier list...</div>
-              </div>
-            {/if}
-          {/if}
+        <div class="flex-1 overflow-auto p-6">
+          {#key getViewMode()}
+            <div in:fade={{ duration: 150, delay: 50 }} out:fade={{ duration: 100 }}>
+              {#if getViewMode() === "month"}
+                {#if MonthViewComponent}
+                  <MonthViewComponent />
+                {:else}
+                  <div class="flex items-center justify-center h-full">
+                    <div class="text-text-muted">Loading calendar...</div>
+                  </div>
+                {/if}
+              {:else if getViewMode() === "week"}
+                {#if WeekViewComponent}
+                  <WeekViewComponent />
+                {:else}
+                  <div class="flex items-center justify-center h-full">
+                    <div class="text-text-muted">Loading calendar...</div>
+                  </div>
+                {/if}
+              {:else if getViewMode() === "agenda"}
+                {#if AgendaViewComponent}
+                  <AgendaViewComponent />
+                {:else}
+                  <div class="flex items-center justify-center h-full">
+                    <div class="text-text-muted">Loading calendar...</div>
+                  </div>
+                {/if}
+              {:else if getViewMode() === "tier"}
+                {#if TierViewComponent}
+                  <TierViewComponent />
+                {:else}
+                  <div class="flex items-center justify-center h-full">
+                    <div class="text-text-muted">Loading tier list...</div>
+                  </div>
+                {/if}
+              {/if}
+            </div>
+          {/key}
         </div>
-      {/key}
+      </main>
     </div>
-  </main>
-</div>
 
-{#if SearchModalComponent}
-  <SearchModalComponent />
-{/if}
-{#if MovieSearchModalComponent}
-  <MovieSearchModalComponent />
-{/if}
-{#if EpisodePickerComponent}
-  <EpisodePickerComponent />
-{/if}
-{#if DayDetailComponent}
-  <DayDetailComponent />
-{/if}
-{#if ShowDetailComponent}
-  <ShowDetailComponent />
-{/if}
-{#if MovieDetailComponent}
-  <MovieDetailComponent />
-{/if}
-{#if StatisticsDashboardComponent}
-  <StatisticsDashboardComponent />
-{/if}
-{#if DataManagementComponent}
-  <DataManagementComponent />
-{/if}
-{#if UpdateModalComponent}
-  <UpdateModalComponent />
-{/if}
-{#if ArrServersComponent}
-  <ArrServersComponent />
-{/if}
-{#if PlexSettingsComponent}
-  <PlexSettingsComponent />
-{/if}
-<ToastContainer />
-<ConfirmDialog />
-<DragGhost />
+    {#if SearchModalComponent}
+      <SearchModalComponent />
+    {/if}
+    {#if MovieSearchModalComponent}
+      <MovieSearchModalComponent />
+    {/if}
+    {#if EpisodePickerComponent}
+      <EpisodePickerComponent />
+    {/if}
+    {#if DayDetailComponent}
+      <DayDetailComponent />
+    {/if}
+    {#if ShowDetailComponent}
+      <ShowDetailComponent />
+    {/if}
+    {#if MovieDetailComponent}
+      <MovieDetailComponent />
+    {/if}
+    {#if StatisticsDashboardComponent}
+      <StatisticsDashboardComponent />
+    {/if}
+    {#if DataManagementComponent}
+      <DataManagementComponent />
+    {/if}
+    {#if UpdateModalComponent}
+      <UpdateModalComponent />
+    {/if}
+    {#if ArrServersComponent}
+      <ArrServersComponent />
+    {/if}
+    {#if PlexSettingsComponent}
+      <PlexSettingsComponent />
+    {/if}
+    <ToastContainer />
+    <ConfirmDialog />
+    <DragGhost />
+  {/snippet}
+</ErrorBoundary>

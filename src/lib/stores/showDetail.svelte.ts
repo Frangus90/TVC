@@ -1,9 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
-import Database from "@tauri-apps/plugin-sql";
+import { getDatabase } from "../utils/database";
+import { logger } from "../utils/logger";
 import type { Episode } from "./shows.svelte";
-
-// Use separate database in dev mode to avoid breaking production data
-const DB_NAME = import.meta.env.DEV ? "sqlite:tvc_dev.db" : "sqlite:tvc.db";
 
 export interface CastMember {
   id: number;
@@ -34,14 +32,8 @@ export interface ShowDetail {
   rating: number | null;
 }
 
-let db: Database | null = null;
-
-async function getDb(): Promise<Database> {
-  if (!db) {
-    db = await Database.load(DB_NAME);
-  }
-  return db;
-}
+// Use shared database utility
+const getDb = getDatabase;
 
 // Show detail state
 let showDetailOpen = $state(false);
@@ -103,11 +95,25 @@ export async function openShowDetail(showId: number): Promise<void> {
     currentShow = shows[0];
 
     // Get all episodes for this show
-    const episodes = await database.select<Episode[]>(
+    interface EpisodeRow {
+      id: number;
+      show_id: number;
+      show_name: string;
+      network: string | null;
+      season_number: number;
+      episode_number: number;
+      name: string | null;
+      aired: string | null;
+      scheduled_date: string | null;
+      watched: number; // SQLite returns 0 or 1
+      poster_url: string | null;
+    }
+
+    const episodes = await database.select<EpisodeRow[]>(
       `SELECT e.id, e.show_id, s.name as show_name, s.network,
        COALESCE(e.season_number, 0) as season_number,
        COALESCE(e.episode_number, 0) as episode_number,
-       e.name, e.aired, e.scheduled_date, e.watched = 1 as watched,
+       e.name, e.aired, e.scheduled_date, e.watched,
        s.poster_url
        FROM episodes e
        JOIN shows s ON e.show_id = s.id
@@ -126,11 +132,11 @@ export async function openShowDetail(showId: number): Promise<void> {
       name: ep.name,
       aired: ep.aired,
       scheduled_date: ep.scheduled_date,
-      watched: (ep.watched as unknown as number) === 1,
+      watched: ep.watched === 1,
       poster_url: ep.poster_url,
     }));
   } catch (err) {
-    console.error("Failed to load show detail:", err);
+    logger.error("Failed to load show detail", err);
     error = err instanceof Error ? err.message : "Failed to load show details";
   } finally {
     loading = false;
@@ -152,7 +158,7 @@ export async function fetchShowCast(showId: number): Promise<void> {
     const cast = await invoke<CastMember[]>("get_show_cast", { showId });
     showCast = cast;
   } catch (err) {
-    console.error("Failed to fetch show cast:", err);
+    logger.error("Failed to fetch show cast", err);
     // Don't set error state for cast - it's optional
   } finally {
     castLoading = false;
@@ -170,7 +176,7 @@ export async function syncShowEpisodes(showId: number): Promise<void> {
       await openShowDetail(showId);
     }
   } catch (err) {
-    console.error("Failed to sync episodes:", err);
+    logger.error("Failed to sync episodes", err);
     error = err instanceof Error ? err.message : "Failed to sync episodes";
   } finally {
     loading = false;
@@ -191,7 +197,7 @@ export async function updateShowRating(
     const { loadTrackedShows } = await import("./shows.svelte");
     await loadTrackedShows();
   } catch (err) {
-    console.error("Failed to update show rating:", err);
+    logger.error("Failed to update show rating", err);
     error = err instanceof Error ? err.message : "Failed to update rating";
   }
 }
@@ -211,7 +217,7 @@ export async function markSeasonWatched(
     const { updateCalendarEpisodesWatched } = await import("./shows.svelte");
     updateCalendarEpisodesWatched(showId, watched, seasonNumber);
   } catch (err) {
-    console.error("Failed to mark season watched:", err);
+    logger.error("Failed to mark season watched", err);
     error = err instanceof Error ? err.message : "Failed to mark season watched";
   }
 }
@@ -228,7 +234,7 @@ export async function markShowWatched(
     const { updateCalendarEpisodesWatched } = await import("./shows.svelte");
     updateCalendarEpisodesWatched(showId, watched);
   } catch (err) {
-    console.error("Failed to mark show watched:", err);
+    logger.error("Failed to mark show watched", err);
     error = err instanceof Error ? err.message : "Failed to mark show watched";
   }
 }
@@ -247,7 +253,7 @@ export async function markEpisodeWatched(
     const { updateEpisodeWatched } = await import("./shows.svelte");
     updateEpisodeWatched(episodeId, watched);
   } catch (err) {
-    console.error("Failed to mark episode watched:", err);
+    logger.error("Failed to mark episode watched", err);
     error = err instanceof Error ? err.message : "Failed to mark episode watched";
   }
 }

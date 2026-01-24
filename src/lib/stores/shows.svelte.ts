@@ -1,8 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
-import Database from "@tauri-apps/plugin-sql";
-
-// Use separate database in dev mode to avoid breaking production data
-const DB_NAME = import.meta.env.DEV ? "sqlite:tvc_dev.db" : "sqlite:tvc.db";
+import { getDatabase } from "../utils/database";
+import { logger } from "../utils/logger";
+import { validateSearchQuery } from "../utils/validation";
+import { requestDeduplicator } from "../utils/requestDedup";
 
 export interface TrackedShow {
   id: number;
@@ -54,29 +54,8 @@ export interface ShowEpisode {
   overview: string | null;
 }
 
-let db: Database | null = null;
-
-async function getDb(): Promise<Database> {
-  if (!db) {
-    db = await Database.load(DB_NAME);
-    // Ensure scheduled_date column exists (migration)
-    await db.execute(`
-      CREATE TABLE IF NOT EXISTS _migrations (version INTEGER PRIMARY KEY);
-    `);
-    const migrations = await db.select<{ version: number }[]>(
-      "SELECT version FROM _migrations WHERE version = 2"
-    );
-    if (migrations.length === 0) {
-      try {
-        await db.execute("ALTER TABLE episodes ADD COLUMN scheduled_date TEXT");
-      } catch {
-        // Column might already exist
-      }
-      await db.execute("INSERT OR IGNORE INTO _migrations (version) VALUES (2)");
-    }
-  }
-  return db;
-}
+// Use shared database utility
+const getDb = getDatabase;
 
 // Application state
 let trackedShows = $state<TrackedShow[]>([]);
@@ -162,6 +141,24 @@ export function getDayDetailDate() {
 }
 
 // Search relevance scoring
+/**
+ * Score a search result based on relevance to the query.
+ * Higher scores indicate better matches.
+ * 
+ * Scoring algorithm:
+ * - Exact name match: +100 points
+ * - Name starts with query: +80 points
+ * - Name contains query as whole word: +60 points
+ * - Name contains query: +40 points
+ * - Year match: +10 points (if query contains year)
+ * - Default: +10 points
+ * 
+ * The query is normalized to lowercase for case-insensitive matching.
+ * 
+ * @param result - The search result to score
+ * @param query - The search query (will be normalized to lowercase)
+ * @returns A relevance score (higher is better, typically 10-110 range)
+ */
 function scoreSearchResult(result: SearchResult, query: string): number {
   const name = (result.name || "").toLowerCase();
   const q = query.toLowerCase().trim();
@@ -200,15 +197,30 @@ export function setSearchQuery(query: string) {
   searchQuery = query;
 }
 
+/**
+ * Search for TV shows using the TVDB API.
+ * Validates input, performs search, and sorts results by relevance.
+ * 
+ * @param query - The search query string (will be validated)
+ */
 export async function searchShows(query: string): Promise<void> {
-  if (!query.trim()) {
+  // Validate input
+  const validation = validateSearchQuery(query);
+  if (!validation.valid) {
     searchResults = [];
+    if (validation.error) {
+      logger.warn("Invalid search query", { query, error: validation.error });
+    }
     return;
   }
 
   searchLoading = true;
   try {
-    const results = await invoke<SearchResult[]>("search_shows", { query });
+    // Use request deduplication to prevent duplicate searches
+    const results = await requestDeduplicator.deduplicate(
+      `search_shows_${query}`,
+      () => invoke<SearchResult[]>("search_shows", { query })
+    );
     // Sort by relevance
     searchResults = results.sort((a, b) => {
       const scoreA = scoreSearchResult(a, query);
@@ -216,20 +228,25 @@ export async function searchShows(query: string): Promise<void> {
       return scoreB - scoreA;
     });
   } catch (error) {
-    console.error("Search error:", error);
+    logger.error("Search error", error);
     searchResults = [];
   } finally {
     searchLoading = false;
   }
 }
 
+/**
+ * Load all tracked shows from the backend.
+ * Falls back to direct database access if backend command fails.
+ * Updates the trackedShows state and sets loading flags.
+ */
 export async function loadTrackedShows(): Promise<void> {
   showsLoading = true;
   try {
     const shows = await invoke<TrackedShow[]>("get_tracked_shows");
     trackedShows = shows;
   } catch (error) {
-    console.error("Failed to load tracked shows:", error);
+    logger.error("Failed to load tracked shows", error);
     // Fallback to database if backend command fails
     try {
       const database = await getDb();
@@ -238,7 +255,7 @@ export async function loadTrackedShows(): Promise<void> {
       );
       trackedShows = rows;
     } catch (dbError) {
-      console.error("Database fallback also failed:", dbError);
+      logger.error("Database fallback also failed", dbError);
     }
   } finally {
     showsLoading = false;
@@ -264,7 +281,7 @@ export async function addShow(show: SearchResult): Promise<void> {
       }
     });
   } catch (error) {
-    console.error("Failed to add show:", error);
+    logger.error("Failed to add show", error);
   }
 }
 
@@ -276,7 +293,7 @@ export async function removeShow(showId: number): Promise<void> {
     // Immediately remove episodes from calendar state
     calendarEpisodes = calendarEpisodes.filter((ep) => ep.show_id !== showId);
   } catch (error) {
-    console.error("Failed to remove show:", error);
+    logger.error("Failed to remove show", error);
   }
 }
 
@@ -286,7 +303,7 @@ export async function loadArchivedShows(): Promise<void> {
     const shows = await invoke<TrackedShow[]>("get_archived_shows");
     archivedShows = shows;
   } catch (error) {
-    console.error("Failed to load archived shows:", error);
+    logger.error("Failed to load archived shows", error);
   } finally {
     archivedShowsLoading = false;
   }
@@ -300,7 +317,7 @@ export async function archiveShow(showId: number): Promise<void> {
     // Remove episodes from calendar state
     calendarEpisodes = calendarEpisodes.filter((ep) => ep.show_id !== showId);
   } catch (error) {
-    console.error("Failed to archive show:", error);
+    logger.error("Failed to archive show", error);
   }
 }
 
@@ -310,7 +327,7 @@ export async function unarchiveShow(showId: number): Promise<void> {
     await loadTrackedShows();
     await loadArchivedShows();
   } catch (error) {
-    console.error("Failed to unarchive show:", error);
+    logger.error("Failed to unarchive show", error);
   }
 }
 
@@ -319,10 +336,17 @@ export async function syncShowEpisodes(showId: number): Promise<void> {
     // Use backend command to sync episodes
     await invoke("sync_show_episodes", { showId });
   } catch (error) {
-    console.error("Failed to sync episodes:", error);
+    logger.error("Failed to sync episodes", error);
   }
 }
 
+/**
+ * Load episodes for a date range (for calendar views).
+ * Fetches episodes that are either aired or scheduled within the range.
+ * 
+ * @param startDate - Start date in YYYY-MM-DD format
+ * @param endDate - End date in YYYY-MM-DD format
+ */
 export async function loadEpisodesForRange(
   startDate: string,
   endDate: string
@@ -335,7 +359,7 @@ export async function loadEpisodesForRange(
     });
     calendarEpisodes = episodes;
   } catch (error) {
-    console.error("Failed to load episodes:", error);
+    logger.error("Failed to load episodes", error);
     // Fallback to database if backend command fails
     try {
       const database = await getDb();
@@ -377,7 +401,7 @@ export async function loadEpisodesForRange(
         poster_url: row.poster_url,
       }));
     } catch (dbError) {
-      console.error("Database fallback also failed:", dbError);
+      logger.error("Database fallback also failed", dbError);
     }
   }
 }
@@ -393,7 +417,7 @@ export async function toggleEpisodeWatched(
       ep.id === episodeId ? { ...ep, watched } : ep
     );
   } catch (error) {
-    console.error("Failed to toggle episode watched:", error);
+    logger.error("Failed to toggle episode watched", error);
   }
 }
 
@@ -428,7 +452,19 @@ export async function openEpisodePicker(show: TrackedShow, date: string): Promis
 
   try {
     const database = await getDb();
-    const rows = await database.select<ShowEpisode[]>(
+    interface EpisodeRow {
+      id: number;
+      season_number: number;
+      episode_number: number;
+      name: string | null;
+      aired: string | null;
+      scheduled_date: string | null;
+      watched: number; // SQLite returns 0 or 1
+      image_url: string | null;
+      overview: string | null;
+    }
+
+    const rows = await database.select<EpisodeRow[]>(
       `SELECT id, season_number, episode_number, name, aired, scheduled_date, watched, image_url, overview
        FROM episodes
        WHERE show_id = $1
@@ -436,11 +472,18 @@ export async function openEpisodePicker(show: TrackedShow, date: string): Promis
       [show.id]
     );
     episodePickerEpisodes = rows.map((r) => ({
-      ...r,
-      watched: (r.watched as unknown as number) === 1,
+      id: r.id,
+      season_number: r.season_number,
+      episode_number: r.episode_number,
+      name: r.name,
+      aired: r.aired,
+      scheduled_date: r.scheduled_date,
+      watched: r.watched === 1,
+      image_url: r.image_url,
+      overview: r.overview,
     }));
   } catch (error) {
-    console.error("Failed to load episodes for picker:", error);
+    logger.error("Failed to load episodes for picker", error);
     episodePickerEpisodes = [];
   }
 }
@@ -453,30 +496,30 @@ export function closeEpisodePicker() {
 }
 
 export async function scheduleEpisode(episodeId: number, date: string): Promise<void> {
-  console.log("[Schedule] scheduleEpisode called:", { episodeId, date });
+  logger.debug("[Schedule] scheduleEpisode called", { episodeId, date });
   try {
-    console.log("[Schedule] Invoking backend command 'schedule_episode'");
+    logger.debug("[Schedule] Invoking backend command 'schedule_episode'");
     await invoke("schedule_episode", { episodeId, date });
-    console.log("[Schedule] Backend command completed successfully");
+    logger.debug("[Schedule] Backend command completed successfully");
 
     // Refresh calendar
     if (currentCalendarRange) {
-      console.log("[Schedule] Refreshing calendar range:", {
+      logger.debug("[Schedule] Refreshing calendar range", {
         start: currentCalendarRange.start,
         end: currentCalendarRange.end,
       });
       await loadEpisodesForRange(currentCalendarRange.start, currentCalendarRange.end);
-      console.log("[Schedule] Calendar refreshed");
+      logger.debug("[Schedule] Calendar refreshed");
     } else {
-      console.log("[Schedule] No current calendar range, skipping refresh");
+      logger.debug("[Schedule] No current calendar range, skipping refresh");
     }
 
     closeEpisodePicker();
-    console.log("[Schedule] scheduleEpisode completed successfully");
+    logger.debug("[Schedule] scheduleEpisode completed successfully");
   } catch (error) {
-    console.error("[Schedule] Failed to schedule episode:", error);
+    logger.error("[Schedule] Failed to schedule episode", error);
     if (error instanceof Error) {
-      console.error("[Schedule] Error details:", {
+      logger.error("[Schedule] Error details", {
         message: error.message,
         stack: error.stack,
         name: error.name,
@@ -500,7 +543,7 @@ export async function scheduleMultipleEpisodes(episodeIds: number[], date: strin
 
     closeEpisodePicker();
   } catch (error) {
-    console.error("Failed to schedule episodes:", error);
+    logger.error("Failed to schedule episodes", error);
   }
 }
 
@@ -513,14 +556,14 @@ export async function unscheduleEpisode(episodeId: number): Promise<void> {
       await loadEpisodesForRange(currentCalendarRange.start, currentCalendarRange.end);
     }
   } catch (error) {
-    console.error("Failed to unschedule episode:", error);
+    logger.error("Failed to unschedule episode", error);
   }
 }
 
 // Refresh calendar data (called when external changes happen like Plex scrobbles)
 export async function refreshCalendar(): Promise<void> {
   if (currentCalendarRange) {
-    console.log("[Calendar] Refreshing due to external change");
+    logger.debug("[Calendar] Refreshing due to external change");
     await loadEpisodesForRange(currentCalendarRange.start, currentCalendarRange.end);
   }
 }

@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { logger } from "../utils/logger";
 import { loadTrackedShows } from "./shows.svelte";
 import { loadTrackedMovies } from "./movies.svelte";
 
@@ -224,10 +225,10 @@ export async function loadServers() {
 
   try {
     const result = await invoke<ArrServer[]>("get_arr_servers");
-    console.log("[Arr] Loaded servers:", result);
+    logger.debug("[Arr] Loaded servers:", result);
     servers = result;
   } catch (err) {
-    console.error("[Arr] Failed to load servers:", err);
+    logger.error("[Arr] Failed to load servers:", err);
     error = err instanceof Error ? err.message : String(err);
   } finally {
     loading = false;
@@ -249,7 +250,7 @@ export async function testConnection(baseUrl: string, apiKey: string, serverType
       message: `Connected successfully! ${serverType.charAt(0).toUpperCase() + serverType.slice(1)} v${status.version}`,
     };
   } catch (err) {
-    console.error("Connection test failed:", err);
+    logger.error("Connection test failed:", err);
     testResult = {
       success: false,
       message: err instanceof Error ? err.message : String(err),
@@ -264,15 +265,15 @@ export async function addServer(request: ArrServerRequest): Promise<void> {
   error = null;
 
   try {
-    console.log("[Arr] Adding server:", request);
+    logger.debug("[Arr] Adding server:", request);
     const id = await invoke<number>("add_arr_server", { server: request });
-    console.log("[Arr] Server added with id:", id);
+    logger.debug("[Arr] Server added with id:", id);
     successMessage = `${request.name} added successfully`;
     await loadServers();
     editingServer = null;
     setTimeout(() => (successMessage = null), 3000);
   } catch (err) {
-    console.error("Failed to add server:", err);
+    logger.error("Failed to add server:", err);
     error = err instanceof Error ? err.message : String(err);
     throw err;
   } finally {
@@ -291,7 +292,7 @@ export async function updateServer(id: number, request: ArrServerRequest): Promi
     editingServer = null;
     setTimeout(() => (successMessage = null), 3000);
   } catch (err) {
-    console.error("Failed to update server:", err);
+    logger.error("Failed to update server:", err);
     error = err instanceof Error ? err.message : String(err);
     throw err;
   } finally {
@@ -309,7 +310,7 @@ export async function deleteServer(id: number): Promise<void> {
     await loadServers();
     setTimeout(() => (successMessage = null), 3000);
   } catch (err) {
-    console.error("Failed to delete server:", err);
+    logger.error("Failed to delete server:", err);
     error = err instanceof Error ? err.message : String(err);
     throw err;
   } finally {
@@ -329,7 +330,7 @@ export async function loadLibrary(server: ArrServer): Promise<void> {
       libraryItems = await invoke<LibraryItem[]>("get_radarr_library", { serverId: server.id });
     }
   } catch (err) {
-    console.error("Failed to load library:", err);
+    logger.error("Failed to load library:", err);
     error = err instanceof Error ? err.message : String(err);
   } finally {
     loading = false;
@@ -375,7 +376,7 @@ export async function importSelected(): Promise<void> {
     selectedItems = new Set();
     await loadLibrary(selectedServer);
   } catch (err) {
-    console.error("Import failed:", err);
+    logger.error("Import failed:", err);
     error = err instanceof Error ? err.message : String(err);
   } finally {
     importing = false;

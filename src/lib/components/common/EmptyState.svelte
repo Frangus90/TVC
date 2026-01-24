@@ -1,5 +1,7 @@
 <script lang="ts">
-  export let icon: any = null;
+  import type { ComponentType, SvelteComponent } from "svelte";
+
+  export let icon: ComponentType<SvelteComponent> | null = null;
   export let title: string;
   export let message: string;
   export let action: { label: string; onclick: () => void } | null = null;

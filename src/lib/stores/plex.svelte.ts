@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { logger } from "../utils/logger";
 
 // Types
 export interface PlexConfig {
@@ -81,7 +82,7 @@ export async function loadConfig() {
   try {
     config = await invoke<PlexConfig>("get_plex_config");
   } catch (err) {
-    console.error("[Plex] Failed to load config:", err);
+    logger.error("[Plex] Failed to load config:", err);
     error = err instanceof Error ? err.message : String(err);
   } finally {
     loading = false;
@@ -92,7 +93,7 @@ export async function loadServerStatus() {
   try {
     serverStatus = await invoke<PlexServerStatus>("get_plex_server_status");
   } catch (err) {
-    console.error("[Plex] Failed to load server status:", err);
+    logger.error("[Plex] Failed to load server status:", err);
   }
 }
 
@@ -100,7 +101,7 @@ export async function loadScrobbleLog() {
   try {
     scrobbleLog = await invoke<ScrobbleLogEntry[]>("get_scrobble_log", { limit: 20 });
   } catch (err) {
-    console.error("[Plex] Failed to load scrobble log:", err);
+    logger.error("[Plex] Failed to load scrobble log:", err);
   }
 }
 
@@ -112,7 +113,7 @@ export async function updateConfig(newConfig: PlexConfig) {
     await invoke("update_plex_config", { config: newConfig });
     config = newConfig;
   } catch (err) {
-    console.error("[Plex] Failed to update config:", err);
+    logger.error("[Plex] Failed to update config:", err);
     error = err instanceof Error ? err.message : String(err);
     throw err;
   } finally {
@@ -128,7 +129,7 @@ export async function startServer() {
     await invoke("start_plex_server", { port: config.port });
     await loadServerStatus();
   } catch (err) {
-    console.error("[Plex] Failed to start server:", err);
+    logger.error("[Plex] Failed to start server:", err);
     error = err instanceof Error ? err.message : String(err);
   } finally {
     loading = false;
@@ -143,7 +144,7 @@ export async function stopServer() {
     await invoke("stop_plex_server");
     await loadServerStatus();
   } catch (err) {
-    console.error("[Plex] Failed to stop server:", err);
+    logger.error("[Plex] Failed to stop server:", err);
     error = err instanceof Error ? err.message : String(err);
   } finally {
     loading = false;

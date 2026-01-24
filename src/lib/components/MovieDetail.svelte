@@ -23,6 +23,7 @@
   import CastCrew from "./CastCrew.svelte";
   import StarRating from "./StarRating.svelte";
   import { openConfirmDialog } from "../stores/confirmDialog.svelte";
+  import { logger } from "../utils/logger";
 
   type Tab = "overview" | "info";
   let activeTab = $state<Tab>("overview");
@@ -63,7 +64,7 @@
       localCast = result.cast;
       localCrew = result.crew;
     } catch (err) {
-      console.error("Failed to fetch cast/crew:", err);
+      logger.error("Failed to fetch cast/crew", err);
     } finally {
       localCastLoading = false;
     }
@@ -82,7 +83,7 @@
         localTrailerError = "No trailer found for this movie.";
       }
     } catch (err) {
-      console.error("Failed to fetch trailer:", err);
+      logger.error("Failed to fetch trailer", err);
       localTrailerError = err instanceof Error ? err.message : String(err);
     } finally {
       localTrailerLoading = false;

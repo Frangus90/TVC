@@ -1,6 +1,7 @@
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { message } from "@tauri-apps/plugin-dialog";
+import { logger } from "../utils/logger";
 
 // State
 let updateAvailable = $state(false);
@@ -57,20 +58,20 @@ export function closeUpdateModal() {
 }
 
 export async function checkForUpdates(silent = true): Promise<void> {
-  console.log("[TVC Update] checkForUpdates called, silent:", silent);
+  logger.debug("[TVC Update] checkForUpdates called, silent:", silent);
   if (isChecking) {
-    console.log("[TVC Update] Already checking, skipping");
+    logger.debug("[TVC Update] Already checking, skipping");
     return;
   }
 
   isChecking = true;
   try {
-    console.log("[TVC Update] Calling check()...");
+    logger.debug("[TVC Update] Calling check()...");
     const update = await check();
-    console.log("[TVC Update] check() result:", update);
+    logger.debug("[TVC Update] check() result:", update);
 
     if (update?.available) {
-      console.log("[TVC Update] Update available! Version:", update.version);
+      logger.debug("[TVC Update] Update available! Version:", update.version);
       updateAvailable = true;
       updateVersion = update.version;
       updateBody = update.body || null;
@@ -78,20 +79,20 @@ export async function checkForUpdates(silent = true): Promise<void> {
       isDummyUpdate = false; // Real update, not dummy
 
       if (!silent) {
-        console.log("[TVC Update] Opening update modal...");
+        logger.debug("[TVC Update] Opening update modal...");
         openUpdateModal();
       }
     } else {
-      console.log("[TVC Update] No update available or update is null");
+      logger.debug("[TVC Update] No update available or update is null");
       // Reset dummy update flag if no real update found
       isDummyUpdate = false;
     }
   } catch (error) {
-    console.error("[TVC Update] Failed to check for updates:", error);
+    logger.error("[TVC Update] Failed to check for updates:", error);
     isDummyUpdate = false; // Reset on error
   } finally {
     isChecking = false;
-    console.log("[TVC Update] Check complete");
+    logger.debug("[TVC Update] Check complete");
   }
 }
 
@@ -136,7 +137,7 @@ export async function downloadAndInstall(update?: Update): Promise<void> {
     // Relaunch the app after installation
     await relaunch();
   } catch (error) {
-    console.error("Failed to download/install update:", error);
+    logger.error("Failed to download/install update:", error);
     isDownloading = false;
     downloadProgress = 0;
   }

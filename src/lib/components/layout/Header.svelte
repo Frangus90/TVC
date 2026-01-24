@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { ChevronLeft, ChevronRight } from "lucide-svelte";
+  import { ChevronLeft, ChevronRight, Power } from "lucide-svelte";
   import { format, startOfWeek, endOfWeek } from "date-fns";
+  import { invoke } from "@tauri-apps/api/core";
   import {
     getCurrentDate,
     getViewMode,
@@ -10,6 +11,26 @@
     goToToday,
   } from "../../stores/calendar.svelte";
   import ThemeSelector from "../ThemeSelector.svelte";
+  import { openConfirmDialog } from "../../stores/confirmDialog.svelte";
+  import { logger } from "../../utils/logger";
+
+  async function handleExit() {
+    const confirmed = await openConfirmDialog({
+      title: "Exit Application",
+      message: "Are you sure you want to fully exit TVC? The app will close completely and will not minimize to the system tray.",
+      type: "warning",
+      confirmLabel: "Exit",
+      cancelLabel: "Cancel",
+    });
+
+    if (confirmed) {
+      try {
+        await invoke("exit_app");
+      } catch (error) {
+        logger.error("Failed to exit app", error);
+      }
+    }
+  }
 
   function getHeaderTitle(): string {
     const date = getCurrentDate();
@@ -83,5 +104,13 @@
       {/each}
     </div>
     <ThemeSelector />
+    <button
+      onclick={handleExit}
+      class="p-1.5 rounded-lg hover:bg-surface-hover transition-colors text-text-muted hover:text-red-400"
+      aria-label="Exit application"
+      title="Exit application (fully close, not minimize to tray)"
+    >
+      <Power class="w-5 h-5" />
+    </button>
   </div>
 </header>

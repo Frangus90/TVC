@@ -1,6 +1,7 @@
 <script lang="ts">
   import { format, parseISO, addDays, isToday, isTomorrow, isPast } from "date-fns";
   import { Check, Tv, Film } from "lucide-svelte";
+  import { logger } from "../../utils/logger";
   import {
     getCalendarEpisodes,
     loadEpisodesForRange,
@@ -27,7 +28,7 @@
       loadEpisodesForRange(startStr, endStr),
       loadMoviesForRange(startStr, endStr),
     ]).catch((error) => {
-      console.error("Failed to load calendar data:", error);
+      logger.error("Failed to load calendar data", error);
     });
   });
 

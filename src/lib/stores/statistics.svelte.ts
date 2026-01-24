@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { logger } from "../utils/logger";
 
 export interface WatchStatistics {
   total_watch_time_minutes: number;
@@ -105,7 +106,7 @@ export async function loadWatchStatistics(): Promise<void> {
   try {
     statistics = await invoke<WatchStatistics>("get_watch_statistics");
   } catch (error) {
-    console.error("Failed to load watch statistics:", error);
+    logger.error("Failed to load watch statistics:", error);
     statistics = null;
   }
 }
@@ -122,7 +123,7 @@ export async function loadPeriodStats(
       groupBy,
     });
   } catch (error) {
-    console.error("Failed to load period stats:", error);
+    logger.error("Failed to load period stats:", error);
     periodStats = [];
   }
 }
@@ -131,7 +132,7 @@ export async function loadCompletionRates(): Promise<void> {
   try {
     completionRates = await invoke<ShowCompletion[]>("get_completion_rates");
   } catch (error) {
-    console.error("Failed to load completion rates:", error);
+    logger.error("Failed to load completion rates:", error);
     completionRates = [];
   }
 }
@@ -140,7 +141,7 @@ export async function loadWatchHistory(limit?: number): Promise<void> {
   try {
     watchHistory = await invoke<WatchHistoryItem[]>("get_watch_history", { limit });
   } catch (error) {
-    console.error("Failed to load watch history:", error);
+    logger.error("Failed to load watch history:", error);
     watchHistory = [];
   }
 }

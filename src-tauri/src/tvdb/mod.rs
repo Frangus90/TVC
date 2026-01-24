@@ -53,7 +53,7 @@ where
             }
         }
     }
-    Err(last_error.unwrap())
+    Err(last_error.expect("retry_with_backoff: last_error should always be Some after loop"))
 }
 
 fn get_token_lock() -> &'static RwLock<Option<String>> {

@@ -2,6 +2,31 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.7.4]
+
+### Code Quality & Performance Improvements
+
+- **Centralized Logging**: Replaced 105+ console statements with a structured logging system
+- **Error Handling**: Standardized error handling patterns across the application
+- **Type Safety**: Fixed all type safety issues, replaced `any` types with proper TypeScript interfaces
+- **Database Optimization**: Consolidated duplicate database connections into a shared utility
+- **Request Deduplication**: Prevents duplicate API calls when multiple components request the same data
+- **Input Validation**: Added validation layer for all user inputs with sanitization
+- **Accessibility**: Enhanced ARIA labels, keyboard navigation, and screen reader support
+- **Error Boundary**: Added error boundary component to catch and handle unhandled errors gracefully
+- **Centralized Configuration**: All configurable values now in one place for easier maintenance
+
+### New Features
+
+- **Exit Button**: Added exit button in header that fully closes the app (not just minimize to tray)
+- **Confirmation Dialog**: Exit button shows a warning dialog to prevent accidental full closure
+
+### Developer Experience
+
+- **Type Organization**: Centralized type definitions in dedicated module
+- **Documentation**: Added JSDoc comments to complex functions and utilities
+- **Code Organization**: Better structure with dedicated utility modules
+
 ## [0.7.3]
 
 ### Sonarr & Radarr Integration

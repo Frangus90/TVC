@@ -1,7 +1,5 @@
-import Database from "@tauri-apps/plugin-sql";
-
-// Use separate database in dev mode to avoid breaking production data
-const DB_NAME = import.meta.env.DEV ? "sqlite:tvc_dev.db" : "sqlite:tvc.db";
+import { getDatabase } from "../utils/database";
+import { logger } from "../utils/logger";
 
 export interface ThemeSettings {
   colorScheme: string;
@@ -12,14 +10,8 @@ export interface ThemeSettings {
   hidePosters: boolean;
 }
 
-let db: Database | null = null;
-
-async function getDb(): Promise<Database> {
-  if (!db) {
-    db = await Database.load(DB_NAME);
-  }
-  return db;
-}
+// Use shared database utility
+const getDb = getDatabase;
 
 // Default theme settings
 const defaultTheme: ThemeSettings = {
@@ -67,7 +59,7 @@ export async function loadThemeSettings(): Promise<void> {
     applyTheme();
     initialized = true;
   } catch (error) {
-    console.error("Failed to load theme settings:", error);
+    logger.error("Failed to load theme settings", error);
     applyTheme();
     initialized = true;
   }
@@ -86,7 +78,7 @@ export async function updateThemeSettings(updates: Partial<ThemeSettings>): Prom
       );
     }
   } catch (error) {
-    console.error("Failed to save theme settings:", error);
+    logger.error("Failed to save theme settings", error);
   }
 }
 

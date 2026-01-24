@@ -41,6 +41,7 @@
   import { openConfirmDialog } from "../../stores/confirmDialog.svelte";
   import SkeletonLoader from "../common/SkeletonLoader.svelte";
   import EmptyState from "../common/EmptyState.svelte";
+  import { logger } from "../../utils/logger";
 
   type SidebarTab = "shows" | "movies" | "rankings" | "archive";
   type RankingsSubTab = "shows" | "movies";
@@ -113,7 +114,7 @@
       loadArchivedShows(),
       loadArchivedMovies(),
     ]).catch((error) => {
-      console.error("Failed to load sidebar data:", error);
+      logger.error("Failed to load sidebar data", error);
     });
   });
 

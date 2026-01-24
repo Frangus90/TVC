@@ -1,4 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
+import { logger } from "../utils/logger";
+import { validateSearchQuery } from "../utils/validation";
+import { requestDeduplicator } from "../utils/requestDedup";
 
 export interface TrackedMovie {
   id: number;
@@ -201,17 +204,26 @@ export function setMovieSearchQuery(query: string) {
 }
 
 export async function searchMovies(query: string): Promise<void> {
-  if (!query.trim()) {
+  // Validate input
+  const validation = validateSearchQuery(query);
+  if (!validation.valid) {
     movieSearchResults = [];
+    if (validation.error) {
+      logger.warn("Invalid search query", { query, error: validation.error });
+    }
     return;
   }
 
   movieSearchLoading = true;
   try {
-    const results = await invoke<MovieSearchResult[]>("search_movies", { query });
+    // Use request deduplication to prevent duplicate searches
+    const results = await requestDeduplicator.deduplicate(
+      `search_movies_${query}`,
+      () => invoke<MovieSearchResult[]>("search_movies", { query })
+    );
     movieSearchResults = results;
   } catch (error) {
-    console.error("Movie search error:", error);
+    logger.error("Movie search error", error);
     movieSearchResults = [];
   } finally {
     movieSearchLoading = false;
@@ -224,7 +236,7 @@ export async function loadTrackedMovies(): Promise<void> {
     const movies = await invoke<TrackedMovie[]>("get_tracked_movies");
     trackedMovies = movies;
   } catch (error) {
-    console.error("Failed to load tracked movies:", error);
+    logger.error("Failed to load tracked movies:", error);
   } finally {
     moviesLoading = false;
   }
@@ -236,7 +248,7 @@ export async function loadArchivedMovies(): Promise<void> {
     const movies = await invoke<TrackedMovie[]>("get_archived_movies");
     archivedMovies = movies;
   } catch (error) {
-    console.error("Failed to load archived movies:", error);
+    logger.error("Failed to load archived movies:", error);
   } finally {
     archivedMoviesLoading = false;
   }
@@ -247,7 +259,7 @@ export async function addMovie(movie: MovieSearchResult): Promise<void> {
     await invoke("add_movie", { id: movie.id });
     await loadTrackedMovies();
   } catch (error) {
-    console.error("Failed to add movie:", error);
+    logger.error("Failed to add movie:", error);
   }
 }
 
@@ -257,7 +269,7 @@ export async function removeMovie(movieId: number): Promise<void> {
     await loadTrackedMovies();
     calendarMovies = calendarMovies.filter((m) => m.id !== movieId);
   } catch (error) {
-    console.error("Failed to remove movie:", error);
+    logger.error("Failed to remove movie:", error);
   }
 }
 
@@ -273,7 +285,7 @@ export async function loadMoviesForRange(
     });
     calendarMovies = movies;
   } catch (error) {
-    console.error("Failed to load movies for range:", error);
+    logger.error("Failed to load movies for range:", error);
   }
 }
 
@@ -294,7 +306,7 @@ export async function markMovieWatched(
       currentMovie = { ...currentMovie, watched };
     }
   } catch (error) {
-    console.error("Failed to mark movie watched:", error);
+    logger.error("Failed to mark movie watched:", error);
   }
 }
 
@@ -316,7 +328,7 @@ export async function scheduleMovie(
       await loadMoviesForRange(currentCalendarRange.start, currentCalendarRange.end);
     }
   } catch (error) {
-    console.error("Failed to schedule movie:", error);
+    logger.error("Failed to schedule movie:", error);
   }
 }
 
@@ -338,7 +350,7 @@ export async function unscheduleMovie(movieId: number): Promise<void> {
       await loadMoviesForRange(currentCalendarRange.start, currentCalendarRange.end);
     }
   } catch (error) {
-    console.error("Failed to unschedule movie:", error);
+    logger.error("Failed to unschedule movie:", error);
   }
 }
 
@@ -352,7 +364,7 @@ export async function archiveMovie(movieId: number): Promise<void> {
       closeMovieDetail();
     }
   } catch (error) {
-    console.error("Failed to archive movie:", error);
+    logger.error("Failed to archive movie:", error);
   }
 }
 
@@ -362,7 +374,7 @@ export async function unarchiveMovie(movieId: number): Promise<void> {
     await loadTrackedMovies();
     await loadArchivedMovies();
   } catch (error) {
-    console.error("Failed to unarchive movie:", error);
+    logger.error("Failed to unarchive movie:", error);
   }
 }
 
@@ -380,7 +392,7 @@ export async function updateMovieRating(
       currentMovie = { ...currentMovie, rating };
     }
   } catch (error) {
-    console.error("Failed to update movie rating:", error);
+    logger.error("Failed to update movie rating:", error);
   }
 }
 
@@ -392,7 +404,7 @@ export async function syncMovie(movieId: number): Promise<void> {
       await openMovieDetail(movieId);
     }
   } catch (error) {
-    console.error("Failed to sync movie:", error);
+    logger.error("Failed to sync movie:", error);
   }
 }
 
@@ -406,7 +418,7 @@ export async function openMovieDetail(movieId: number): Promise<void> {
     const movie = await invoke<MovieDetail>("get_movie_details", { id: movieId });
     currentMovie = movie;
   } catch (error) {
-    console.error("Failed to load movie detail:", error);
+    logger.error("Failed to load movie detail:", error);
     movieDetailError = error instanceof Error ? error.message : "Failed to load movie details";
   } finally {
     movieDetailLoading = false;
@@ -433,7 +445,7 @@ export async function fetchMovieCastCrew(movieId: number): Promise<void> {
     movieCast = result.cast;
     movieCrew = result.crew;
   } catch (err) {
-    console.error("Failed to fetch movie cast/crew:", err);
+    logger.error("Failed to fetch movie cast/crew:", err);
   } finally {
     movieCastLoading = false;
   }
@@ -446,7 +458,7 @@ export async function fetchMovieTrailer(movieId: number): Promise<void> {
     const trailer = await invoke<TrailerData | null>("get_movie_trailer", { movieId });
     movieTrailer = trailer;
   } catch (err) {
-    console.error("Failed to fetch movie trailer:", err);
+    logger.error("Failed to fetch movie trailer:", err);
   } finally {
     movieTrailerLoading = false;
   }
@@ -455,7 +467,7 @@ export async function fetchMovieTrailer(movieId: number): Promise<void> {
 // Refresh movies calendar data (called when external changes happen like Plex scrobbles)
 export async function refreshMoviesCalendar(): Promise<void> {
   if (currentCalendarRange) {
-    console.log("[Movies] Refreshing due to external change");
+    logger.debug("[Movies] Refreshing due to external change");
     await loadMoviesForRange(currentCalendarRange.start, currentCalendarRange.end);
   }
   // Also reload tracked movies to update sidebar

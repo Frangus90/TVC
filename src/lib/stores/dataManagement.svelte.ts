@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { logger } from "../utils/logger";
 
 // Types
 export interface ChangeHistoryItem {
@@ -157,7 +158,7 @@ export async function loadDatabaseStats() {
   try {
     databaseStats = await invoke<DatabaseStats>("get_database_stats");
   } catch (err) {
-    console.error("Failed to load database stats:", err);
+    logger.error("Failed to load database stats:", err);
     error = err instanceof Error ? err.message : String(err);
   } finally {
     loading = false;
@@ -176,7 +177,7 @@ export async function loadChangeHistory(limit = 100) {
     changeHistory = history;
     historyStats = stats;
   } catch (err) {
-    console.error("Failed to load change history:", err);
+    logger.error("Failed to load change history:", err);
     error = err instanceof Error ? err.message : String(err);
   } finally {
     loading = false;
@@ -190,7 +191,7 @@ export async function loadDuplicates() {
   try {
     duplicates = await invoke<DuplicatePair[]>("find_duplicates");
   } catch (err) {
-    console.error("Failed to load duplicates:", err);
+    logger.error("Failed to load duplicates:", err);
     error = err instanceof Error ? err.message : String(err);
   } finally {
     loading = false;
@@ -206,7 +207,7 @@ export async function loadCleanupPreviews() {
     orphanedEpisodes = orphaned;
     unairedEpisodes = unaired;
   } catch (err) {
-    console.error("Failed to load cleanup previews:", err);
+    logger.error("Failed to load cleanup previews:", err);
   }
 }
 
@@ -221,7 +222,7 @@ export async function cleanupOrphaned(): Promise<number> {
     await loadCleanupPreviews();
     return count;
   } catch (err) {
-    console.error("Failed to cleanup orphaned episodes:", err);
+    logger.error("Failed to cleanup orphaned episodes:", err);
     error = err instanceof Error ? err.message : String(err);
     throw err;
   } finally {
@@ -239,7 +240,7 @@ export async function cleanupUnaired(): Promise<number> {
     await loadCleanupPreviews();
     return count;
   } catch (err) {
-    console.error("Failed to cleanup unaired episodes:", err);
+    logger.error("Failed to cleanup unaired episodes:", err);
     error = err instanceof Error ? err.message : String(err);
     throw err;
   } finally {
@@ -255,7 +256,7 @@ export async function optimizeDatabase(): Promise<void> {
     await invoke("optimize_database");
     await loadDatabaseStats();
   } catch (err) {
-    console.error("Failed to optimize database:", err);
+    logger.error("Failed to optimize database:", err);
     error = err instanceof Error ? err.message : String(err);
     throw err;
   } finally {
@@ -272,7 +273,7 @@ export async function runFullCleanup(): Promise<CleanupResult> {
     await loadDatabaseStats();
     return result;
   } catch (err) {
-    console.error("Failed to run full cleanup:", err);
+    logger.error("Failed to run full cleanup:", err);
     error = err instanceof Error ? err.message : String(err);
     throw err;
   } finally {
@@ -289,7 +290,7 @@ export async function clearHistory(): Promise<number> {
     await loadChangeHistory();
     return count;
   } catch (err) {
-    console.error("Failed to clear history:", err);
+    logger.error("Failed to clear history:", err);
     error = err instanceof Error ? err.message : String(err);
     throw err;
   } finally {
@@ -307,7 +308,7 @@ export async function mergeDuplicates(keepId: number, mergeId: number): Promise<
     await loadDuplicates();
     return result;
   } catch (err) {
-    console.error("Failed to merge duplicates:", err);
+    logger.error("Failed to merge duplicates:", err);
     error = err instanceof Error ? err.message : String(err);
     throw err;
   } finally {

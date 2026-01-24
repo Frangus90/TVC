@@ -12,6 +12,7 @@
     addMovie,
     type MovieSearchResult,
   } from "../stores/movies.svelte";
+  import { config } from "../config";
 
   let searchInput: HTMLInputElement | undefined = $state();
   let debounceTimer: ReturnType<typeof setTimeout> | null = $state(null);
@@ -42,11 +43,11 @@
       clearTimeout(debounceTimer);
     }
 
-    // Debounce search - auto-search after 400ms of no typing
+    // Debounce search - auto-search after configured delay
     if (value.trim()) {
       debounceTimer = setTimeout(() => {
         searchMovies(value);
-      }, 400);
+      }, config.ui.searchDebounceMs);
     } else {
       // Clear results immediately if query is empty
       searchMovies("");

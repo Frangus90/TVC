@@ -200,6 +200,8 @@ pub fn run() {
             commands::plex::stop_plex_server,
             commands::plex::get_plex_server_status,
             commands::plex::get_scrobble_log,
+            // App commands
+            commands::app::exit_app,
         ])
         .setup(|app| {
             // Setup system tray
@@ -207,8 +209,10 @@ pub fn run() {
             let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show_item, &quit_item])?;
 
+            let icon = app.default_window_icon()
+                .ok_or_else(|| "Failed to get default window icon")?;
             let _tray = TrayIconBuilder::with_id("main")
-                .icon(app.default_window_icon().unwrap().clone())
+                .icon(icon.clone())
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {

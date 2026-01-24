@@ -9,6 +9,7 @@ pub mod metadata;
 pub mod backup;
 pub mod arr;
 pub mod plex;
+pub mod app;
 
 use crate::tvdb::{self, EpisodeBase, SearchResult, SeriesExtended};
 

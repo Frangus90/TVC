@@ -30,6 +30,8 @@
   } from "../stores/dataManagement.svelte";
   import { openConfirmDialog } from "../stores/confirmDialog.svelte";
   import { simulateDummyUpdate } from "../stores/updates.svelte";
+  import type { TrackedShow, Episode } from "../stores/shows.svelte";
+  import type { TrackedMovie } from "../stores/movies.svelte";
 
   let cleanupMessage = $state<string | null>(null);
   let dummyUpdateVersion = $state("0.8.0");
@@ -54,9 +56,9 @@
   interface BackupData {
     version: string;
     exported_at: string;
-    shows: unknown[];
-    episodes: unknown[];
-    movies: unknown[];
+    shows: TrackedShow[];
+    episodes: Episode[];
+    movies: TrackedMovie[];
   }
 
   interface ImportResult {

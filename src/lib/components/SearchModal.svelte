@@ -12,6 +12,7 @@
     addShow,
     type SearchResult,
   } from "../stores/shows.svelte";
+  import { config } from "../config";
 
   let searchInput: HTMLInputElement | undefined = $state();
   let debounceTimer: ReturnType<typeof setTimeout> | null = $state(null);
@@ -43,11 +44,11 @@
       clearTimeout(debounceTimer);
     }
 
-    // Debounce search - auto-search after 400ms of no typing
+    // Debounce search - auto-search after debounce delay
     if (value.trim()) {
       debounceTimer = setTimeout(() => {
         searchShows(value);
-      }, 400);
+      }, config.ui.searchDebounceMs);
     } else {
       // Clear results immediately if query is empty
       searchShows("");
@@ -113,7 +114,11 @@
         value={getSearchQuery()}
         oninput={handleInput}
         bind:this={searchInput}
+        aria-label="Search for TV shows"
+        aria-describedby="search-help"
+        autocomplete="off"
       />
+      <span id="search-help" class="sr-only">Type a show name and press Enter to search</span>
       <button
         type="button"
         onclick={closeSearchModal}
@@ -149,13 +154,13 @@
             Found {getSearchResults().length} result{getSearchResults().length !== 1 ? 's' : ''}
           </p>
         </div>
-        <ul class="divide-y divide-border">
+        <ul class="divide-y divide-border" role="listbox" aria-label="Search results">
           {#each getSearchResults() as show}
-            <li class="flex items-start gap-4 p-4 hover:bg-surface-hover transition-colors">
+            <li class="flex items-start gap-4 p-4 hover:bg-surface-hover transition-colors" role="option" tabindex="0">
               {#if show.image_url}
                 <img
                   src={show.image_url}
-                  alt=""
+                  alt={`Poster for ${show.name || "TV show"}`}
                   class="w-16 h-24 rounded object-cover flex-shrink-0"
                 />
               {:else}

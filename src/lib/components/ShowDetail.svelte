@@ -22,6 +22,7 @@
   import CastCrew from "./CastCrew.svelte";
   import StarRating from "./StarRating.svelte";
   import { openConfirmDialog } from "../stores/confirmDialog.svelte";
+  import { logger } from "../utils/logger";
 
   type Tab = "episodes" | "info";
   let activeTab = $state<Tab>("episodes");
@@ -57,7 +58,7 @@
       const cast = await invoke<CastMember[]>("fetch_show_cast", { showId: show.id });
       localCast = cast;
     } catch (err) {
-      console.error("Failed to fetch cast:", err);
+      logger.error("Failed to fetch cast", err);
     } finally {
       localCastLoading = false;
     }
@@ -76,7 +77,7 @@
         localTrailerError = "No trailer found for this show.";
       }
     } catch (err) {
-      console.error("Failed to fetch trailer:", err);
+      logger.error("Failed to fetch trailer", err);
       localTrailerError = err instanceof Error ? err.message : String(err);
     } finally {
       localTrailerLoading = false;
