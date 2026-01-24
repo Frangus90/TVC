@@ -1,11 +1,16 @@
+mod arr;
 mod commands;
 mod db;
 mod error;
+mod plex;
 mod tmdb;
 mod tvdb;
 
 use db::migration_repair::{repair_migration_checksums, MigrationDef};
 use db::get_db_connection_string;
+use tauri::Manager;
+use tauri::menu::{Menu, MenuItem};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri_plugin_sql::{Migration, MigrationKind};
 
 // Migration SQL content - embedded at compile time
@@ -18,6 +23,7 @@ const MIGRATION_006: &str = include_str!("../migrations/006_add_movies.sql");
 const MIGRATION_007: &str = include_str!("../migrations/007_add_change_history.sql");
 const MIGRATION_008: &str = include_str!("../migrations/008_add_cast_crew.sql");
 const MIGRATION_009: &str = include_str!("../migrations/009_rating_to_real.sql");
+const MIGRATION_010: &str = include_str!("../migrations/010_add_arr_integration.sql");
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -33,6 +39,7 @@ pub fn run() {
         MigrationDef { version: 7, sql: MIGRATION_007 },
         MigrationDef { version: 8, sql: MIGRATION_008 },
         MigrationDef { version: 9, sql: MIGRATION_009 },
+        MigrationDef { version: 10, sql: MIGRATION_010 },
     ]);
 
     let migrations = vec![
@@ -88,6 +95,12 @@ pub fn run() {
             version: 9,
             description: "convert rating to real for half-stars",
             sql: MIGRATION_009,
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 10,
+            description: "add arr integration tables",
+            sql: MIGRATION_010,
             kind: MigrationKind::Up,
         },
     ];
@@ -170,7 +183,77 @@ pub fn run() {
             // Backup commands
             commands::backup::export_database,
             commands::backup::import_database,
+            // Arr (Sonarr/Radarr) commands
+            commands::arr::get_arr_servers,
+            commands::arr::add_arr_server,
+            commands::arr::update_arr_server,
+            commands::arr::delete_arr_server,
+            commands::arr::test_arr_server,
+            commands::arr::get_sonarr_library,
+            commands::arr::get_radarr_library,
+            commands::arr::import_from_sonarr,
+            commands::arr::import_from_radarr,
+            // Plex scrobbler commands
+            commands::plex::get_plex_config,
+            commands::plex::update_plex_config,
+            commands::plex::start_plex_server,
+            commands::plex::stop_plex_server,
+            commands::plex::get_plex_server_status,
+            commands::plex::get_scrobble_log,
         ])
+        .setup(|app| {
+            // Setup system tray
+            let show_item = MenuItem::with_id(app, "show", "Show TVC", true, None::<&str>)?;
+            let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show_item, &quit_item])?;
+
+            let _tray = TrayIconBuilder::with_id("main")
+                .icon(app.default_window_icon().unwrap().clone())
+                .menu(&menu)
+                .show_menu_on_left_click(false)
+                .on_menu_event(|app, event| match event.id.as_ref() {
+                    "show" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                    "quit" => {
+                        app.exit(0);
+                    }
+                    _ => {}
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        let app = tray.app_handle();
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                })
+                .build(app)?;
+
+            // Start Plex scrobbler if enabled
+            let app_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                plex::auto_start_if_enabled(app_handle).await;
+            });
+
+            Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                // Hide window instead of closing (minimize to tray)
+                let _ = window.hide();
+                api.prevent_close();
+            }
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

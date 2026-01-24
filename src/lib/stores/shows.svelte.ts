@@ -517,6 +517,14 @@ export async function unscheduleEpisode(episodeId: number): Promise<void> {
   }
 }
 
+// Refresh calendar data (called when external changes happen like Plex scrobbles)
+export async function refreshCalendar(): Promise<void> {
+  if (currentCalendarRange) {
+    console.log("[Calendar] Refreshing due to external change");
+    await loadEpisodesForRange(currentCalendarRange.start, currentCalendarRange.end);
+  }
+}
+
 // Day detail functions
 export function openDayDetail(date: string) {
   dayDetailDate = date;

@@ -452,6 +452,16 @@ export async function fetchMovieTrailer(movieId: number): Promise<void> {
   }
 }
 
+// Refresh movies calendar data (called when external changes happen like Plex scrobbles)
+export async function refreshMoviesCalendar(): Promise<void> {
+  if (currentCalendarRange) {
+    console.log("[Movies] Refreshing due to external change");
+    await loadMoviesForRange(currentCalendarRange.start, currentCalendarRange.end);
+  }
+  // Also reload tracked movies to update sidebar
+  await loadTrackedMovies();
+}
+
 // Helper to get movies for a specific date (only scheduled movies)
 export function getMoviesForDate(date: string): CalendarMovie[] {
   return calendarMovies.filter((m) => {

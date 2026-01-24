@@ -7,6 +7,8 @@ pub mod duplicates;
 pub mod maintenance;
 pub mod metadata;
 pub mod backup;
+pub mod arr;
+pub mod plex;
 
 use crate::tvdb::{self, EpisodeBase, SearchResult, SeriesExtended};
 

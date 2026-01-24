@@ -1,7 +1,7 @@
 <script lang="ts">
   import { fade, scale } from "svelte/transition";
   import { format, parseISO } from "date-fns";
-  import { X, Check, Calendar, CalendarX, Eye, EyeOff, Trash2 } from "lucide-svelte";
+  import { X, Check, Calendar, CalendarX, Eye, EyeOff, Trash2, Film } from "lucide-svelte";
   import {
     isDayDetailOpen,
     getDayDetailDate,
@@ -12,6 +12,12 @@
     getTrackedShows,
     type Episode,
   } from "../stores/shows.svelte";
+  import {
+    getMoviesForDate,
+    markMovieWatched,
+    unscheduleMovie,
+    type CalendarMovie,
+  } from "../stores/movies.svelte";
   import { openConfirmDialog } from "../stores/confirmDialog.svelte";
 
   interface GroupedEpisodes {
@@ -56,6 +62,13 @@
     return Array.from(groups.values()).sort((a, b) => a.showName.localeCompare(b.showName));
   });
 
+  // Get movies for the selected date
+  let moviesForDate = $derived(() => {
+    const date = getDayDetailDate();
+    if (!date) return [];
+    return getMoviesForDate(date);
+  });
+
   function formatDate(dateStr: string): string {
     const date = parseISO(dateStr);
     return format(date, "EEEE, MMMM d, yyyy");
@@ -68,6 +81,16 @@
   async function handleUnschedule(episode: Episode) {
     if (episode.scheduled_date) {
       await unscheduleEpisode(episode.id);
+    }
+  }
+
+  async function handleToggleMovieWatched(movie: CalendarMovie) {
+    await markMovieWatched(movie.id, !movie.watched);
+  }
+
+  async function handleUnscheduleMovie(movie: CalendarMovie) {
+    if (movie.scheduled_date) {
+      await unscheduleMovie(movie.id);
     }
   }
 
@@ -87,6 +110,18 @@
       (sum, g) => sum + g.episodes.filter((e) => !!e.scheduled_date).length,
       0
     );
+  }
+
+  function getTotalMovies(): number {
+    return moviesForDate().length;
+  }
+
+  function getWatchedMoviesCount(): number {
+    return moviesForDate().filter((m) => m.watched).length;
+  }
+
+  function getTotalItems(): number {
+    return getTotalEpisodes() + getTotalMovies();
   }
 
   async function handleClearAll() {
@@ -135,9 +170,23 @@
       <div>
         <h2 class="text-xl font-semibold">{formatDate(getDayDetailDate()!)}</h2>
         <p class="text-sm text-text-muted mt-1">
-          {getTotalEpisodes()} episode{getTotalEpisodes() !== 1 ? 's' : ''}
-          {#if getWatchedCount() > 0}
-            <span class="text-watched">({getWatchedCount()} watched)</span>
+          {#if getTotalEpisodes() > 0}
+            {getTotalEpisodes()} episode{getTotalEpisodes() !== 1 ? 's' : ''}
+            {#if getWatchedCount() > 0}
+              <span class="text-watched">({getWatchedCount()} watched)</span>
+            {/if}
+          {/if}
+          {#if getTotalEpisodes() > 0 && getTotalMovies() > 0}
+            <span class="mx-1">&bull;</span>
+          {/if}
+          {#if getTotalMovies() > 0}
+            {getTotalMovies()} movie{getTotalMovies() !== 1 ? 's' : ''}
+            {#if getWatchedMoviesCount() > 0}
+              <span class="text-watched">({getWatchedMoviesCount()} watched)</span>
+            {/if}
+          {/if}
+          {#if getTotalItems() === 0}
+            Nothing scheduled
           {/if}
         </p>
       </div>
@@ -164,13 +213,14 @@
 
     <!-- Content -->
     <div class="flex-1 overflow-y-auto p-5">
-      {#if groupedEpisodes().length === 0}
+      {#if getTotalItems() === 0}
         <div class="text-center py-10 text-text-muted">
           <Calendar class="w-12 h-12 mx-auto mb-3 opacity-50" />
-          <p>No episodes scheduled for this day</p>
+          <p>Nothing scheduled for this day</p>
         </div>
       {:else}
         <div class="space-y-6">
+          <!-- Episodes grouped by show -->
           {#each groupedEpisodes() as group}
             <div class="bg-background rounded-lg p-4">
               <!-- Show header -->
@@ -246,6 +296,63 @@
                     </div>
                   </div>
                 {/each}
+              </div>
+            </div>
+          {/each}
+
+          <!-- Movies -->
+          {#each moviesForDate() as movie}
+            <div class="bg-background rounded-lg p-4">
+              <div class="flex items-center gap-4">
+                {#if movie.poster_url}
+                  <img
+                    src={movie.poster_url}
+                    alt=""
+                    class="w-14 h-[84px] rounded object-cover flex-shrink-0"
+                  />
+                {:else}
+                  <div class="w-14 h-[84px] rounded bg-border flex-shrink-0 flex items-center justify-center">
+                    <Film class="w-6 h-6 text-text-muted" />
+                  </div>
+                {/if}
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    {#if movie.watched}
+                      <Check class="w-4 h-4 text-watched flex-shrink-0" />
+                    {:else}
+                      <Film class="w-4 h-4 text-premiere flex-shrink-0" />
+                    {/if}
+                    <h3 class="font-semibold text-lg truncate {movie.watched ? 'text-watched line-through' : ''}">{movie.title}</h3>
+                  </div>
+                  <p class="text-sm text-text-muted">
+                    Movie
+                    {#if movie.runtime}
+                      &bull; {Math.floor(movie.runtime / 60)}h {movie.runtime % 60}m
+                    {/if}
+                  </p>
+                </div>
+                <div class="flex items-center gap-1">
+                  <button
+                    onclick={() => handleToggleMovieWatched(movie)}
+                    class="p-2 rounded-lg hover:bg-surface-hover transition-colors"
+                    title={movie.watched ? "Mark as unwatched" : "Mark as watched"}
+                  >
+                    {#if movie.watched}
+                      <EyeOff class="w-4 h-4 text-text-muted" />
+                    {:else}
+                      <Eye class="w-4 h-4 text-text-muted" />
+                    {/if}
+                  </button>
+                  {#if movie.scheduled_date}
+                    <button
+                      onclick={() => handleUnscheduleMovie(movie)}
+                      class="p-2 rounded-lg hover:bg-surface-hover transition-colors"
+                      title="Remove from schedule"
+                    >
+                      <CalendarX class="w-4 h-4 text-text-muted" />
+                    </button>
+                  {/if}
+                </div>
               </div>
             </div>
           {/each}

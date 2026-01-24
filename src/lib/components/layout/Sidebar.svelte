@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Plus, Tv, Trash2, RefreshCw, Check, Film, Archive, RotateCcw, CalendarX, BarChart3, Database, PanelLeftClose, PanelLeft, Trophy } from "lucide-svelte";
+  import { Plus, Tv, Trash2, RefreshCw, Check, Film, Archive, RotateCcw, CalendarX, BarChart3, Database, PanelLeftClose, PanelLeft, Trophy, Server, Play } from "lucide-svelte";
   import { onMount } from "svelte";
   import { startDrag } from "../../stores/dragDrop.svelte";
   import {
@@ -33,6 +33,8 @@
   } from "../../stores/updates.svelte";
   import { openStatisticsModal } from "../../stores/statistics.svelte";
   import { openDataManagement } from "../../stores/dataManagement.svelte";
+  import { openArrSettings } from "../../stores/arr.svelte";
+  import { openPlexSettings } from "../../stores/plex.svelte";
   import { isSidebarCollapsed, toggleSidebar } from "../../stores/sidebar.svelte";
   import { getThemeSettings } from "../../stores/theme.svelte";
   import { getViewMode } from "../../stores/calendar.svelte";
@@ -822,6 +824,30 @@
           Data
         {/if}
       </button>
+      <button
+        type="button"
+        onclick={openArrSettings}
+        class="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-text-muted hover:text-text hover:bg-surface-hover rounded transition-colors"
+        aria-label="Sonarr/Radarr"
+        title="Sonarr/Radarr"
+      >
+        <Server class="w-3 h-3" />
+        {#if !isSidebarCollapsed()}
+          Arr
+        {/if}
+      </button>
+      <button
+        type="button"
+        onclick={openPlexSettings}
+        class="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-text-muted hover:text-text hover:bg-surface-hover rounded transition-colors"
+        aria-label="Plex Scrobbler"
+        title="Plex Scrobbler"
+      >
+        <Play class="w-3 h-3" />
+        {#if !isSidebarCollapsed()}
+          Plex
+        {/if}
+      </button>
     </div>
     {#if !isSidebarCollapsed()}
       <button
@@ -833,7 +859,7 @@
         <RefreshCw class="w-3 h-3 {isCheckingForUpdates() ? 'animate-spin' : ''}" />
         {isCheckingForUpdates() ? "Checking..." : "Check for Updates"}
       </button>
-      <p class="text-xs text-text-muted text-center mt-2">v0.7.2</p>
+      <p class="text-xs text-text-muted text-center mt-2">v0.7.3</p>
     {/if}
   </div>
 </aside>

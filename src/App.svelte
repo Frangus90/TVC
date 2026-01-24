@@ -2,6 +2,7 @@
   import { fade } from "svelte/transition";
   import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
+  import { listen, type UnlistenFn } from "@tauri-apps/api/event";
   import { getCurrentWebview } from "@tauri-apps/api/webview";
   import Sidebar from "./lib/components/layout/Sidebar.svelte";
   import Header from "./lib/components/layout/Header.svelte";
@@ -10,8 +11,8 @@
   import DragGhost from "./lib/components/common/DragGhost.svelte";
   import { getViewMode } from "./lib/stores/calendar.svelte";
   import { checkForUpdates } from "./lib/stores/updates.svelte";
-  import { isSearchModalOpen } from "./lib/stores/shows.svelte";
-  import { isMovieSearchModalOpen } from "./lib/stores/movies.svelte";
+  import { isSearchModalOpen, refreshCalendar } from "./lib/stores/shows.svelte";
+  import { isMovieSearchModalOpen, refreshMoviesCalendar } from "./lib/stores/movies.svelte";
   import { isEpisodePickerOpen } from "./lib/stores/shows.svelte";
   import { isDayDetailOpen } from "./lib/stores/shows.svelte";
   import { isShowDetailOpen } from "./lib/stores/showDetail.svelte";
@@ -19,6 +20,9 @@
   import { isStatisticsModalOpen } from "./lib/stores/statistics.svelte";
   import { isModalOpen as isDataManagementOpen } from "./lib/stores/dataManagement.svelte";
   import { isUpdateModalOpen } from "./lib/stores/updates.svelte";
+  import { isModalOpen as isArrSettingsOpen } from "./lib/stores/arr.svelte";
+  import { isModalOpen as isPlexSettingsOpen } from "./lib/stores/plex.svelte";
+  import { showSuccess } from "./lib/stores/toast.svelte";
 
   // Lazy load modal components only when they're opened
   let SearchModalComponent = $state<any>(null);
@@ -30,6 +34,8 @@
   let StatisticsDashboardComponent = $state<any>(null);
   let DataManagementComponent = $state<any>(null);
   let UpdateModalComponent = $state<any>(null);
+  let ArrServersComponent = $state<any>(null);
+  let PlexSettingsComponent = $state<any>(null);
 
   // Load components when modals open
   $effect(() => {
@@ -104,6 +110,22 @@
     }
   });
 
+  $effect(() => {
+    if (isArrSettingsOpen() && !ArrServersComponent) {
+      import("./lib/components/ArrServers.svelte").then((mod) => {
+        ArrServersComponent = mod.default;
+      });
+    }
+  });
+
+  $effect(() => {
+    if (isPlexSettingsOpen() && !PlexSettingsComponent) {
+      import("./lib/components/PlexSettings.svelte").then((mod) => {
+        PlexSettingsComponent = mod.default;
+      });
+    }
+  });
+
   // Lazy load calendar views based on current view mode
   let MonthViewComponent = $state<any>(null);
   let WeekViewComponent = $state<any>(null);
@@ -131,7 +153,7 @@
     }
   });
 
-  // Check for updates on app start
+  // Check for updates on app start and listen for Plex scrobble events
   onMount(() => {
     console.log("[TVC] App mounted, will check for updates in 2s...");
     setTimeout(() => {
@@ -140,6 +162,29 @@
         console.error("[TVC] Update check failed:", err);
       });
     }, 2000);
+
+    // Listen for Plex scrobble events to refresh calendar
+    let unlistenScrobble: UnlistenFn | undefined;
+    listen<{ media_type: string; entity_id: number }>("plex-scrobble", (event) => {
+      console.log("[TVC] Plex scrobble event received:", event.payload);
+      const { media_type } = event.payload;
+
+      // Show toast notification
+      showSuccess(`Plex: Marked ${media_type} as watched`);
+
+      // Refresh the appropriate calendar data
+      if (media_type === "movie") {
+        refreshMoviesCalendar();
+      } else if (media_type === "episode") {
+        refreshCalendar();
+      }
+    }).then((unlisten) => {
+      unlistenScrobble = unlisten;
+    });
+
+    return () => {
+      unlistenScrobble?.();
+    };
   });
 
   // CTRL+Shift+I to open dev tools (like browser)
@@ -235,6 +280,12 @@
 {/if}
 {#if UpdateModalComponent}
   <UpdateModalComponent />
+{/if}
+{#if ArrServersComponent}
+  <ArrServersComponent />
+{/if}
+{#if PlexSettingsComponent}
+  <PlexSettingsComponent />
 {/if}
 <ToastContainer />
 <ConfirmDialog />

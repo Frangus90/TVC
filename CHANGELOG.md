@@ -2,6 +2,30 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.7.3]
+
+### Sonarr & Radarr Integration
+
+- Connect to your Sonarr and Radarr servers to import your library
+- Add multiple servers and test connections before saving
+- Browse your Sonarr library and import TV shows directly into TVC
+- Browse your Radarr library and import movies directly into TVC
+- See which items are already tracked before importing
+- Select multiple items at once for bulk import
+- Import results show how many items were imported, skipped, or failed
+- Access ARR settings from the sidebar footer
+
+### Plex Scrobbler
+
+- Automatically mark shows and movies as watched when you watch them in Plex
+- Built-in webhook server receives playback events from Plex
+- Configure the webhook port (default: 9876)
+- View recent scrobbles to see what was automatically tracked
+- Smart title matching to link Plex content with your tracked shows and movies
+- See which scrobbles were successfully matched and which weren't
+- Requires Plex Pass subscription for webhook support
+- Access Plex settings from the sidebar footer
+
 ## [0.7.2]
 
 ### Drag & Drop Rating
