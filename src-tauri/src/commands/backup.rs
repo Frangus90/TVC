@@ -33,7 +33,7 @@ pub struct ShowBackup {
     pub notes: Option<String>,
     pub tags: Option<String>,
     pub archived: i32,
-    pub rating: Option<i32>,
+    pub rating: Option<f64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -50,7 +50,7 @@ pub struct EpisodeBackup {
     pub watched: i32,
     pub watched_at: Option<String>,
     pub scheduled_date: Option<String>,
-    pub rating: Option<i32>,
+    pub rating: Option<f64>,
     pub tags: Option<String>,
 }
 
@@ -72,7 +72,7 @@ pub struct MovieBackup {
     pub scheduled_date: Option<String>,
     pub watched: i32,
     pub watched_at: Option<String>,
-    pub rating: Option<i32>,
+    pub rating: Option<f64>,
     pub notes: Option<String>,
     pub color: Option<String>,
     pub tags: Option<String>,
@@ -119,7 +119,7 @@ pub async fn export_database(app: AppHandle) -> Result<BackupData, String> {
             notes: row.get("notes"),
             tags: row.get("tags"),
             archived: row.get("archived"),
-            rating: row.get("rating"),
+            rating: row.get::<Option<f64>, _>("rating"),
         })
         .collect();
 
@@ -148,7 +148,7 @@ pub async fn export_database(app: AppHandle) -> Result<BackupData, String> {
             watched: row.get("watched"),
             watched_at: row.get("watched_at"),
             scheduled_date: row.get("scheduled_date"),
-            rating: row.get("rating"),
+            rating: row.get::<Option<f64>, _>("rating"),
             tags: row.get("tags"),
         })
         .collect();
@@ -184,7 +184,7 @@ pub async fn export_database(app: AppHandle) -> Result<BackupData, String> {
             scheduled_date: row.get("scheduled_date"),
             watched: row.get("watched"),
             watched_at: row.get("watched_at"),
-            rating: row.get("rating"),
+            rating: row.get::<Option<f64>, _>("rating"),
             notes: row.get("notes"),
             color: row.get("color"),
             tags: row.get("tags"),

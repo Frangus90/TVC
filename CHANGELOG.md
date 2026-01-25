@@ -2,6 +2,15 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.7.5]
+
+### Bug Fixes
+
+- **Fixed Export Crash**: Fixed a critical bug that caused the app to crash when exporting data in release builds
+- The issue was caused by a type mismatch between the database schema (REAL/f64 for ratings) and the backup structs (i32)
+- All rating fields in backup/export structures now correctly use f64 to match the database schema
+- Export functionality now works correctly in both development and production builds
+
 ## [0.7.4]
 
 ### Code Quality & Performance Improvements
