@@ -2,6 +2,14 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.7.7]
+
+### Single Instance
+
+- **Prevent Multiple Windows**: The app now enforces single-instance mode - if you try to open TVC while it's already running, the existing window will be focused instead of opening a duplicate
+- Uses `tauri-plugin-single-instance` to detect and handle duplicate launches
+- When a second instance is launched, the existing window is shown, unminimized, and brought to focus
+
 ## [0.7.6]
 
 ### Date & Time Formatting
