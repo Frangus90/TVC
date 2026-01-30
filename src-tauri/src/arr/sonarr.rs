@@ -1,6 +1,16 @@
 use reqwest::Client;
+use std::time::Duration;
 use crate::error::AppError;
 use super::models::{SonarrSeries, ArrSystemStatus};
+
+/// Create an HTTP client with proper timeout configuration
+fn create_http_client() -> Client {
+    Client::builder()
+        .timeout(Duration::from_secs(30))
+        .connect_timeout(Duration::from_secs(10))
+        .build()
+        .unwrap_or_else(|_| Client::new()) // Fallback to default if builder fails
+}
 
 pub struct SonarrClient {
     client: Client,
@@ -14,7 +24,7 @@ impl SonarrClient {
         let base_url = base_url.trim_end_matches('/').to_string();
 
         Self {
-            client: Client::new(),
+            client: create_http_client(),
             base_url,
             api_key: api_key.to_string(),
         }

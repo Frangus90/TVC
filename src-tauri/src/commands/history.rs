@@ -70,42 +70,41 @@ pub async fn get_change_history(
 
     let limit = limit.unwrap_or(100);
 
-    // Build query with optional filters
-    let mut query = String::from(
-        r#"SELECT
-            ch.id, ch.entity_type, ch.entity_id, ch.change_type,
-            ch.old_value, ch.new_value, ch.changed_at, ch.user_action,
-            CASE
-                WHEN ch.entity_type = 'episode' THEN e.name
-                WHEN ch.entity_type = 'movie' THEN m.title
-                WHEN ch.entity_type = 'show' THEN s.name
-            END as entity_name,
-            CASE
-                WHEN ch.entity_type = 'episode' THEN s2.name
-                ELSE NULL
-            END as show_name,
-            CASE
-                WHEN ch.entity_type = 'episode' THEN s2.poster_url
-                WHEN ch.entity_type = 'movie' THEN m.poster_url
-                WHEN ch.entity_type = 'show' THEN s.poster_url
-            END as poster_url
-        FROM change_history ch
-        LEFT JOIN episodes e ON ch.entity_type = 'episode' AND ch.entity_id = e.id
-        LEFT JOIN shows s2 ON e.show_id = s2.id
-        LEFT JOIN movies m ON ch.entity_type = 'movie' AND ch.entity_id = m.id
-        LEFT JOIN shows s ON ch.entity_type = 'show' AND ch.entity_id = s.id
-        WHERE 1=1"#
-    );
+    // Build query using sqlx query builder for safety (all parameters are bound, not interpolated)
+    let base_query = r#"SELECT
+        ch.id, ch.entity_type, ch.entity_id, ch.change_type,
+        ch.old_value, ch.new_value, ch.changed_at, ch.user_action,
+        CASE
+            WHEN ch.entity_type = 'episode' THEN e.name
+            WHEN ch.entity_type = 'movie' THEN m.title
+            WHEN ch.entity_type = 'show' THEN s.name
+        END as entity_name,
+        CASE
+            WHEN ch.entity_type = 'episode' THEN s2.name
+            ELSE NULL
+        END as show_name,
+        CASE
+            WHEN ch.entity_type = 'episode' THEN s2.poster_url
+            WHEN ch.entity_type = 'movie' THEN m.poster_url
+            WHEN ch.entity_type = 'show' THEN s.poster_url
+        END as poster_url
+    FROM change_history ch
+    LEFT JOIN episodes e ON ch.entity_type = 'episode' AND ch.entity_id = e.id
+    LEFT JOIN shows s2 ON e.show_id = s2.id
+    LEFT JOIN movies m ON ch.entity_type = 'movie' AND ch.entity_id = m.id
+    LEFT JOIN shows s ON ch.entity_type = 'show' AND ch.entity_id = s.id
+    WHERE 1=1"#;
 
-    if entity_type.is_some() {
-        query.push_str(" AND ch.entity_type = ?");
-    }
-    if change_type.is_some() {
-        query.push_str(" AND ch.change_type = ?");
-    }
-
-    query.push_str(" ORDER BY ch.changed_at DESC LIMIT ?");
-
+    // Build query with proper parameterization (all dynamic parts use .bind())
+    // Construct WHERE clause conditionally but all values are parameterized
+    let where_clause = match (entity_type.as_ref(), change_type.as_ref()) {
+        (Some(_), Some(_)) => " AND ch.entity_type = ? AND ch.change_type = ?",
+        (Some(_), None) => " AND ch.entity_type = ?",
+        (None, Some(_)) => " AND ch.change_type = ?",
+        (None, None) => "",
+    };
+    
+    let query = format!("{} {} ORDER BY ch.changed_at DESC LIMIT ?", base_query, where_clause);
     let mut q = sqlx::query(&query);
 
     if let Some(ref et) = entity_type {

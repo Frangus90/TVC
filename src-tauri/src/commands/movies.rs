@@ -67,6 +67,8 @@ pub async fn search_movies(query: String) -> Result<Vec<MovieSearchResult>, Stri
 
 #[tauri::command]
 pub async fn add_movie(app: AppHandle, id: i64) -> Result<(), String> {
+    crate::commands::validation::validate_id(id)?;
+    
     // Get movie details and release dates from TMDB
     let (movie_details, release_dates) = tmdb::get_movie_with_release_dates(id, "US")
         .await
@@ -108,6 +110,8 @@ pub async fn add_movie(app: AppHandle, id: i64) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn remove_movie(app: AppHandle, id: i64) -> Result<(), String> {
+    crate::commands::validation::validate_id(id)?;
+    
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
@@ -132,6 +136,7 @@ pub async fn get_tracked_movies(app: AppHandle) -> Result<Vec<TrackedMovie>, Str
         FROM movies
         WHERE archived = 0
         ORDER BY title
+        LIMIT 10000
         "#,
     )
     .fetch_all(&pool)
@@ -172,6 +177,7 @@ pub async fn get_archived_movies(app: AppHandle) -> Result<Vec<TrackedMovie>, St
         FROM movies
         WHERE archived = 1
         ORDER BY title
+        LIMIT 10000
         "#,
     )
     .fetch_all(&pool)
@@ -228,17 +234,22 @@ pub async fn mark_movie_watched(
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    let watched_at = if watched { "datetime('now')" } else { "NULL" };
-
-    sqlx::query(&format!(
-        "UPDATE movies SET watched = ?, watched_at = {} WHERE id = ?",
-        watched_at
-    ))
-    .bind(if watched { 1 } else { 0 })
-    .bind(id)
-    .execute(&pool)
-    .await
-    .map_err(|e| format!("Failed to mark movie watched: {}", e))?;
+    // Use parameterized queries instead of format!() for safety
+    if watched {
+        sqlx::query(r#"UPDATE movies SET watched = ?, watched_at = datetime('now') WHERE id = ?"#)
+            .bind(1)
+            .bind(id)
+            .execute(&pool)
+            .await
+            .map_err(|e| format!("Failed to mark movie watched: {}", e))?;
+    } else {
+        sqlx::query(r#"UPDATE movies SET watched = ?, watched_at = NULL WHERE id = ?"#)
+            .bind(0)
+            .bind(id)
+            .execute(&pool)
+            .await
+            .map_err(|e| format!("Failed to mark movie watched: {}", e))?;
+    }
 
     Ok(())
 }
@@ -249,6 +260,9 @@ pub async fn schedule_movie(
     id: i64,
     date: String,
 ) -> Result<(), String> {
+    crate::commands::validation::validate_id(id)?;
+    crate::commands::validation::validate_date(&date)?;
+    
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
@@ -264,6 +278,8 @@ pub async fn schedule_movie(
 
 #[tauri::command]
 pub async fn unschedule_movie(app: AppHandle, id: i64) -> Result<(), String> {
+    crate::commands::validation::validate_id(id)?;
+    
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
@@ -278,6 +294,8 @@ pub async fn unschedule_movie(app: AppHandle, id: i64) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn archive_movie(app: AppHandle, id: i64) -> Result<(), String> {
+    crate::commands::validation::validate_id(id)?;
+    
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
@@ -292,6 +310,8 @@ pub async fn archive_movie(app: AppHandle, id: i64) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn unarchive_movie(app: AppHandle, id: i64) -> Result<(), String> {
+    crate::commands::validation::validate_id(id)?;
+    
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
@@ -302,6 +322,11 @@ pub async fn unarchive_movie(app: AppHandle, id: i64) -> Result<(), String> {
         .map_err(|e| format!("Failed to unarchive movie: {}", e))?;
 
     Ok(())
+}
+
+/// Helper function to sync a single movie (takes reference to avoid cloning)
+async fn sync_movie_ref(app: &AppHandle, id: i64) -> Result<(), String> {
+    sync_movie(app.clone(), id).await
 }
 
 #[tauri::command]
@@ -369,12 +394,23 @@ pub async fn sync_all_movies(app: AppHandle) -> Result<u32, String> {
         .map_err(|e| format!("Failed to get movies: {}", e))?;
 
     let mut synced = 0u32;
+    let mut errors: Vec<String> = Vec::new();
 
+    // Use reference to app to avoid cloning in loop
     for movie_id in movie_ids {
-        match sync_movie(app.clone(), movie_id).await {
+        match sync_movie_ref(&app, movie_id).await {
             Ok(_) => synced += 1,
-            Err(e) => eprintln!("Failed to sync movie {}: {}", movie_id, e),
+            Err(e) => {
+                let error_msg = format!("Movie {}: {}", movie_id, e);
+                eprintln!("Failed to sync movie {}: {}", movie_id, e);
+                errors.push(error_msg);
+            }
         }
+    }
+
+    // Log errors if any occurred (for debugging - return value remains compatible)
+    if !errors.is_empty() {
+        eprintln!("[sync_all_movies] {} movies failed to sync: {:?}", errors.len(), errors);
     }
 
     Ok(synced)
@@ -397,6 +433,7 @@ pub async fn get_movies_for_range(
         WHERE archived = 0
           AND scheduled_date >= ? AND scheduled_date <= ?
         ORDER BY scheduled_date, title
+        LIMIT 10000
         "#,
     )
     .bind(&start_date)

@@ -4,6 +4,15 @@ use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
 use std::time::Duration;
 
+/// Create an HTTP client with proper timeout configuration
+fn create_http_client() -> Client {
+    Client::builder()
+        .timeout(Duration::from_secs(30))
+        .connect_timeout(Duration::from_secs(10))
+        .build()
+        .unwrap_or_else(|_| Client::new()) // Fallback to default if builder fails
+}
+
 const API_BASE: &str = "https://api.themoviedb.org/3";
 const IMAGE_BASE: &str = "https://image.tmdb.org/t/p/w500";
 const READ_ACCESS_TOKEN: &str = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI4MzU5NzQ2YTgyMTY5ZDQ1NjZjMDJiM2Q3NWYyMDMwYiIsIm5iZiI6MTc2NTcwNzM3Mi45Miwic3ViIjoiNjkzZThlNmMyY2M2NDVlOWUxNWUwMTk4Iiwic2NvcGVzIjpbImFwaV9yZWFkIl0sInZlcnNpb24iOjF9.NsOWeumDwHhAxu2KHDXY6_HhLAPX5JEa3tVbZHVTWtU";
@@ -166,7 +175,7 @@ pub async fn search_movies(
         return Ok(cached);
     }
 
-    let client = Client::new();
+    let client = create_http_client();
     let response = client
         .get(format!("{}/search/movie", API_BASE))
         .query(&[("query", query), ("include_adult", "false")])
@@ -197,7 +206,7 @@ pub async fn get_movie_details(
         return Ok(cached);
     }
 
-    let client = Client::new();
+    let client = create_http_client();
     let response = client
         .get(format!("{}/movie/{}", API_BASE, id))
         .bearer_auth(READ_ACCESS_TOKEN)
@@ -221,7 +230,7 @@ pub async fn get_movie_release_dates(
     id: i64,
     country: &str, // ISO 3166-1 country code, e.g., "US"
 ) -> Result<MovieReleaseDates, Box<dyn std::error::Error + Send + Sync>> {
-    let client = Client::new();
+    let client = create_http_client();
     let response = client
         .get(format!("{}/movie/{}/release_dates", API_BASE, id))
         .bearer_auth(READ_ACCESS_TOKEN)
@@ -338,7 +347,7 @@ pub struct MovieCredits {
 pub async fn get_movie_credits(
     id: i64,
 ) -> Result<MovieCredits, Box<dyn std::error::Error + Send + Sync>> {
-    let client = Client::new();
+    let client = create_http_client();
     let response = client
         .get(format!("{}/movie/{}/credits", API_BASE, id))
         .bearer_auth(READ_ACCESS_TOKEN)
@@ -392,7 +401,7 @@ struct VideosResponse {
 pub async fn get_movie_videos(
     id: i64,
 ) -> Result<Vec<Video>, Box<dyn std::error::Error + Send + Sync>> {
-    let client = Client::new();
+    let client = create_http_client();
     let response = client
         .get(format!("{}/movie/{}/videos", API_BASE, id))
         .bearer_auth(READ_ACCESS_TOKEN)
@@ -445,7 +454,7 @@ struct TvSearchResponse {
 pub async fn search_tv_show(
     query: &str,
 ) -> Result<Vec<TvSearchResult>, Box<dyn std::error::Error + Send + Sync>> {
-    let client = Client::new();
+    let client = create_http_client();
     let response = client
         .get(format!("{}/search/tv", API_BASE))
         .query(&[("query", query)])
@@ -465,7 +474,7 @@ pub async fn search_tv_show(
 pub async fn get_tv_videos(
     id: i64,
 ) -> Result<Vec<Video>, Box<dyn std::error::Error + Send + Sync>> {
-    let client = Client::new();
+    let client = create_http_client();
     let response = client
         .get(format!("{}/tv/{}/videos", API_BASE, id))
         .bearer_auth(READ_ACCESS_TOKEN)

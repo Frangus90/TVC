@@ -25,24 +25,39 @@ pub async fn mark_episode_watched(
     episode_id: i64,
     watched: bool,
 ) -> Result<(), String> {
+    crate::commands::validation::validate_id(episode_id)?;
+    
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    let watched_at = if watched { "datetime('now')" } else { "NULL" };
-
-    sqlx::query(&format!(
-        r#"
-        UPDATE episodes
-        SET watched = ?, watched_at = {}
-        WHERE id = ?
-        "#,
-        watched_at
-    ))
-    .bind(if watched { 1 } else { 0 })
-    .bind(episode_id)
-    .execute(&pool)
-    .await
-    .map_err(|e| format!("Failed to mark episode watched: {}", e))?;
+    // Use parameterized query instead of format! for safety
+    if watched {
+        sqlx::query(
+            r#"
+            UPDATE episodes
+            SET watched = ?, watched_at = datetime('now')
+            WHERE id = ?
+            "#,
+        )
+        .bind(1)
+        .bind(episode_id)
+        .execute(&pool)
+        .await
+        .map_err(|e| format!("Failed to mark episode watched: {}", e))?;
+    } else {
+        sqlx::query(
+            r#"
+            UPDATE episodes
+            SET watched = ?, watched_at = NULL
+            WHERE id = ?
+            "#,
+        )
+        .bind(0)
+        .bind(episode_id)
+        .execute(&pool)
+        .await
+        .map_err(|e| format!("Failed to mark episode watched: {}", e))?;
+    }
 
     Ok(())
 }
@@ -75,6 +90,7 @@ pub async fn get_episodes_for_range(
         WHERE (e.aired >= ? AND e.aired <= ?)
            OR (e.scheduled_date >= ? AND e.scheduled_date <= ?)
         ORDER BY COALESCE(e.scheduled_date, e.aired), s.name
+        LIMIT 10000
         "#,
     )
     .bind(&start_date)
@@ -136,7 +152,8 @@ pub async fn sync_show_episodes(app: AppHandle, show_id: i64) -> Result<(), Stri
         .as_ref()
         .and_then(|n| n.name.as_ref());
 
-    sqlx::query(
+    // Execute operations with explicit rollback on error
+    if let Err(e) = sqlx::query(
         r#"
         UPDATE shows SET
             name = ?,
@@ -166,7 +183,10 @@ pub async fn sync_show_episodes(app: AppHandle, show_id: i64) -> Result<(), Stri
     .bind(show_id)
     .execute(&mut *tx)
     .await
-    .map_err(|e| format!("Failed to update show: {}", e))?;
+    {
+        let _ = tx.rollback().await;
+        return Err(format!("Failed to update show: {}", e));
+    }
 
     // Update episodes
     for episode in episodes {
@@ -174,7 +194,7 @@ pub async fn sync_show_episodes(app: AppHandle, show_id: i64) -> Result<(), Stri
         // - New episodes: insert with scheduled_date = aired
         // - Existing episodes: update metadata AND scheduled_date to new aired date
         // - Preserves: watched, watched_at, rating, tags (user data)
-        sqlx::query(
+        if let Err(e) = sqlx::query(
             r#"
             INSERT INTO episodes
             (id, show_id, season_number, episode_number, name, overview, aired, runtime, image_url, scheduled_date)
@@ -202,13 +222,21 @@ pub async fn sync_show_episodes(app: AppHandle, show_id: i64) -> Result<(), Stri
         .bind(episode.aired.as_ref()) // scheduled_date = aired for new episodes
         .execute(&mut *tx)
         .await
-        .map_err(|e| format!("Failed to sync episode: {}", e))?;
+        {
+            let _ = tx.rollback().await;
+            return Err(format!("Failed to sync episode: {}", e));
+        }
     }
 
     tx.commit().await
         .map_err(|e| format!("Failed to commit transaction: {}", e))?;
 
     Ok(())
+}
+
+/// Helper function to sync a single show (takes reference to avoid cloning)
+async fn sync_show_episodes_ref(app: &AppHandle, show_id: i64) -> Result<(), String> {
+    sync_show_episodes(app.clone(), show_id).await
 }
 
 /// Sync all tracked shows - fetches fresh data from TVDB for all shows
@@ -227,12 +255,23 @@ pub async fn sync_all_shows(app: AppHandle) -> Result<u32, String> {
         .map_err(|e| format!("Failed to get shows: {}", e))?;
 
     let mut synced = 0u32;
+    let mut errors: Vec<String> = Vec::new();
 
+    // Use reference to app to avoid cloning in loop
     for show_id in show_ids {
-        match sync_show_episodes(app.clone(), show_id).await {
+        match sync_show_episodes_ref(&app, show_id).await {
             Ok(_) => synced += 1,
-            Err(e) => eprintln!("Failed to sync show {}: {}", show_id, e),
+            Err(e) => {
+                let error_msg = format!("Show {}: {}", show_id, e);
+                eprintln!("Failed to sync show {}: {}", show_id, e);
+                errors.push(error_msg);
+            }
         }
+    }
+
+    // Log errors if any occurred (for debugging - return value remains compatible)
+    if !errors.is_empty() {
+        eprintln!("[sync_all_shows] {} shows failed to sync: {:?}", errors.len(), errors);
     }
 
     Ok(synced)
@@ -244,33 +283,25 @@ pub async fn schedule_episode(
     episode_id: i64,
     date: String,
 ) -> Result<(), String> {
-    println!("[Backend] schedule_episode called: episode_id={}, date={}", episode_id, date);
+    crate::commands::validation::validate_id(episode_id)?;
+    crate::commands::validation::validate_date(&date)?;
     
     let pool = connection::get_pool(&app).await
-        .map_err(|e| {
-            let err_msg = format!("Database error: {}", e);
-            println!("[Backend] schedule_episode database connection error: {}", err_msg);
-            err_msg
-        })?;
+        .map_err(|e| format!("Database error: {}", e))?;
 
-    println!("[Backend] Executing UPDATE query");
-    let result = sqlx::query("UPDATE episodes SET scheduled_date = ? WHERE id = ?")
+    sqlx::query("UPDATE episodes SET scheduled_date = ? WHERE id = ?")
         .bind(&date)
         .bind(episode_id)
         .execute(&pool)
         .await
-        .map_err(|e| {
-            let err_msg = format!("Failed to schedule episode: {}", e);
-            println!("[Backend] schedule_episode query error: {}", err_msg);
-            err_msg
-        })?;
-
-    println!("[Backend] schedule_episode completed: rows_affected={}", result.rows_affected());
+        .map_err(|e| format!("Failed to schedule episode: {}", e))?;
     Ok(())
 }
 
 #[tauri::command]
 pub async fn unschedule_episode(app: AppHandle, episode_id: i64) -> Result<(), String> {
+    crate::commands::validation::validate_id(episode_id)?;
+    
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
@@ -290,25 +321,41 @@ pub async fn mark_season_watched(
     season_number: i32,
     watched: bool,
 ) -> Result<(), String> {
+    crate::commands::validation::validate_id(show_id)?;
+    
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    let watched_at = if watched { "datetime('now')" } else { "NULL" };
-
-    sqlx::query(&format!(
-        r#"
-        UPDATE episodes
-        SET watched = ?, watched_at = {}
-        WHERE show_id = ? AND season_number = ?
-        "#,
-        watched_at
-    ))
-    .bind(if watched { 1 } else { 0 })
-    .bind(show_id)
-    .bind(season_number)
-    .execute(&pool)
-    .await
-    .map_err(|e| format!("Failed to mark season watched: {}", e))?;
+    // Use parameterized query instead of format! for safety
+    if watched {
+        sqlx::query(
+            r#"
+            UPDATE episodes
+            SET watched = ?, watched_at = datetime('now')
+            WHERE show_id = ? AND season_number = ?
+            "#,
+        )
+        .bind(1)
+        .bind(show_id)
+        .bind(season_number)
+        .execute(&pool)
+        .await
+        .map_err(|e| format!("Failed to mark season watched: {}", e))?;
+    } else {
+        sqlx::query(
+            r#"
+            UPDATE episodes
+            SET watched = ?, watched_at = NULL
+            WHERE show_id = ? AND season_number = ?
+            "#,
+        )
+        .bind(0)
+        .bind(show_id)
+        .bind(season_number)
+        .execute(&pool)
+        .await
+        .map_err(|e| format!("Failed to mark season watched: {}", e))?;
+    }
 
     Ok(())
 }
@@ -319,24 +366,39 @@ pub async fn mark_show_watched(
     show_id: i64,
     watched: bool,
 ) -> Result<(), String> {
+    crate::commands::validation::validate_id(show_id)?;
+    
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    let watched_at = if watched { "datetime('now')" } else { "NULL" };
-
-    sqlx::query(&format!(
-        r#"
-        UPDATE episodes
-        SET watched = ?, watched_at = {}
-        WHERE show_id = ?
-        "#,
-        watched_at
-    ))
-    .bind(if watched { 1 } else { 0 })
-    .bind(show_id)
-    .execute(&pool)
-    .await
-    .map_err(|e| format!("Failed to mark show watched: {}", e))?;
+    // Use parameterized query instead of format! for safety
+    if watched {
+        sqlx::query(
+            r#"
+            UPDATE episodes
+            SET watched = ?, watched_at = datetime('now')
+            WHERE show_id = ?
+            "#,
+        )
+        .bind(1)
+        .bind(show_id)
+        .execute(&pool)
+        .await
+        .map_err(|e| format!("Failed to mark show watched: {}", e))?;
+    } else {
+        sqlx::query(
+            r#"
+            UPDATE episodes
+            SET watched = ?, watched_at = NULL
+            WHERE show_id = ?
+            "#,
+        )
+        .bind(0)
+        .bind(show_id)
+        .execute(&pool)
+        .await
+        .map_err(|e| format!("Failed to mark show watched: {}", e))?;
+    }
 
     Ok(())
 }

@@ -31,27 +31,29 @@ pub async fn handle_webhook(
 ) -> StatusCode {
     let pool = &state.pool;
     // Log the raw body for debugging (first 200 chars)
-    let body_preview = String::from_utf8_lossy(&body);
-    let preview = if body_preview.len() > 200 {
-        &body_preview[..200]
+    let _body_preview = String::from_utf8_lossy(&body);
+    let _preview = if _body_preview.len() > 200 {
+        &_body_preview[..200]
     } else {
-        &body_preview
+        &_body_preview
     };
-    println!("[Plex] Received webhook ({} bytes): {}...", body.len(), preview);
+    // Removed debug println! statements - use proper logging in production
+    // Only log errors with eprintln! for now
+    
+    // TODO: Add webhook authentication/authorization
+    // Security Note: Currently webhook is only accessible from localhost (127.0.0.1)
+    // For production hardening, consider:
+    // 1. Verify Plex webhook signature if available
+    // 2. Require a configurable token in request header
+    // 3. Use IP whitelist (already limited to 127.0.0.1)
 
     // Parse multipart form data (Plex sends the JSON in a multipart payload field)
     let payload = match parse_multipart_payload(&body) {
-        Some(p) => {
-            println!("[Plex] Successfully parsed payload from multipart");
-            p
-        }
+        Some(p) => p,
         None => {
             // Try parsing as raw JSON (some Plex versions or test tools)
             match serde_json::from_slice::<PlexPayload>(&body) {
-                Ok(p) => {
-                    println!("[Plex] Successfully parsed payload as raw JSON");
-                    p
-                }
+                Ok(p) => p,
                 Err(e) => {
                     eprintln!("[Plex] Failed to parse webhook payload: {}", e);
                     // Return OK anyway to not cause Plex to retry
@@ -61,33 +63,23 @@ pub async fn handle_webhook(
         }
     };
 
-    println!("[Plex] Event type: {}", payload.event);
-
     // Only process media.scrobble events
     if payload.event != "media.scrobble" {
-        println!("[Plex] Ignoring non-scrobble event: {}", payload.event);
         return StatusCode::OK;
     }
 
     let metadata = match &payload.metadata {
         Some(m) => m,
         None => {
-            println!("[Plex] No metadata in payload");
             return StatusCode::OK;
         }
     };
-
-    println!(
-        "[Plex] Received scrobble: type={}, title={}",
-        metadata.media_type, metadata.title
-    );
 
     match metadata.media_type.as_str() {
         "episode" => {
             let show_name = match &metadata.grandparent_title {
                 Some(s) => s.clone(),
                 None => {
-                    println!("[Plex] Episode without show name");
                     log_scrobble(pool, &payload, None).await;
                     return StatusCode::OK;
                 }
@@ -95,55 +87,41 @@ pub async fn handle_webhook(
             let season = metadata.parent_index.unwrap_or(0);
             let episode = metadata.index.unwrap_or(0);
 
-            println!("[Plex] Matching episode: {} S{:02}E{:02}", show_name, season, episode);
             let match_result = match_episode(pool, &show_name, season, episode).await;
 
             if let Some(ref result) = match_result {
                 if let Err(e) = mark_episode_watched(pool, result.entity_id).await {
                     eprintln!("[Plex] Failed to mark episode watched: {}", e);
                 } else {
-                    println!(
-                        "[Plex] Marked episode {} as watched (method: {})",
-                        result.entity_id, result.method
-                    );
                     // Emit event to notify frontend
                     let _ = state.app_handle.emit("plex-scrobble", ScrobbleEvent {
                         media_type: "episode".to_string(),
                         entity_id: result.entity_id,
                     });
                 }
-            } else {
-                println!("[Plex] No match found for episode");
             }
 
             log_scrobble(pool, &payload, match_result.as_ref().map(|r| (r.entity_type.clone(), r.entity_id, r.method.clone()))).await;
         }
         "movie" => {
-            println!("[Plex] Matching movie: {} ({})", metadata.title, metadata.year.unwrap_or(0));
             let match_result = match_movie(pool, &metadata.title, metadata.year).await;
 
             if let Some(ref result) = match_result {
                 if let Err(e) = mark_movie_watched(pool, result.entity_id).await {
                     eprintln!("[Plex] Failed to mark movie watched: {}", e);
                 } else {
-                    println!(
-                        "[Plex] Marked movie {} as watched (method: {})",
-                        result.entity_id, result.method
-                    );
                     // Emit event to notify frontend
                     let _ = state.app_handle.emit("plex-scrobble", ScrobbleEvent {
                         media_type: "movie".to_string(),
                         entity_id: result.entity_id,
                     });
                 }
-            } else {
-                println!("[Plex] No match found for movie");
             }
 
             log_scrobble(pool, &payload, match_result.as_ref().map(|r| (r.entity_type.clone(), r.entity_id, r.method.clone()))).await;
         }
         _ => {
-            println!("[Plex] Ignoring media type: {}", metadata.media_type);
+            // Ignore unknown media types
         }
     }
 
@@ -188,24 +166,16 @@ fn parse_multipart_payload(body: &Bytes) -> Option<PlexPayload> {
 
     let json_str = json_content[..json_end].trim();
 
-    println!("[Plex] Extracted JSON payload, length={}", json_str.len());
-    if json_str.len() > 300 {
-        println!("[Plex] JSON preview: {}...", &json_str[..300]);
-    }
-
     match serde_json::from_str::<PlexPayload>(json_str) {
-        Ok(payload) => {
-            println!("[Plex] Successfully parsed payload");
-            Some(payload)
-        }
+        Ok(payload) => Some(payload),
         Err(e) => {
-            println!("[Plex] JSON parse failed: {} at line {} col {}", e, e.line(), e.column());
-            // Show context around error
+            eprintln!("[Plex] JSON parse failed: {} at line {} col {}", e, e.line(), e.column());
+            // Show context around error for debugging
             let col = e.column().saturating_sub(1);
             if col < json_str.len() {
                 let start = col.saturating_sub(50);
                 let end = (col + 50).min(json_str.len());
-                println!("[Plex] Context around error: ...{}...", &json_str[start..end]);
+                eprintln!("[Plex] Context around error: ...{}...", &json_str[start..end]);
             }
             None
         }

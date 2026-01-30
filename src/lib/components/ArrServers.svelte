@@ -47,6 +47,7 @@
     type ArrServerRequest,
   } from "../stores/arr.svelte";
   import { openConfirmDialog } from "../stores/confirmDialog.svelte";
+  import { formatDateTime } from "../utils/dateFormat";
 
   // Form state for add/edit
   let formName = $state("");
@@ -371,7 +372,7 @@
                 </div>
 
                 {#if server.last_synced}
-                  <p class="text-xs text-text-muted mt-2">Last synced: {new Date(server.last_synced).toLocaleString()}</p>
+                  <p class="text-xs text-text-muted mt-2">Last synced: {formatDateTime(server.last_synced)}</p>
                 {/if}
               </div>
             {/each}

@@ -2,6 +2,24 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.7.6]
+
+### Date & Time Formatting
+
+- **App-wide defaults**: All dates and times now use **D.M.YYYY** (e.g. 29.01.2026), **24-hour clock**, and your **PC's local timezone**
+- **Plex Scrobbler**: Fixed scrobble timestamps using 12-hour clock, wrong timezone, and incorrect date format—now matches app defaults
+- **Show modal**: Episode air dates and show first-aired dates in the TV show modal now display as D.M.YYYY instead of YYYY-MM-DD
+- **Calendar, statistics, data management**: Day headers, watch history, relative dates, and "last synced" labels all use the new formatting
+- **Centralized formatting**: New `dateFormat` utility ensures consistent parsing (including DB UTC timestamps) and display across the app
+
+### Bug Fixes
+
+- **Plex Scrobbler**: Scrobble log timestamps now show correct timezone (PC local) and 24-hour time
+
+### Code Quality
+
+- **Rust**: Resolved compiler warnings—unused variables in Plex webhook handler, dead code in validation helpers, removed redundant port check
+
 ## [0.7.5]
 
 ### Bug Fixes

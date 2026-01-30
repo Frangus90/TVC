@@ -216,24 +216,33 @@ pub async fn import_database(app: AppHandle, data: BackupData) -> Result<ImportR
         .map_err(|e| format!("Failed to begin transaction: {}", e))?;
 
     // Clear existing data (in correct order due to foreign keys)
-    sqlx::query("DELETE FROM episodes")
+    if let Err(e) = sqlx::query("DELETE FROM episodes")
         .execute(&mut *tx)
         .await
-        .map_err(|e| format!("Failed to clear episodes: {}", e))?;
+    {
+        let _ = tx.rollback().await;
+        return Err(format!("Failed to clear episodes: {}", e));
+    }
 
-    sqlx::query("DELETE FROM shows")
+    if let Err(e) = sqlx::query("DELETE FROM shows")
         .execute(&mut *tx)
         .await
-        .map_err(|e| format!("Failed to clear shows: {}", e))?;
+    {
+        let _ = tx.rollback().await;
+        return Err(format!("Failed to clear shows: {}", e));
+    }
 
-    sqlx::query("DELETE FROM movies")
+    if let Err(e) = sqlx::query("DELETE FROM movies")
         .execute(&mut *tx)
         .await
-        .map_err(|e| format!("Failed to clear movies: {}", e))?;
+    {
+        let _ = tx.rollback().await;
+        return Err(format!("Failed to clear movies: {}", e));
+    }
 
     // Import shows
     for show in &data.shows {
-        sqlx::query(
+        if let Err(e) = sqlx::query(
             r#"INSERT INTO shows (id, name, slug, status, poster_url, first_aired, network,
                                   overview, airs_time, airs_days, runtime, added_at, last_synced,
                                   color, notes, tags, archived, rating)
@@ -259,12 +268,15 @@ pub async fn import_database(app: AppHandle, data: BackupData) -> Result<ImportR
         .bind(show.rating)
         .execute(&mut *tx)
         .await
-        .map_err(|e| format!("Failed to import show {}: {}", show.name, e))?;
+        {
+            let _ = tx.rollback().await;
+            return Err(format!("Failed to import show {}: {}", show.name, e));
+        }
     }
 
     // Import episodes
     for episode in &data.episodes {
-        sqlx::query(
+        if let Err(e) = sqlx::query(
             r#"INSERT INTO episodes (id, show_id, season_number, episode_number, name, overview,
                                      aired, runtime, image_url, watched, watched_at, scheduled_date,
                                      rating, tags)
@@ -286,12 +298,15 @@ pub async fn import_database(app: AppHandle, data: BackupData) -> Result<ImportR
         .bind(&episode.tags)
         .execute(&mut *tx)
         .await
-        .map_err(|e| format!("Failed to import episode: {}", e))?;
+        {
+            let _ = tx.rollback().await;
+            return Err(format!("Failed to import episode: {}", e));
+        }
     }
 
     // Import movies
     for movie in &data.movies {
-        sqlx::query(
+        if let Err(e) = sqlx::query(
             r#"INSERT INTO movies (id, title, tagline, overview, poster_url, backdrop_url,
                                    release_date, digital_release_date, physical_release_date,
                                    runtime, status, genres, vote_average, scheduled_date, watched,
@@ -323,7 +338,10 @@ pub async fn import_database(app: AppHandle, data: BackupData) -> Result<ImportR
         .bind(&movie.last_synced)
         .execute(&mut *tx)
         .await
-        .map_err(|e| format!("Failed to import movie {}: {}", movie.title, e))?;
+        {
+            let _ = tx.rollback().await;
+            return Err(format!("Failed to import movie {}: {}", movie.title, e));
+        }
     }
 
     tx.commit()

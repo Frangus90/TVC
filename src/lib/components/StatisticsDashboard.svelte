@@ -23,6 +23,7 @@
     formatWatchTime,
     formatRelativeDate,
     groupHistoryByDate,
+    formatDateHeader,
   } from "../stores/statistics.svelte";
 
   function handleKeyDown(event: KeyboardEvent) {
@@ -219,7 +220,7 @@
           <div class="space-y-6">
             {#each [...groupedHistory] as [dateGroup, items]}
               <div>
-                <h3 class="text-sm font-medium text-text-muted mb-3">{dateGroup}</h3>
+                <h3 class="text-sm font-medium text-text-muted mb-3">{formatDateHeader(dateGroup)}</h3>
                 <div class="space-y-2">
                   {#each items as item}
                     <div

@@ -23,6 +23,7 @@
     loadScrobbleLog,
     getWebhookUrl,
   } from "../stores/plex.svelte";
+  import { formatDateTime } from "../utils/dateFormat";
 
   let copied = $state(false);
   let portInput = $state(9876);
@@ -49,11 +50,6 @@
     navigator.clipboard.writeText(getWebhookUrl());
     copied = true;
     setTimeout(() => (copied = false), 2000);
-  }
-
-  function formatDate(dateStr: string): string {
-    const date = new Date(dateStr);
-    return date.toLocaleString();
   }
 </script>
 
@@ -240,7 +236,7 @@
                         {/if}
                       {/if}
                     </p>
-                    <p class="text-xs text-text-muted">{formatDate(entry.scrobbled_at)}</p>
+                    <p class="text-xs text-text-muted">{formatDateTime(entry.scrobbled_at)}</p>
                   </div>
                   <div class="flex-shrink-0">
                     {#if entry.matched_entity_id}

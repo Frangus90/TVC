@@ -24,6 +24,7 @@
   import StarRating from "./StarRating.svelte";
   import { openConfirmDialog } from "../stores/confirmDialog.svelte";
   import { logger } from "../utils/logger";
+  import { formatDate } from "../utils/dateFormat";
 
   type Tab = "overview" | "info";
   let activeTab = $state<Tab>("overview");
@@ -140,24 +141,32 @@
     const movie = getCurrentMovie();
     if (!movie) return;
 
-    await openUrl(`https://www.themoviedb.org/movie/${movie.id}`);
+    // Validate URL before opening - only allow trusted domains
+    const url = `https://www.themoviedb.org/movie/${movie.id}`;
+    if (!url.startsWith("https://www.themoviedb.org")) {
+      logger.error("Invalid TMDB URL", { url });
+      return;
+    }
+    await openUrl(url);
   }
 
   async function handleOpenIMDB() {
     const movie = getCurrentMovie();
     if (!movie) return;
 
-    await openUrl(`https://www.imdb.com/find?q=${encodeURIComponent(movie.title)}`);
+    // Validate URL before opening - only allow trusted domains
+    const url = `https://www.imdb.com/find?q=${encodeURIComponent(movie.title)}`;
+    if (!url.startsWith("https://www.imdb.com")) {
+      logger.error("Invalid IMDB URL", { url });
+      return;
+    }
+    await openUrl(url);
   }
 
-  function formatDate(dateStr: string | null): string {
+  function formatMovieDate(dateStr: string | null): string {
     if (!dateStr) return "Unknown";
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    const s = formatDate(dateStr);
+    return s || "Unknown";
   }
 </script>
 
@@ -272,15 +281,15 @@
       <div class="grid grid-cols-3 gap-4 p-4 border-b border-border bg-background/50">
         <div>
           <p class="text-xs text-text-muted mb-1">Theatrical Release</p>
-          <p class="text-sm text-text">{formatDate(movie.release_date)}</p>
+          <p class="text-sm text-text">{formatMovieDate(movie.release_date)}</p>
         </div>
         <div>
           <p class="text-xs text-text-muted mb-1">Digital Release</p>
-          <p class="text-sm text-text">{formatDate(movie.digital_release_date)}</p>
+          <p class="text-sm text-text">{formatMovieDate(movie.digital_release_date)}</p>
         </div>
         <div>
           <p class="text-xs text-text-muted mb-1">Physical Release</p>
-          <p class="text-sm text-text">{formatDate(movie.physical_release_date)}</p>
+          <p class="text-sm text-text">{formatMovieDate(movie.physical_release_date)}</p>
         </div>
       </div>
 
@@ -444,7 +453,7 @@
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
               <Calendar class="w-4 h-4 text-accent" />
-              <span class="text-sm text-text">Scheduled for {formatDate(movie.scheduled_date)}</span>
+              <span class="text-sm text-text">Scheduled for {formatMovieDate(movie.scheduled_date)}</span>
             </div>
             <button
               type="button"

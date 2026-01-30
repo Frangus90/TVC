@@ -7,6 +7,15 @@ use std::sync::OnceLock;
 use std::time::Duration;
 use tokio::sync::RwLock;
 
+/// Create an HTTP client with proper timeout configuration
+fn create_http_client() -> Client {
+    Client::builder()
+        .timeout(Duration::from_secs(30))
+        .connect_timeout(Duration::from_secs(10))
+        .build()
+        .unwrap_or_else(|_| Client::new()) // Fallback to default if builder fails
+}
+
 /// Invalidate cache for a specific show (call before sync to force fresh data)
 pub async fn invalidate_show_cache(id: i64) {
     get_cache().invalidate_show(id).await;
@@ -175,7 +184,7 @@ async fn get_token() -> Result<String, Box<dyn std::error::Error + Send + Sync>>
         }
     }
 
-    let client = Client::new();
+    let client = create_http_client();
     let login_req = LoginRequest {
         apikey: API_KEY.to_string(),
     };
@@ -217,7 +226,7 @@ pub async fn search_series(
             let token = token.clone();
             let query = query_str.clone();
             async move {
-                let client = Client::new();
+                let client = create_http_client();
                 let response = client
                     .get(format!("{}/search", API_BASE))
                     .query(&[("query", query.as_str()), ("type", "series")])
@@ -264,7 +273,7 @@ pub async fn get_series_extended(
             let token = token.clone();
             let id = id;
             async move {
-                let client = Client::new();
+                let client = create_http_client();
                 let response = client
                     .get(format!("{}/series/{}/extended", API_BASE, id))
                     .bearer_auth(&token)
@@ -304,7 +313,7 @@ pub async fn get_series_episodes(
     get_rate_limiter().wait_if_needed().await;
 
     let token = get_token().await?;
-    let client = Client::new();
+    let client = create_http_client();
 
     // Get all seasons for this series
     let url = format!("{}/series/{}/extended", API_BASE, id);
@@ -425,7 +434,7 @@ pub async fn get_series_characters(
     get_rate_limiter().wait_if_needed().await;
 
     let token = get_token().await?;
-    let client = Client::new();
+    let client = create_http_client();
 
     // Get series extended with characters
     let response = client

@@ -23,6 +23,7 @@
   import StarRating from "./StarRating.svelte";
   import { openConfirmDialog } from "../stores/confirmDialog.svelte";
   import { logger } from "../utils/logger";
+  import { formatDate } from "../utils/dateFormat";
 
   type Tab = "episodes" | "info";
   let activeTab = $state<Tab>("episodes");
@@ -120,14 +121,26 @@
     const show = getCurrentShow();
     if (!show) return;
 
-    await openUrl(`https://thetvdb.com/series/${show.slug || show.id}`);
+    // Validate URL before opening - only allow trusted domains
+    const url = `https://thetvdb.com/series/${show.slug || show.id}`;
+    if (!url.startsWith("https://thetvdb.com")) {
+      logger.error("Invalid TVDB URL", { url });
+      return;
+    }
+    await openUrl(url);
   }
 
   async function handleOpenWikipedia() {
     const show = getCurrentShow();
     if (!show) return;
 
-    await openUrl(`https://en.wikipedia.org/wiki/${encodeURIComponent(show.name)}`);
+    // Validate URL before opening - only allow trusted domains
+    const url = `https://en.wikipedia.org/wiki/${encodeURIComponent(show.name)}`;
+    if (!url.startsWith("https://en.wikipedia.org")) {
+      logger.error("Invalid Wikipedia URL", { url });
+      return;
+    }
+    await openUrl(url);
   }
 
   function groupEpisodesBySeason(episodes: ReturnType<typeof getShowEpisodes>) {
@@ -233,7 +246,7 @@
               <h2 class="text-2xl font-bold text-text mb-2">{show.name}</h2>
               {#if show.network || show.first_aired}
                 <p class="text-sm text-text-muted mb-1">
-                  {[show.network, show.first_aired].filter(Boolean).join(" - ")}
+                  {[show.network, show.first_aired ? formatDate(show.first_aired) : null].filter(Boolean).join(" - ")}
                 </p>
               {/if}
               {#if show.status}
@@ -386,7 +399,7 @@
                             {episode.name || "TBA"}
                           </span>
                           {#if episode.aired}
-                            <span class="text-xs text-text-muted">{episode.aired}</span>
+                            <span class="text-xs text-text-muted">{formatDate(episode.aired)}</span>
                           {/if}
                           <button
                             type="button"

@@ -77,7 +77,7 @@ pub async fn start_server(app: AppHandle, port: u16) -> Result<(), String> {
         .await
         .map_err(|e| format!("Failed to bind to port {}: {}", port, e))?;
 
-    println!("[Plex] Starting webhook server on {}", addr);
+    // Removed debug println! - server start is logged via status command if needed
 
     let handle = tokio::spawn(async move {
         if let Err(e) = axum::serve(listener, app_router).await {
@@ -104,7 +104,6 @@ pub async fn stop_server() -> Result<(), String> {
 
     if let Some(h) = handle.take() {
         h.abort();
-        println!("[Plex] Webhook server stopped");
     }
 
     let mut port = SERVER_PORT.lock().await;
@@ -138,7 +137,7 @@ pub async fn auto_start_if_enabled(app: AppHandle) {
     let config = get_config(&pool).await;
 
     if config.enabled {
-        println!("[Plex] Auto-starting webhook server (enabled in config)");
+        // Auto-start server if enabled (removed debug println!)
         if let Err(e) = start_server(app, config.port).await {
             eprintln!("[Plex] Failed to auto-start server: {}", e);
         }

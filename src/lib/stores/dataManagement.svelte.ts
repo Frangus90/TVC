@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { logger } from "../utils/logger";
+import { formatDate, parseDateTime } from "../utils/dateFormat";
 
 // Types
 export interface ChangeHistoryItem {
@@ -336,7 +337,7 @@ export function formatChangeType(type: string): string {
 }
 
 export function formatRelativeDate(dateStr: string): string {
-  const date = new Date(dateStr + "Z");
+  const date = parseDateTime(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
@@ -348,5 +349,6 @@ export function formatRelativeDate(dateStr: string): string {
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 7) return `${diffDays}d ago`;
 
-  return date.toLocaleDateString();
+  const formatted = formatDate(dateStr);
+  return formatted || "";
 }

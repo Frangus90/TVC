@@ -5,6 +5,7 @@ pub struct RateLimiter {
     requests: Mutex<Vec<Instant>>,
     max_requests: usize,
     window: Duration,
+    max_history: usize, // Maximum number of request timestamps to keep
 }
 
 impl RateLimiter {
@@ -13,6 +14,7 @@ impl RateLimiter {
             requests: Mutex::new(Vec::new()),
             max_requests,
             window,
+            max_history: max_requests * 2, // Keep 2x max_requests to prevent unbounded growth
         }
     }
 
@@ -38,6 +40,13 @@ impl RateLimiter {
 
         // Record this request
         requests.push(Instant::now());
+        
+        // Enforce maximum history size to prevent unbounded memory growth
+        if requests.len() > self.max_history {
+            // Keep only the most recent max_history entries
+            let start_idx = requests.len() - self.max_history;
+            requests.drain(..start_idx);
+        }
     }
 }
 

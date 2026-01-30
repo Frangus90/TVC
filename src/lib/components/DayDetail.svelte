@@ -1,6 +1,5 @@
 <script lang="ts">
   import { fade, scale } from "svelte/transition";
-  import { format, parseISO } from "date-fns";
   import { X, Check, Calendar, CalendarX, Eye, EyeOff, Trash2, Film } from "lucide-svelte";
   import {
     isDayDetailOpen,
@@ -19,6 +18,7 @@
     type CalendarMovie,
   } from "../stores/movies.svelte";
   import { openConfirmDialog } from "../stores/confirmDialog.svelte";
+  import { formatLongDate } from "../utils/dateFormat";
 
   interface GroupedEpisodes {
     showName: string;
@@ -68,11 +68,6 @@
     if (!date) return [];
     return getMoviesForDate(date);
   });
-
-  function formatDate(dateStr: string): string {
-    const date = parseISO(dateStr);
-    return format(date, "EEEE, MMMM d, yyyy");
-  }
 
   async function handleToggleWatched(episode: Episode) {
     await toggleEpisodeWatched(episode.id, !episode.watched);
@@ -168,7 +163,7 @@
     <!-- Header -->
     <div class="flex items-center justify-between p-5 border-b border-border">
       <div>
-        <h2 class="text-xl font-semibold">{formatDate(getDayDetailDate()!)}</h2>
+        <h2 class="text-xl font-semibold">{formatLongDate(getDayDetailDate()!)}</h2>
         <p class="text-sm text-text-muted mt-1">
           {#if getTotalEpisodes() > 0}
             {getTotalEpisodes()} episode{getTotalEpisodes() !== 1 ? 's' : ''}

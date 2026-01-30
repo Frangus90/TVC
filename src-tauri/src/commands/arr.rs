@@ -109,6 +109,8 @@ pub async fn update_arr_server(
 /// Delete an arr server
 #[tauri::command]
 pub async fn delete_arr_server(app: AppHandle, id: i64) -> Result<(), String> {
+    crate::commands::validation::validate_id(id)?;
+    
     let pool = connection::get_pool(&app)
         .await
         .map_err(|e| format!("Database error: {}", e))?;

@@ -17,6 +17,9 @@ pub struct TrackedShow {
 
 #[tauri::command]
 pub async fn add_show(app: AppHandle, id: i64) -> Result<(), String> {
+    // Validate input
+    crate::commands::validation::validate_id(id)?;
+    
     // Get show details from TVDB
     let show_details = crate::tvdb::get_series_extended(id)
         .await
@@ -55,6 +58,8 @@ pub async fn add_show(app: AppHandle, id: i64) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn remove_show(app: AppHandle, id: i64) -> Result<(), String> {
+    crate::commands::validation::validate_id(id)?;
+    
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
@@ -78,6 +83,7 @@ pub async fn get_tracked_shows(app: AppHandle) -> Result<Vec<TrackedShow>, Strin
         FROM shows
         WHERE archived = 0 OR archived IS NULL
         ORDER BY name
+        LIMIT 10000
         "#,
     )
     .fetch_all(&pool)
@@ -98,6 +104,7 @@ pub async fn get_archived_shows(app: AppHandle) -> Result<Vec<TrackedShow>, Stri
         FROM shows
         WHERE archived = 1
         ORDER BY name
+        LIMIT 10000
         "#,
     )
     .fetch_all(&pool)
@@ -109,6 +116,8 @@ pub async fn get_archived_shows(app: AppHandle) -> Result<Vec<TrackedShow>, Stri
 
 #[tauri::command]
 pub async fn archive_show(app: AppHandle, id: i64) -> Result<(), String> {
+    crate::commands::validation::validate_id(id)?;
+    
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
@@ -123,6 +132,8 @@ pub async fn archive_show(app: AppHandle, id: i64) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn unarchive_show(app: AppHandle, id: i64) -> Result<(), String> {
+    crate::commands::validation::validate_id(id)?;
+    
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 

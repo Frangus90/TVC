@@ -28,6 +28,7 @@ pub async fn update_plex_config(app: AppHandle, config: PlexConfig) -> Result<()
 /// Start the Plex webhook server
 #[tauri::command]
 pub async fn start_plex_server(app: AppHandle, port: u16) -> Result<(), String> {
+    crate::commands::validation::validate_port(port)?;
     plex::start_server(app, port).await
 }
 

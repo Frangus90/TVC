@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { logger } from "../utils/logger";
+import { formatDateKey, formatDateHeader, parseDateTime } from "../utils/dateFormat";
 
 export interface WatchStatistics {
   total_watch_time_minutes: number;
@@ -162,7 +163,7 @@ export function formatWatchTime(minutes: number): string {
 }
 
 export function formatRelativeDate(dateString: string): string {
-  const date = new Date(dateString);
+  const date = parseDateTime(dateString);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -195,13 +196,8 @@ export function groupHistoryByDate(
   const groups = new Map<string, WatchHistoryItem[]>();
 
   for (const item of history) {
-    const date = new Date(item.watched_at);
-    const dateKey = date.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    const dateKey = formatDateKey(item.watched_at);
+    if (!dateKey) continue;
 
     if (!groups.has(dateKey)) {
       groups.set(dateKey, []);
@@ -211,3 +207,5 @@ export function groupHistoryByDate(
 
   return groups;
 }
+
+export { formatDateHeader };

@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { format, parseISO, addDays, isToday, isTomorrow, isPast } from "date-fns";
+  import { format, parseISO, addDays, isPast, isToday } from "date-fns";
   import { Check, Tv, Film } from "lucide-svelte";
   import { logger } from "../../utils/logger";
+  import { formatDateHeader } from "../../utils/dateFormat";
   import {
     getCalendarEpisodes,
     loadEpisodesForRange,
@@ -102,13 +103,6 @@
     }
 
     return grouped;
-  }
-
-  function formatDateHeader(dateStr: string): string {
-    const date = parseISO(dateStr);
-    if (isToday(date)) return "Today";
-    if (isTomorrow(date)) return "Tomorrow";
-    return format(date, "EEEE, MMMM d");
   }
 
   function isDatePast(dateStr: string): boolean {

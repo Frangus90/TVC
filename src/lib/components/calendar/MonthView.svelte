@@ -35,6 +35,7 @@
   } from "../../stores/movies.svelte";
   import { Tv } from "lucide-svelte";
   import { getThemeSettings } from "../../stores/theme.svelte";
+  import { formatDate } from "../../utils/dateFormat";
 
   let showPickerOpen = $state(false);
   let showPickerDate = $state<string | null>(null);
@@ -202,7 +203,7 @@
       {@const dayItems = getItemsForDay(day)}
       <div
         role="region"
-        aria-label="Calendar day {format(day, 'MMMM d, yyyy')}"
+        aria-label="Calendar day {formatDate(day)}"
         data-date={format(day, "yyyy-MM-dd")}
         class="border-b border-r border-border p-2 min-h-[100px] overflow-hidden group hover:bg-surface-hover/30 transition-colors {isCurrentMonth
           ? ''

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { ChevronLeft, ChevronRight, Power } from "lucide-svelte";
-  import { format, startOfWeek, endOfWeek } from "date-fns";
+  import { startOfWeek, endOfWeek } from "date-fns";
   import { invoke } from "@tauri-apps/api/core";
   import {
     getCurrentDate,
@@ -13,6 +13,7 @@
   import ThemeSelector from "../ThemeSelector.svelte";
   import { openConfirmDialog } from "../../stores/confirmDialog.svelte";
   import { logger } from "../../utils/logger";
+  import { formatWeekRange, formatMonthYearLong } from "../../utils/dateFormat";
 
   async function handleExit() {
     const confirmed = await openConfirmDialog({
@@ -39,13 +40,13 @@
     if (mode === "week") {
       const weekStart = startOfWeek(date, { weekStartsOn: 1 });
       const weekEnd = endOfWeek(date, { weekStartsOn: 1 });
-      return `${format(weekStart, "MMM d")} - ${format(weekEnd, "MMM d, yyyy")}`;
+      return formatWeekRange(weekStart, weekEnd);
     } else if (mode === "agenda") {
       return "Upcoming Episodes";
     } else if (mode === "tier") {
       return "Tier Rankings";
     }
-    return format(date, "MMMM yyyy");
+    return formatMonthYearLong(date);
   }
 </script>
 
