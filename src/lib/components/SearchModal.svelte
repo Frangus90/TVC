@@ -156,7 +156,7 @@
         </div>
         <ul class="divide-y divide-border" role="listbox" aria-label="Search results">
           {#each getSearchResults() as show}
-            <li class="flex items-start gap-4 p-4 hover:bg-surface-hover transition-colors" role="option" tabindex="0">
+            <li class="flex items-start gap-4 p-4 hover:bg-surface-hover transition-colors" role="option" aria-selected="false" tabindex="0">
               {#if show.image_url}
                 <img
                   src={show.image_url}

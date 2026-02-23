@@ -13,3 +13,15 @@ export function toggleSidebar() {
 export function setSidebarCollapsed(value: boolean) {
   collapsed = value;
 }
+
+// Tab state management
+export type SidebarTab = "shows" | "movies" | "archive";
+let activeTab = $state<SidebarTab>("shows");
+
+export function getSidebarTab() {
+  return activeTab;
+}
+
+export function setSidebarTab(tab: SidebarTab) {
+  activeTab = tab;
+}

@@ -19,6 +19,7 @@ pub struct TrackedMovie {
     pub rating: Option<f64>,
     pub color: Option<String>,
     pub archived: bool,
+    pub rank_order: Option<i32>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -132,7 +133,7 @@ pub async fn get_tracked_movies(app: AppHandle) -> Result<Vec<TrackedMovie>, Str
     let rows = sqlx::query(
         r#"
         SELECT id, title, tagline, poster_url, release_date, digital_release_date,
-               runtime, status, scheduled_date, watched, rating, color, archived
+               runtime, status, scheduled_date, watched, rating, color, archived, rank_order
         FROM movies
         WHERE archived = 0
         ORDER BY title
@@ -159,6 +160,7 @@ pub async fn get_tracked_movies(app: AppHandle) -> Result<Vec<TrackedMovie>, Str
             rating: row.get("rating"),
             color: row.get("color"),
             archived: row.get::<i32, _>("archived") == 1,
+            rank_order: row.get("rank_order"),
         })
         .collect();
 
@@ -173,7 +175,7 @@ pub async fn get_archived_movies(app: AppHandle) -> Result<Vec<TrackedMovie>, St
     let rows = sqlx::query(
         r#"
         SELECT id, title, tagline, poster_url, release_date, digital_release_date,
-               runtime, status, scheduled_date, watched, rating, color, archived
+               runtime, status, scheduled_date, watched, rating, color, archived, rank_order
         FROM movies
         WHERE archived = 1
         ORDER BY title
@@ -200,6 +202,7 @@ pub async fn get_archived_movies(app: AppHandle) -> Result<Vec<TrackedMovie>, St
             rating: row.get("rating"),
             color: row.get("color"),
             archived: row.get::<i32, _>("archived") == 1,
+            rank_order: row.get("rank_order"),
         })
         .collect();
 
@@ -215,12 +218,31 @@ pub async fn update_movie_rating(
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    sqlx::query("UPDATE movies SET rating = ? WHERE id = ?")
+    sqlx::query("UPDATE movies SET rating = ?, rank_order = NULL WHERE id = ?")
         .bind(rating)
         .bind(id)
         .execute(&pool)
         .await
         .map_err(|e| format!("Failed to update movie rating: {}", e))?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn reorder_movie_in_tier(
+    app: AppHandle,
+    id: i64,
+    new_rank_order: i32,
+) -> Result<(), String> {
+    let pool = connection::get_pool(&app).await
+        .map_err(|e| format!("Database error: {}", e))?;
+
+    sqlx::query("UPDATE movies SET rank_order = ? WHERE id = ?")
+        .bind(new_rank_order)
+        .bind(id)
+        .execute(&pool)
+        .await
+        .map_err(|e| format!("Failed to reorder movie: {}", e))?;
 
     Ok(())
 }

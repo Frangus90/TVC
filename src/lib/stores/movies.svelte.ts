@@ -17,6 +17,7 @@ export interface TrackedMovie {
   rating: number | null;
   color: string | null;
   archived: boolean;
+  rank_order: number | null;
 }
 
 export interface MovieSearchResult {

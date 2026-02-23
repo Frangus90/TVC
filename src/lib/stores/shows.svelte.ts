@@ -13,6 +13,7 @@ export interface TrackedShow {
   notes: string | null;
   tags: string | null;
   rating: number | null;
+  rank_order: number | null;
 }
 
 export interface SearchResult {

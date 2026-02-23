@@ -13,6 +13,7 @@ pub struct TrackedShow {
     pub notes: Option<String>,
     pub tags: Option<String>,
     pub rating: Option<f64>,
+    pub rank_order: Option<i32>,
 }
 
 #[tauri::command]
@@ -79,7 +80,7 @@ pub async fn get_tracked_shows(app: AppHandle) -> Result<Vec<TrackedShow>, Strin
 
     let shows = sqlx::query_as::<_, TrackedShow>(
         r#"
-        SELECT id, name, poster_url, status, color, notes, tags, rating
+        SELECT id, name, poster_url, status, color, notes, tags, rating, rank_order
         FROM shows
         WHERE archived = 0 OR archived IS NULL
         ORDER BY name
@@ -100,7 +101,7 @@ pub async fn get_archived_shows(app: AppHandle) -> Result<Vec<TrackedShow>, Stri
 
     let shows = sqlx::query_as::<_, TrackedShow>(
         r#"
-        SELECT id, name, poster_url, status, color, notes, tags, rating
+        SELECT id, name, poster_url, status, color, notes, tags, rating, rank_order
         FROM shows
         WHERE archived = 1
         ORDER BY name
@@ -158,7 +159,7 @@ pub async fn update_show_rating(
     sqlx::query(
         r#"
         UPDATE shows
-        SET rating = ?
+        SET rating = ?, rank_order = NULL
         WHERE id = ?
         "#,
     )
@@ -167,6 +168,25 @@ pub async fn update_show_rating(
     .execute(&pool)
     .await
     .map_err(|e| format!("Failed to update show rating: {}", e))?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn reorder_show_in_tier(
+    app: AppHandle,
+    id: i64,
+    new_rank_order: i32,
+) -> Result<(), String> {
+    let pool = connection::get_pool(&app).await
+        .map_err(|e| format!("Database error: {}", e))?;
+
+    sqlx::query("UPDATE shows SET rank_order = ? WHERE id = ?")
+        .bind(new_rank_order)
+        .bind(id)
+        .execute(&pool)
+        .await
+        .map_err(|e| format!("Failed to reorder show: {}", e))?;
 
     Ok(())
 }

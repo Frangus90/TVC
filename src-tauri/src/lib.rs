@@ -24,6 +24,7 @@ const MIGRATION_007: &str = include_str!("../migrations/007_add_change_history.s
 const MIGRATION_008: &str = include_str!("../migrations/008_add_cast_crew.sql");
 const MIGRATION_009: &str = include_str!("../migrations/009_rating_to_real.sql");
 const MIGRATION_010: &str = include_str!("../migrations/010_add_arr_integration.sql");
+const MIGRATION_011: &str = include_str!("../migrations/011_add_rank_order.sql");
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -40,6 +41,7 @@ pub fn run() {
         MigrationDef { version: 8, sql: MIGRATION_008 },
         MigrationDef { version: 9, sql: MIGRATION_009 },
         MigrationDef { version: 10, sql: MIGRATION_010 },
+        MigrationDef { version: 11, sql: MIGRATION_011 },
     ]);
 
     let migrations = vec![
@@ -103,6 +105,12 @@ pub fn run() {
             sql: MIGRATION_010,
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 11,
+            description: "add rank_order for tier ordering",
+            sql: MIGRATION_011,
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
@@ -136,6 +144,7 @@ pub fn run() {
             commands::shows::archive_show,
             commands::shows::unarchive_show,
             commands::shows::update_show_rating,
+            commands::shows::reorder_show_in_tier,
             // Episode commands
             commands::episodes::sync_show_episodes,
             commands::episodes::sync_all_shows,
@@ -153,6 +162,7 @@ pub fn run() {
             commands::movies::get_archived_movies,
             commands::movies::get_movie_details,
             commands::movies::update_movie_rating,
+            commands::movies::reorder_movie_in_tier,
             commands::movies::mark_movie_watched,
             commands::movies::schedule_movie,
             commands::movies::unschedule_movie,

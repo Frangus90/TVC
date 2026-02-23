@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Plus, Tv, Trash2, RefreshCw, Check, Film, Archive, RotateCcw, CalendarX, BarChart3, Database, PanelLeftClose, PanelLeft, Trophy, Server, Play } from "lucide-svelte";
+  import { Plus, Tv, Trash2, RefreshCw, Check, Film, Archive, RotateCcw, CalendarX, BarChart3, Database, PanelLeftClose, PanelLeft, Server, Play } from "lucide-svelte";
   import { onMount } from "svelte";
   import { startDrag } from "../../stores/dragDrop.svelte";
   import {
@@ -35,7 +35,7 @@
   import { openDataManagement } from "../../stores/dataManagement.svelte";
   import { openArrSettings } from "../../stores/arr.svelte";
   import { openPlexSettings } from "../../stores/plex.svelte";
-  import { isSidebarCollapsed, toggleSidebar } from "../../stores/sidebar.svelte";
+  import { isSidebarCollapsed, toggleSidebar, getSidebarTab, setSidebarTab, type SidebarTab } from "../../stores/sidebar.svelte";
   import { getThemeSettings } from "../../stores/theme.svelte";
   import { getViewMode } from "../../stores/calendar.svelte";
   import { openConfirmDialog } from "../../stores/confirmDialog.svelte";
@@ -43,68 +43,13 @@
   import EmptyState from "../common/EmptyState.svelte";
   import { logger } from "../../utils/logger";
 
-  type SidebarTab = "shows" | "movies" | "rankings" | "archive";
-  type RankingsSubTab = "shows" | "movies";
-  let activeTab = $state<SidebarTab>("shows");
-  let rankingsSubTab = $state<RankingsSubTab>("shows");
+  // Use shared sidebar tab state
+  const activeTab = $derived(getSidebarTab());
   let selectedItems = $state<Set<number>>(new Set());
   let bulkMode = $state(false);
 
   const theme = $derived(getThemeSettings());
   const isCompactList = $derived(theme.compactSpacing && theme.hidePosters);
-
-  // Rankings derived state
-  const rankedShows = $derived.by(() => {
-    return getTrackedShows()
-      .filter(s => s.rating !== null)
-      .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
-  });
-
-  const rankedMovies = $derived.by(() => {
-    return getTrackedMovies()
-      .filter(m => m.rating !== null)
-      .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
-  });
-
-  function groupByRating<T extends { rating: number | null }>(items: T[]): [number, T[]][] {
-    const groups = new Map<number, T[]>();
-    for (const item of items) {
-      if (item.rating === null) continue;
-      if (!groups.has(item.rating)) groups.set(item.rating, []);
-      groups.get(item.rating)!.push(item);
-    }
-    return Array.from(groups.entries()).sort((a, b) => b[0] - a[0]);
-  }
-
-  const showStats = $derived.by(() => {
-    const rated = rankedShows;
-    if (rated.length === 0) return { avg: 0, count: 0, distribution: new Map<number, number>() };
-    const avg = rated.reduce((sum, s) => sum + (s.rating ?? 0), 0) / rated.length;
-    const distribution = new Map<number, number>();
-    for (const s of rated) {
-      const r = s.rating ?? 0;
-      distribution.set(r, (distribution.get(r) ?? 0) + 1);
-    }
-    return { avg, count: rated.length, distribution };
-  });
-
-  const movieStats = $derived.by(() => {
-    const rated = rankedMovies;
-    if (rated.length === 0) return { avg: 0, count: 0, distribution: new Map<number, number>() };
-    const avg = rated.reduce((sum, m) => sum + (m.rating ?? 0), 0) / rated.length;
-    const distribution = new Map<number, number>();
-    for (const m of rated) {
-      const r = m.rating ?? 0;
-      distribution.set(r, (distribution.get(r) ?? 0) + 1);
-    }
-    return { avg, count: rated.length, distribution };
-  });
-
-  function renderStars(rating: number): string {
-    const fullStars = Math.floor(rating);
-    const hasHalf = rating % 1 >= 0.5;
-    return "★".repeat(fullStars) + (hasHalf ? "½" : "");
-  }
 
   onMount(() => {
     // Load all data in parallel for faster startup
@@ -119,7 +64,7 @@
   });
 
   function switchTab(tab: SidebarTab) {
-    activeTab = tab;
+    setSidebarTab(tab);
     bulkMode = false;
     selectedItems = new Set();
   }
@@ -283,21 +228,6 @@
       <Film class="w-3.5 h-3.5 flex-shrink-0" />
       {#if !isSidebarCollapsed()}
         <span>Movies</span>
-      {/if}
-    </button>
-    <button
-      type="button"
-      onclick={() => switchTab("rankings")}
-      class="flex-1 flex items-center justify-center gap-1 px-1 py-2.5 text-xs font-medium transition-colors
-        {activeTab === 'rankings' ? 'text-accent border-b-2 border-accent bg-accent/5' : 'text-text-muted hover:text-text hover:bg-surface-hover'}
-        {isSidebarCollapsed() ? 'border-b-0 border-l-2' : ''}"
-      aria-label="Rankings"
-      aria-pressed={activeTab === 'rankings'}
-      title="Rankings"
-    >
-      <Trophy class="w-3.5 h-3.5 flex-shrink-0" />
-      {#if !isSidebarCollapsed()}
-        <span>Rank</span>
       {/if}
     </button>
     <button
@@ -642,147 +572,6 @@
       {/if}
     {/if}
 
-    <!-- Rankings Tab -->
-    {#if activeTab === "rankings"}
-      <!-- Sub-tabs for Shows/Movies -->
-      <div class="flex gap-1 mb-3 p-1 bg-background rounded-lg">
-        <button
-          type="button"
-          onclick={() => rankingsSubTab = "shows"}
-          class="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium rounded transition-colors
-            {rankingsSubTab === 'shows' ? 'bg-surface text-accent' : 'text-text-muted hover:text-text'}"
-        >
-          <Tv class="w-3 h-3" />
-          Shows
-        </button>
-        <button
-          type="button"
-          onclick={() => rankingsSubTab = "movies"}
-          class="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium rounded transition-colors
-            {rankingsSubTab === 'movies' ? 'bg-surface text-accent' : 'text-text-muted hover:text-text'}"
-        >
-          <Film class="w-3 h-3" />
-          Movies
-        </button>
-      </div>
-
-      <!-- Statistics -->
-      {@const stats = rankingsSubTab === "shows" ? showStats : movieStats}
-      {#if stats.count > 0}
-        <div class="mb-4 p-3 bg-background rounded-lg">
-          <div class="flex items-center justify-between text-sm mb-2">
-            <span class="text-text-muted">Average:</span>
-            <span class="text-yellow-400 font-medium">{stats.avg.toFixed(1)} ★</span>
-          </div>
-          <div class="flex items-center justify-between text-sm mb-3">
-            <span class="text-text-muted">Rated:</span>
-            <span class="text-text">{stats.count} {rankingsSubTab === "shows" ? "shows" : "movies"}</span>
-          </div>
-          <!-- Distribution bar -->
-          <div class="flex h-2 rounded-full overflow-hidden bg-surface">
-            {#each Array.from(stats.distribution.entries()).sort((a, b) => b[0] - a[0]) as [rating, count]}
-              <div
-                class="h-full transition-all"
-                style="width: {(count / stats.count) * 100}%; background-color: hsl({(rating / 5) * 60}, 80%, 50%);"
-                title="{rating}★: {count}"
-              ></div>
-            {/each}
-          </div>
-          <div class="flex justify-between text-xs text-text-muted mt-1">
-            <span>5★</span>
-            <span>1★</span>
-          </div>
-        </div>
-      {/if}
-
-      <!-- Grouped Rankings List - Shows -->
-      {#if rankingsSubTab === "shows"}
-        {#if rankedShows.length === 0}
-          <EmptyState
-            icon={Trophy}
-            title="No rated shows"
-            message="Rate shows from their detail page to see them here."
-          />
-        {:else}
-          {@const grouped = groupByRating(rankedShows)}
-          <div class="space-y-4">
-            {#each grouped as [rating, groupItems]}
-              <div>
-                <div class="flex items-center gap-2 mb-2 px-1">
-                  <span class="text-yellow-400 text-sm font-medium">{renderStars(rating)}</span>
-                  <span class="text-xs text-text-muted">({rating})</span>
-                </div>
-                <ul class="space-y-1">
-                  {#each groupItems as show}
-                    <li>
-                      <button
-                        type="button"
-                        onclick={() => openShowDetail(show.id)}
-                        class="w-full flex items-center {isCompactList ? 'gap-2 px-2 py-1' : 'gap-3 px-3 py-2'} rounded-lg hover:bg-surface-hover transition-colors text-left"
-                      >
-                        {#if !theme.hidePosters}
-                          {#if show.poster_url}
-                            <img src={show.poster_url} alt="" class="w-8 h-12 rounded object-cover" loading="lazy" decoding="async" />
-                          {:else}
-                            <div class="w-8 h-12 rounded bg-border flex items-center justify-center">
-                              <Tv class="w-4 h-4 text-text-muted" />
-                            </div>
-                          {/if}
-                        {/if}
-                        <span class="flex-1 text-sm truncate">{show.name}</span>
-                      </button>
-                    </li>
-                  {/each}
-                </ul>
-              </div>
-            {/each}
-          </div>
-        {/if}
-      {:else}
-        <!-- Grouped Rankings List - Movies -->
-        {#if rankedMovies.length === 0}
-          <EmptyState
-            icon={Trophy}
-            title="No rated movies"
-            message="Rate movies from their detail page to see them here."
-          />
-        {:else}
-          {@const grouped = groupByRating(rankedMovies)}
-          <div class="space-y-4">
-            {#each grouped as [rating, groupItems]}
-              <div>
-                <div class="flex items-center gap-2 mb-2 px-1">
-                  <span class="text-yellow-400 text-sm font-medium">{renderStars(rating)}</span>
-                  <span class="text-xs text-text-muted">({rating})</span>
-                </div>
-                <ul class="space-y-1">
-                  {#each groupItems as movie}
-                    <li>
-                      <button
-                        type="button"
-                        onclick={() => openMovieDetail(movie.id)}
-                        class="w-full flex items-center {isCompactList ? 'gap-2 px-2 py-1' : 'gap-3 px-3 py-2'} rounded-lg hover:bg-surface-hover transition-colors text-left"
-                      >
-                        {#if !theme.hidePosters}
-                          {#if movie.poster_url}
-                            <img src={movie.poster_url} alt="" class="w-8 h-12 rounded object-cover" loading="lazy" decoding="async" />
-                          {:else}
-                            <div class="w-8 h-12 rounded bg-border flex items-center justify-center">
-                              <Film class="w-4 h-4 text-text-muted" />
-                            </div>
-                          {/if}
-                        {/if}
-                        <span class="flex-1 text-sm truncate">{movie.title}</span>
-                      </button>
-                    </li>
-                  {/each}
-                </ul>
-              </div>
-            {/each}
-          </div>
-        {/if}
-      {/if}
-    {/if}
   </div>
 
   <!-- Footer -->
@@ -860,7 +649,7 @@
         <RefreshCw class="w-3 h-3 {isCheckingForUpdates() ? 'animate-spin' : ''}" />
         {isCheckingForUpdates() ? "Checking..." : "Check for Updates"}
       </button>
-      <p class="text-xs text-text-muted text-center mt-2">v0.7.7</p>
+      <p class="text-xs text-text-muted text-center mt-2">v0.7.8</p>
     {/if}
   </div>
 </aside>

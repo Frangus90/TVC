@@ -30,13 +30,21 @@ let state = $state<DragState>({
 
 const dropZones = new Map<string, {
   element: HTMLElement;
-  onDrop: (data: DragData) => void;
+  onDrop: (data: DragData, dropX?: number, dropY?: number) => void;
   onDragEnter?: () => void;
   onDragLeave?: () => void;
 }>();
 
 let currentHoveredZone: string | null = null;
 let overlay: HTMLDivElement | null = null;
+let wasDragging = false;
+
+// Returns true if a drag just completed (resets on read)
+export function consumeWasDragging(): boolean {
+  const val = wasDragging;
+  wasDragging = false;
+  return val;
+}
 
 export function getIsDragging() {
   return state.isDragging;
@@ -130,6 +138,7 @@ function handleMouseUp(e: MouseEvent) {
   }
 
   if (state.isDragging && state.dragData) {
+    wasDragging = true;
     // Look through overlay to find drop zone
     if (overlay) overlay.style.pointerEvents = "none";
     const elementUnder = document.elementFromPoint(e.clientX, e.clientY);
@@ -139,7 +148,7 @@ function handleMouseUp(e: MouseEvent) {
     const zoneId = dropZoneEl?.dataset.dropZone ?? null;
 
     if (zoneId && dropZones.has(zoneId)) {
-      dropZones.get(zoneId)!.onDrop(state.dragData);
+      dropZones.get(zoneId)!.onDrop(state.dragData, e.clientX, e.clientY);
     }
   }
 
@@ -163,7 +172,7 @@ export function registerDropZone(
   id: string,
   element: HTMLElement,
   callbacks: {
-    onDrop: (data: DragData) => void;
+    onDrop: (data: DragData, dropX?: number, dropY?: number) => void;
     onDragEnter?: () => void;
     onDragLeave?: () => void;
   }

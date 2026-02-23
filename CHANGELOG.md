@@ -2,6 +2,21 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.7.8]
+
+### Tier List Rankings
+
+- **Tier View Overhaul**: Redesigned tier view with descriptive labels (Masterpiece, Excellent, Great, etc.) alongside star ratings
+- **Click-to-Rate Menu**: Hover over any poster to reveal a 3-dot menu for quickly changing or removing ratings without drag-and-drop
+- **Within-Tier Ordering**: Drag posters horizontally within the same tier to reorder them — order is saved and persists
+- **Sidebar Sync**: Switching between Shows/Movies in the tier view now syncs the sidebar tab automatically
+- **Improved Empty State**: Helpful icon and instructions shown when no items are rated yet
+- **Show Names on Posters**: Item names now display below posters in the tier view for easier identification
+
+### Bug Fixes
+
+- **Fixed Duplicate System Tray Icons**: Removed redundant declarative tray icon config that caused two icons to appear when minimized
+
 ## [0.7.7]
 
 ### Single Instance
