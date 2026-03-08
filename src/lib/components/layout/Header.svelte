@@ -6,6 +6,8 @@
     getCurrentDate,
     getViewMode,
     setViewMode,
+    getCalendarFilter,
+    setCalendarFilter,
     previousPeriod,
     nextPeriod,
     goToToday,
@@ -89,6 +91,23 @@
   </h1>
 
   <div class="flex items-center gap-2">
+    {#if getViewMode() !== "tier"}
+      <div class="flex bg-background rounded-lg p-1">
+        {#each [{ value: "all", label: "All" }, { value: "shows", label: "Shows" }, { value: "movies", label: "Movies" }] as option}
+          <button
+            onclick={() => setCalendarFilter(option.value as "all" | "shows" | "movies")}
+            class="px-3 py-1 text-sm rounded-md transition-colors {getCalendarFilter() === option.value
+              ? 'bg-surface text-text'
+              : 'text-text-muted hover:text-text'}"
+            aria-label="Show {option.label.toLowerCase()}"
+            aria-pressed={getCalendarFilter() === option.value}
+            title="Show {option.label.toLowerCase()}"
+          >
+            {option.label}
+          </button>
+        {/each}
+      </div>
+    {/if}
     <div class="flex bg-background rounded-lg p-1">
       {#each ["month", "week", "agenda", "tier"] as mode}
         <button

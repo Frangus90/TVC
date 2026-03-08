@@ -1,6 +1,8 @@
 <script lang="ts">
   import { format, parseISO, addDays, isPast, isToday } from "date-fns";
   import { Check, Tv, Film } from "lucide-svelte";
+  import { getCalendarFilter } from "../../stores/calendar.svelte";
+  import { getNow } from "../../stores/now.svelte";
   import { logger } from "../../utils/logger";
   import { formatDateHeader } from "../../utils/dateFormat";
   import {
@@ -20,7 +22,7 @@
 
   // Load episodes and movies for the next 60 days
   $effect(() => {
-    const today = new Date();
+    const today = getNow();
     const futureDate = addDays(today, 60);
     const startStr = format(today, "yyyy-MM-dd");
     const endStr = format(futureDate, "yyyy-MM-dd");
@@ -48,8 +50,10 @@
 
   // Get all calendar items (episodes + movies) - reactive
   let allItems = $derived.by((): CalendarItem[] => {
-    const episodes = getCalendarEpisodes().map((ep): CalendarItem => {
-      const hasAired = ep.aired ? new Date(ep.aired) <= new Date() : false;
+    const filter = getCalendarFilter();
+
+    const episodes = filter === "movies" ? [] : getCalendarEpisodes().map((ep): CalendarItem => {
+      const hasAired = ep.aired ? new Date(ep.aired) <= getNow() : false;
       const title = ep.network ? `${ep.show_name} | ${ep.network}` : ep.show_name;
       return {
         type: "episode",
@@ -64,12 +68,12 @@
       };
     });
 
-    const movies = getCalendarMovies()
+    const movies = filter === "shows" ? [] : getCalendarMovies()
       .filter((movie) => movie.scheduled_date) // Only include movies with scheduled_date
       .map((movie): CalendarItem => {
         // Only use scheduled_date (not digital_release_date)
         const displayDate = movie.scheduled_date || "";
-        const hasReleased = displayDate ? new Date(displayDate) <= new Date() : false;
+        const hasReleased = displayDate ? new Date(displayDate) <= getNow() : false;
       return {
         type: "movie",
         id: movie.id,

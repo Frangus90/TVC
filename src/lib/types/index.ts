@@ -29,7 +29,7 @@ export type {
 // Statistics types
 export type {
   WatchStatistics,
-  PeriodStatistics,
+  PeriodStats,
   ShowCompletion,
   WatchHistoryItem,
 } from "../stores/statistics.svelte";
@@ -37,7 +37,6 @@ export type {
 // Data management types
 export type {
   DatabaseStats,
-  ChangeHistoryItem,
   DuplicatePair,
   CleanupEpisodePreview,
 } from "../stores/dataManagement.svelte";
@@ -63,5 +62,3 @@ export type {
 // Theme types
 export type { ThemeSettings } from "../stores/theme.svelte";
 
-// Toast types
-export type { Toast } from "../stores/toast.svelte";

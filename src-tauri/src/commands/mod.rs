@@ -2,7 +2,6 @@ pub mod shows;
 pub mod episodes;
 pub mod movies;
 pub mod statistics;
-pub mod history;
 pub mod duplicates;
 pub mod maintenance;
 pub mod metadata;

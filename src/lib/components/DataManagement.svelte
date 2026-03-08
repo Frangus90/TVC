@@ -1,6 +1,6 @@
 <script lang="ts">
   import { fade, scale } from "svelte/transition";
-  import { X, Database, History, Copy, Trash2, RefreshCw, AlertTriangle, Check, CloudDownload, Download, Upload, ChevronDown } from "lucide-svelte";
+  import { X, Database, Copy, RefreshCw, AlertTriangle, Check, CloudDownload, Download, Upload, ChevronDown } from "lucide-svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { save, open } from "@tauri-apps/plugin-dialog";
   import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
@@ -10,8 +10,6 @@
     isLoading,
     getError,
     getDatabaseStats,
-    getChangeHistory,
-    getHistoryStats,
     getDuplicates,
     getOrphanedEpisodes,
     getUnairedEpisodes,
@@ -21,11 +19,8 @@
     cleanupUnaired,
     optimizeDatabase,
     runFullCleanup,
-    clearHistory,
     mergeDuplicates,
     formatBytes,
-    formatChangeType,
-    formatRelativeDate,
     type DuplicatePair,
   } from "../stores/dataManagement.svelte";
   import { openConfirmDialog } from "../stores/confirmDialog.svelte";
@@ -201,30 +196,10 @@
   async function handleFullCleanup() {
     try {
       const result = await runFullCleanup();
-      cleanupMessage = `Cleanup complete: ${result.orphaned_episodes_removed} orphaned, ${result.unaired_episodes_removed} unaired, ${result.history_entries_removed} history entries removed`;
+      cleanupMessage = `Cleanup complete: ${result.orphaned_episodes_removed} orphaned, ${result.unaired_episodes_removed} unaired episodes removed`;
       setTimeout(() => (cleanupMessage = null), 5000);
     } catch {
       // Error handled in store
-    }
-  }
-
-  async function handleClearHistory() {
-    const confirmed = await openConfirmDialog({
-      title: "Clear History",
-      message: "Are you sure you want to clear all change history?",
-      type: "warning",
-      confirmLabel: "Clear",
-      cancelLabel: "Cancel",
-    });
-
-    if (confirmed) {
-      try {
-        const count = await clearHistory();
-        cleanupMessage = `Cleared ${count} history entries`;
-        setTimeout(() => (cleanupMessage = null), 3000);
-      } catch {
-        // Error handled in store
-      }
     }
   }
 
@@ -258,8 +233,6 @@
   {@const loading = isLoading()}
   {@const error = getError()}
   {@const stats = getDatabaseStats()}
-  {@const history = getChangeHistory()}
-  {@const historyStats = getHistoryStats()}
   {@const duplicates = getDuplicates()}
   {@const orphanedEpisodesList = getOrphanedEpisodes()}
   {@const unairedEpisodesList = getUnairedEpisodes()}
@@ -304,15 +277,6 @@
           : 'text-text-muted hover:text-text'}"
       >
         Overview
-      </button>
-      <button
-        type="button"
-        onclick={() => setActiveTab("history")}
-        class="px-4 py-3 text-sm font-medium transition-colors {activeTab === 'history'
-          ? 'text-accent border-b-2 border-accent'
-          : 'text-text-muted hover:text-text'}"
-      >
-        History
       </button>
       <button
         type="button"
@@ -364,10 +328,6 @@
             <div class="bg-background rounded-lg p-4">
               <p class="text-2xl font-bold text-text">{formatBytes(stats.database_size_bytes)}</p>
               <p class="text-sm text-text-muted">Database Size</p>
-            </div>
-            <div class="bg-background rounded-lg p-4">
-              <p class="text-2xl font-bold text-text">{stats.change_history_count}</p>
-              <p class="text-sm text-text-muted">History Entries</p>
             </div>
             <div class="bg-background rounded-lg p-4">
               <p class="text-2xl font-bold {stats.orphaned_episodes > 0 ? 'text-yellow-400' : 'text-text'}">
@@ -482,65 +442,6 @@
             </div>
           {/if}
         {/if}
-      {:else if activeTab === "history"}
-        <!-- History Tab -->
-        <div class="space-y-4">
-          {#if historyStats}
-            <div class="flex items-center justify-between">
-              <div class="flex gap-4 text-sm text-text-muted">
-                <span>{historyStats.total_changes} total</span>
-                <span>{historyStats.watched_changes} watched</span>
-                <span>{historyStats.schedule_changes} scheduled</span>
-                <span>{historyStats.rating_changes} ratings</span>
-              </div>
-              {#if historyStats.total_changes > 0}
-                <button
-                  type="button"
-                  onclick={handleClearHistory}
-                  class="text-sm text-red-400 hover:text-red-300 flex items-center gap-1"
-                >
-                  <Trash2 class="w-3 h-3" />
-                  Clear All
-                </button>
-              {/if}
-            </div>
-          {/if}
-
-          {#if history.length === 0}
-            <div class="text-center py-12 text-text-muted">
-              <History class="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>No change history yet</p>
-              <p class="text-sm mt-1">Changes will be tracked as you use the app</p>
-            </div>
-          {:else}
-            <div class="space-y-2">
-              {#each history as item}
-                <div class="flex items-center gap-3 p-3 bg-background rounded-lg">
-                  {#if item.poster_url}
-                    <img src={item.poster_url} alt="" class="w-10 h-14 rounded object-cover" />
-                  {:else}
-                    <div class="w-10 h-14 rounded bg-surface-hover"></div>
-                  {/if}
-                  <div class="flex-1 min-w-0">
-                    <p class="text-sm text-text truncate">
-                      {item.entity_name || "Unknown"}
-                      {#if item.show_name}
-                        <span class="text-text-muted">({item.show_name})</span>
-                      {/if}
-                    </p>
-                    <p class="text-xs text-text-muted">
-                      {formatChangeType(item.change_type)}
-                      {#if item.old_value || item.new_value}
-                        : {item.old_value || "none"} → {item.new_value || "none"}
-                      {/if}
-                    </p>
-                  </div>
-                  <span class="text-xs text-text-muted">{formatRelativeDate(item.changed_at)}</span>
-                </div>
-              {/each}
-            </div>
-          {/if}
-        </div>
       {:else if activeTab === "duplicates"}
         <!-- Duplicates Tab -->
         {#if duplicates.length === 0}

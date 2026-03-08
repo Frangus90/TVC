@@ -9,7 +9,8 @@
   import ToastContainer from "./lib/components/ToastContainer.svelte";
   import ConfirmDialog from "./lib/components/common/ConfirmDialog.svelte";
   import DragGhost from "./lib/components/common/DragGhost.svelte";
-  import { getViewMode } from "./lib/stores/calendar.svelte";
+  import { getViewMode, goToToday } from "./lib/stores/calendar.svelte";
+  import { startClock, stopClock, onDayChange } from "./lib/stores/now.svelte";
   import { checkForUpdates } from "./lib/stores/updates.svelte";
   import { isSearchModalOpen, refreshCalendar } from "./lib/stores/shows.svelte";
   import { isMovieSearchModalOpen, refreshMoviesCalendar } from "./lib/stores/movies.svelte";
@@ -165,6 +166,15 @@
       });
     }, 2000);
 
+    // Start the real-time clock so the app tracks the current date/time
+    startClock();
+    const unsubDayChange = onDayChange(() => {
+      logger.debug("[TVC] Day rolled over, refreshing calendar");
+      goToToday();
+      refreshCalendar();
+      refreshMoviesCalendar();
+    });
+
     // Listen for Plex scrobble events to refresh calendar
     let unlistenScrobble: UnlistenFn | undefined;
     listen<{ media_type: string; entity_id: number }>("plex-scrobble", (event) => {
@@ -185,6 +195,8 @@
     });
 
     return () => {
+      stopClock();
+      unsubDayChange();
       unlistenScrobble?.();
     };
   });

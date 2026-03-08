@@ -2,6 +2,18 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.7.9]
+
+### Live Date & Time Tracking
+
+- **Real-Time Clock**: The app now tracks the current system time with a 60-second tick, so date-dependent UI (aired vs upcoming) stays accurate even if the app is left open for days
+- **Automatic Day Rollover**: At midnight the calendar automatically navigates to the new day and refreshes all episode and movie data
+
+### Bug Fixes
+
+- **Fixed unused imports in PlexSettings**: Removed unused `ExternalLink` import and `config` template variable
+- **Fixed broken type re-exports**: Corrected `PeriodStatistics` to `PeriodStats` and removed non-existent `Toast` type export
+
 ## [0.7.8]
 
 ### Tier List Rankings

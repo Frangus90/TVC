@@ -2,6 +2,7 @@ import { addMonths, subMonths, addWeeks, subWeeks, startOfMonth, endOfMonth, sta
 
 let currentDate = $state(new Date());
 let viewMode = $state<"month" | "week" | "agenda" | "tier">("month");
+let calendarFilter = $state<"all" | "shows" | "movies">("all");
 
 export function getCurrentDate() {
   return currentDate;
@@ -13,6 +14,14 @@ export function getViewMode() {
 
 export function setViewMode(mode: "month" | "week" | "agenda" | "tier") {
   viewMode = mode;
+}
+
+export function getCalendarFilter() {
+  return calendarFilter;
+}
+
+export function setCalendarFilter(filter: "all" | "shows" | "movies") {
+  calendarFilter = filter;
 }
 
 export function previousPeriod() {

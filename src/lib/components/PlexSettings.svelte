@@ -8,7 +8,6 @@
     Check,
     AlertTriangle,
     RefreshCw,
-    ExternalLink,
   } from "lucide-svelte";
   import {
     isModalOpen,
@@ -56,7 +55,6 @@
 {#if isModalOpen()}
   {@const loading = isLoading()}
   {@const error = getError()}
-  {@const config = getConfig()}
   {@const serverStatus = getServerStatus()}
   {@const scrobbleLog = getScrobbleLog()}
 

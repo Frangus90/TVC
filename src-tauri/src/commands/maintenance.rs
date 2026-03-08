@@ -11,14 +11,12 @@ pub struct DatabaseStats {
     pub orphaned_episodes: i64,
     pub unaired_unscheduled_episodes: i64,
     pub database_size_bytes: i64,
-    pub change_history_count: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CleanupResult {
     pub orphaned_episodes_removed: i64,
     pub unaired_episodes_removed: i64,
-    pub history_entries_removed: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -83,12 +81,6 @@ pub async fn get_database_stats(app: AppHandle) -> Result<DatabaseStats, String>
         .map(|row| row.get("size"))
         .unwrap_or(0);
 
-    let history_count: i64 = sqlx::query(r#"SELECT COUNT(*) as count FROM change_history"#)
-        .fetch_one(&pool)
-        .await
-        .map(|row| row.get("count"))
-        .unwrap_or(0);
-
     Ok(DatabaseStats {
         total_shows,
         total_episodes,
@@ -96,7 +88,6 @@ pub async fn get_database_stats(app: AppHandle) -> Result<DatabaseStats, String>
         orphaned_episodes,
         unaired_unscheduled_episodes: unaired_unscheduled,
         database_size_bytes: db_size,
-        change_history_count: history_count,
     })
 }
 
@@ -250,16 +241,6 @@ pub async fn run_full_cleanup(app: AppHandle) -> Result<CleanupResult, String> {
     .map_err(|e| format!("Failed to cleanup unaired episodes: {}", e))?
     .rows_affected() as i64;
 
-    // Clear old history entries (older than 30 days)
-    let history = sqlx::query(
-        r#"DELETE FROM change_history
-           WHERE changed_at < datetime('now', '-30 days')"#
-    )
-    .execute(&pool)
-    .await
-    .map_err(|e| format!("Failed to cleanup history: {}", e))?
-    .rows_affected() as i64;
-
     // Vacuum after cleanup
     sqlx::query(r#"VACUUM"#)
         .execute(&pool)
@@ -269,6 +250,5 @@ pub async fn run_full_cleanup(app: AppHandle) -> Result<CleanupResult, String> {
     Ok(CleanupResult {
         orphaned_episodes_removed: orphaned,
         unaired_episodes_removed: unaired,
-        history_entries_removed: history,
     })
 }

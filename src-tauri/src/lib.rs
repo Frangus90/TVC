@@ -176,10 +176,6 @@ pub fn run() {
             commands::statistics::get_episodes_watched_by_period,
             commands::statistics::get_completion_rates,
             commands::statistics::get_watch_history,
-            // History commands
-            commands::history::get_change_history,
-            commands::history::get_change_history_stats,
-            commands::history::clear_change_history,
             // Duplicates commands
             commands::duplicates::find_duplicates,
             commands::duplicates::merge_duplicates,

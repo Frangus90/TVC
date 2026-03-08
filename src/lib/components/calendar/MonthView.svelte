@@ -12,7 +12,8 @@
     isSameDay,
   } from "date-fns";
   import { Check, Plus, Film } from "lucide-svelte";
-  import { getCurrentDate } from "../../stores/calendar.svelte";
+  import { getCurrentDate, getCalendarFilter } from "../../stores/calendar.svelte";
+  import { getNow } from "../../stores/now.svelte";
   import { logger } from "../../utils/logger";
   import {
     getCalendarEpisodes,
@@ -99,8 +100,10 @@
   }
 
   function getItemsForDay(day: Date): CalendarItem[] {
-    const episodes = getEpisodesForDay(day).map((ep): CalendarItem => {
-      const hasAired = ep.aired ? new Date(ep.aired) <= new Date() : false;
+    const filter = getCalendarFilter();
+
+    const episodes = filter === "movies" ? [] : getEpisodesForDay(day).map((ep): CalendarItem => {
+      const hasAired = ep.aired ? new Date(ep.aired) <= getNow() : false;
       const title = ep.network ? `${ep.show_name} | ${ep.network}` : ep.show_name;
       return {
         type: "episode",
@@ -114,10 +117,10 @@
       };
     });
 
-    const movies = getMoviesForDay(day).map((movie): CalendarItem => {
+    const movies = filter === "shows" ? [] : getMoviesForDay(day).map((movie): CalendarItem => {
       // Only use scheduled_date (not digital_release_date)
       const displayDate = movie.scheduled_date;
-      const hasReleased = displayDate ? new Date(displayDate) <= new Date() : false;
+      const hasReleased = displayDate ? new Date(displayDate) <= getNow() : false;
       return {
         type: "movie",
         id: movie.id,

@@ -1,29 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { logger } from "../utils/logger";
-import { formatDate, parseDateTime } from "../utils/dateFormat";
 
 // Types
-export interface ChangeHistoryItem {
-  id: number;
-  entity_type: string;
-  entity_id: number;
-  change_type: string;
-  old_value: string | null;
-  new_value: string | null;
-  changed_at: string;
-  user_action: string | null;
-  entity_name: string | null;
-  show_name: string | null;
-  poster_url: string | null;
-}
-
-export interface ChangeHistoryStats {
-  total_changes: number;
-  watched_changes: number;
-  schedule_changes: number;
-  rating_changes: number;
-}
-
 export interface DuplicatePair {
   show1_id: number;
   show1_name: string;
@@ -51,13 +29,11 @@ export interface DatabaseStats {
   orphaned_episodes: number;
   unaired_unscheduled_episodes: number;
   database_size_bytes: number;
-  change_history_count: number;
 }
 
 export interface CleanupResult {
   orphaned_episodes_removed: number;
   unaired_episodes_removed: number;
-  history_entries_removed: number;
 }
 
 export interface CleanupEpisodePreview {
@@ -70,14 +46,12 @@ export interface CleanupEpisodePreview {
 
 // State
 let modalOpen = $state(false);
-let activeTab = $state<"overview" | "history" | "duplicates" | "cleanup">("overview");
+let activeTab = $state<"overview" | "duplicates" | "cleanup">("overview");
 let loading = $state(false);
 let error = $state<string | null>(null);
 
 // Data states
 let databaseStats = $state<DatabaseStats | null>(null);
-let changeHistory = $state<ChangeHistoryItem[]>([]);
-let historyStats = $state<ChangeHistoryStats | null>(null);
 let duplicates = $state<DuplicatePair[]>([]);
 let orphanedEpisodes = $state<CleanupEpisodePreview[]>([]);
 let unairedEpisodes = $state<CleanupEpisodePreview[]>([]);
@@ -101,14 +75,6 @@ export function getError() {
 
 export function getDatabaseStats() {
   return databaseStats;
-}
-
-export function getChangeHistory() {
-  return changeHistory;
-}
-
-export function getHistoryStats() {
-  return historyStats;
 }
 
 export function getDuplicates() {
@@ -135,7 +101,7 @@ export function closeDataManagement() {
   error = null;
 }
 
-export function setActiveTab(tab: "overview" | "history" | "duplicates" | "cleanup") {
+export function setActiveTab(tab: "overview" | "duplicates" | "cleanup") {
   activeTab = tab;
 
   // Load data for the tab
@@ -144,8 +110,6 @@ export function setActiveTab(tab: "overview" | "history" | "duplicates" | "clean
   } else if (tab === "cleanup") {
     loadDatabaseStats();
     loadCleanupPreviews();
-  } else if (tab === "history") {
-    loadChangeHistory();
   } else if (tab === "duplicates") {
     loadDuplicates();
   }
@@ -160,25 +124,6 @@ export async function loadDatabaseStats() {
     databaseStats = await invoke<DatabaseStats>("get_database_stats");
   } catch (err) {
     logger.error("Failed to load database stats:", err);
-    error = err instanceof Error ? err.message : String(err);
-  } finally {
-    loading = false;
-  }
-}
-
-export async function loadChangeHistory(limit = 100) {
-  loading = true;
-  error = null;
-
-  try {
-    const [history, stats] = await Promise.all([
-      invoke<ChangeHistoryItem[]>("get_change_history", { limit }),
-      invoke<ChangeHistoryStats>("get_change_history_stats"),
-    ]);
-    changeHistory = history;
-    historyStats = stats;
-  } catch (err) {
-    logger.error("Failed to load change history:", err);
     error = err instanceof Error ? err.message : String(err);
   } finally {
     loading = false;
@@ -282,23 +227,6 @@ export async function runFullCleanup(): Promise<CleanupResult> {
   }
 }
 
-export async function clearHistory(): Promise<number> {
-  loading = true;
-  error = null;
-
-  try {
-    const count = await invoke<number>("clear_change_history");
-    await loadChangeHistory();
-    return count;
-  } catch (err) {
-    logger.error("Failed to clear history:", err);
-    error = err instanceof Error ? err.message : String(err);
-    throw err;
-  } finally {
-    loading = false;
-  }
-}
-
 // Duplicate actions
 export async function mergeDuplicates(keepId: number, mergeId: number): Promise<MergeResult> {
   loading = true;
@@ -326,29 +254,3 @@ export function formatBytes(bytes: number): string {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
-export function formatChangeType(type: string): string {
-  switch (type) {
-    case "watched": return "Marked Watched";
-    case "scheduled": return "Scheduled";
-    case "unscheduled": return "Unscheduled";
-    case "rating": return "Rating Changed";
-    default: return type;
-  }
-}
-
-export function formatRelativeDate(dateStr: string): string {
-  const date = parseDateTime(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-
-  const formatted = formatDate(dateStr);
-  return formatted || "";
-}
