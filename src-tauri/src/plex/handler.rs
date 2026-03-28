@@ -9,6 +9,7 @@ use tauri::{AppHandle, Emitter};
 
 use super::matcher::{match_episode, match_movie, mark_episode_watched, mark_movie_watched};
 use super::models::PlexPayload;
+use crate::notifications;
 
 /// Shared state for the webhook handler
 #[derive(Clone)]
@@ -98,6 +99,14 @@ pub async fn handle_webhook(
                         media_type: "episode".to_string(),
                         entity_id: result.entity_id,
                     });
+
+                    // Create in-app notification
+                    let title = format!("Plex: Marked episode as watched");
+                    let body = format!(
+                        "{} S{:02}E{:02}",
+                        show_name, season, episode
+                    );
+                    emit_plex_notification(&state.app_handle, &title, &body, result.entity_id, "episode").await;
                 }
             }
 
@@ -115,6 +124,11 @@ pub async fn handle_webhook(
                         media_type: "movie".to_string(),
                         entity_id: result.entity_id,
                     });
+
+                    // Create in-app notification
+                    let title = format!("Plex: Marked movie as watched");
+                    let body = metadata.title.clone();
+                    emit_plex_notification(&state.app_handle, &title, &body, result.entity_id, "movie").await;
                 }
             }
 
@@ -180,6 +194,29 @@ fn parse_multipart_payload(body: &Bytes) -> Option<PlexPayload> {
             None
         }
     }
+}
+
+/// Create an in-app notification for a Plex scrobble event
+async fn emit_plex_notification(
+    app_handle: &AppHandle,
+    title: &str,
+    body: &str,
+    entity_id: i64,
+    reference_type: &str,
+) {
+    let _ = notifications::send_notification(
+        app_handle,
+        &notifications::models::CreateNotification {
+            r#type: "plex".to_string(),
+            title: title.to_string(),
+            body: body.to_string(),
+            icon: None,
+            reference_id: Some(entity_id.to_string()),
+            reference_type: Some(reference_type.to_string()),
+            expires_at: None,
+        },
+    )
+    .await;
 }
 
 /// Log a scrobble event to the database

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ChevronLeft, ChevronRight, Power } from "lucide-svelte";
+  import { ChevronLeft, ChevronRight, Power, Bell } from "lucide-svelte";
   import { startOfWeek, endOfWeek } from "date-fns";
   import { invoke } from "@tauri-apps/api/core";
   import {
@@ -15,6 +15,12 @@
   import { getSidebarTab } from "../../stores/sidebar.svelte";
   import ThemeSelector from "../ThemeSelector.svelte";
   import { openConfirmDialog } from "../../stores/confirmDialog.svelte";
+  import {
+    getUnreadCount,
+    isNotificationCenterOpen,
+    toggleNotificationCenter,
+  } from "../../stores/notifications.svelte";
+  import NotificationCenter from "../notifications/NotificationCenter.svelte";
   import { logger } from "../../utils/logger";
   import { formatWeekRange, formatMonthYearLong } from "../../utils/dateFormat";
 
@@ -133,6 +139,25 @@
       </div>
     {/if}
     <ThemeSelector />
+    <div class="relative">
+      <button
+        data-notification-bell
+        onclick={toggleNotificationCenter}
+        class="p-1.5 rounded-lg hover:bg-surface-hover transition-colors text-text-muted hover:text-text relative"
+        aria-label="Notifications"
+        title="Notifications"
+      >
+        <Bell class="w-5 h-5" />
+        {#if getUnreadCount() > 0}
+          <span class="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+            {getUnreadCount() > 9 ? "9+" : getUnreadCount()}
+          </span>
+        {/if}
+      </button>
+      {#if isNotificationCenterOpen()}
+        <NotificationCenter />
+      {/if}
+    </div>
     <button
       onclick={handleExit}
       class="p-1.5 rounded-lg hover:bg-surface-hover transition-colors text-text-muted hover:text-red-400"

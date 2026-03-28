@@ -28,6 +28,13 @@
   import { getSidebarTab } from "./lib/stores/sidebar.svelte";
   import { isRacingSettingsOpen } from "./lib/stores/racing.svelte";
   import { showSuccess } from "./lib/stores/toast.svelte";
+  import {
+    setupNotificationListener,
+    loadNotificationSettings,
+    loadUnreadCount,
+    isNotificationSettingsOpen,
+  } from "./lib/stores/notifications.svelte";
+  import NotificationPopupContainer from "./lib/components/notifications/NotificationPopupContainer.svelte";
   import { logger } from "./lib/utils/logger";
   import ErrorBoundary from "./lib/components/common/ErrorBoundary.svelte";
 
@@ -46,6 +53,7 @@
   let WhatsNewComponent = $state<any>(null);
   let RaceCalendarComponent = $state<any>(null);
   let RacingSettingsComponent = $state<any>(null);
+  let NotificationSettingsComponent = $state<any>(null);
 
   // Load components when modals open
   $effect(() => {
@@ -160,6 +168,14 @@
     }
   });
 
+  $effect(() => {
+    if (isNotificationSettingsOpen() && !NotificationSettingsComponent) {
+      import("./lib/components/notifications/NotificationSettings.svelte").then((mod) => {
+        NotificationSettingsComponent = mod.default;
+      });
+    }
+  });
+
   // Lazy load calendar views based on current view mode
   let MonthViewComponent = $state<any>(null);
   let WeekViewComponent = $state<any>(null);
@@ -211,6 +227,15 @@
       refreshMoviesCalendar();
     });
 
+    // Load notification settings and unread count, start listener
+    loadNotificationSettings().catch((err) => {
+      logger.error("[TVC] Notification settings load failed", err);
+    });
+    loadUnreadCount().catch((err) => {
+      logger.error("[TVC] Notification unread count load failed", err);
+    });
+    const unlistenNotifications = setupNotificationListener();
+
     // Listen for Plex scrobble events to refresh calendar
     let unlistenScrobble: UnlistenFn | undefined;
     listen<{ media_type: string; entity_id: number }>("plex-scrobble", (event) => {
@@ -234,6 +259,7 @@
       stopClock();
       unsubDayChange();
       unlistenScrobble?.();
+      unlistenNotifications();
     };
   });
 
@@ -355,6 +381,10 @@
     {#if RacingSettingsComponent}
       <RacingSettingsComponent />
     {/if}
+    {#if NotificationSettingsComponent}
+      <NotificationSettingsComponent />
+    {/if}
+    <NotificationPopupContainer />
     <ToastContainer />
     <ConfirmDialog />
     <DragGhost />

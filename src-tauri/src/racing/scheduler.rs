@@ -1,11 +1,11 @@
 use chrono::Utc;
 use sqlx::Row;
 use tauri::AppHandle;
-use tauri_plugin_notification::NotificationExt;
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
 use crate::db::connection;
+use crate::notifications;
 
 /// Handles for all pending notification tasks
 static SCHEDULER_HANDLES: Mutex<Vec<JoinHandle<()>>> = Mutex::const_new(Vec::new());
@@ -75,7 +75,7 @@ pub async fn start_scheduler(app: AppHandle) {
         let handle = tokio::spawn(async move {
             tokio::time::sleep(delay).await;
 
-            // Build notification
+            // Build notification content
             let session_label = session_name
                 .as_deref()
                 .unwrap_or("Session");
@@ -91,15 +91,22 @@ pub async fn start_scheduler(app: AppHandle) {
                 ),
             };
 
-            // Send notification via tauri-plugin-notification
-            let _ = app_clone
-                .notification()
-                .builder()
-                .title(&title)
-                .body(&body)
-                .show();
+            // Send via central dispatch (handles in-app, OS, and tray logic)
+            let _ = notifications::send_notification(
+                &app_clone,
+                &notifications::models::CreateNotification {
+                    r#type: "racing".to_string(),
+                    title,
+                    body,
+                    icon: None,
+                    reference_id: Some(event_id.to_string()),
+                    reference_type: Some("racing_event".to_string()),
+                    expires_at: None,
+                },
+            )
+            .await;
 
-            // Mark as notified in database
+            // Mark racing event as notified
             if let Ok(pool) = connection::get_pool(&app_clone).await {
                 let _ = super::mark_notified(&pool, event_id).await;
             }

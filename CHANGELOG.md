@@ -2,6 +2,27 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.9.4]
+
+### Accessibility
+
+- Fixed missing `aria-label` attributes on all toggle buttons in Notification Settings and Racing Settings
+- Fixed notification popup using a non-interactive element for click handling
+
+## [0.9.3]
+
+### In-App Notification System
+
+- **Bespoke Notifications**: Custom in-app notification popups replace easy-to-miss Windows notifications — fully styled, positioned, and configurable
+- **Notification Center**: Bell icon in the header with unread badge, dropdown panel to browse, filter, and manage all notifications
+- **Notification Sounds**: Four synthesized sounds (Chime, Bell, Soft, Alert) via Web Audio API — no external files needed
+- **Tray Notifications**: When the app is minimized to the system tray, notifications automatically fall back to OS notifications so you never miss an event
+- **Per-Category Toggles**: Enable or disable notifications independently for Racing, Plex, Premieres, Updates, and System events
+- **Display Settings**: Configure popup position (4 corners), auto-dismiss duration, max visible popups, and sound volume
+- **Plex Integration**: Plex scrobble events (episodes and movies) now trigger in-app notifications alongside the existing scrobble tracking
+- **Racing Integration**: Racing session reminders now route through the unified notification system with tray fallback
+- **Dev Testing**: Development-only panel to fire test notifications for each type individually or all at once
+
 ## [0.9.2]
 
 ### Bug Fixes

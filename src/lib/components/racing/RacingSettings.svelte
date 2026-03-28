@@ -142,6 +142,7 @@
           <button
             onclick={() => { globalNotifications = !globalNotifications; handleSaveGlobalConfig(); }}
             class="relative w-10 h-5 rounded-full transition-colors {globalNotifications ? 'bg-accent' : 'bg-border'}"
+            aria-label="Toggle desktop notifications"
           >
             <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform {globalNotifications ? 'translate-x-5' : ''}"></span>
           </button>
@@ -259,6 +260,7 @@
                   <button
                     onclick={() => handleToggle(series.slug, !series.enabled)}
                     class="relative w-10 h-5 rounded-full transition-colors {series.enabled ? 'bg-accent' : 'bg-border'}"
+                    aria-label="Toggle {series.name}"
                   >
                     <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform {series.enabled ? 'translate-x-5' : ''}"></span>
                   </button>

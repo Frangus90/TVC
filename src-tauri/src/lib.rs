@@ -2,6 +2,7 @@ mod arr;
 mod commands;
 mod db;
 mod error;
+mod notifications;
 mod plex;
 mod racing;
 mod tmdb;
@@ -27,6 +28,7 @@ const MIGRATION_009: &str = include_str!("../migrations/009_rating_to_real.sql")
 const MIGRATION_010: &str = include_str!("../migrations/010_add_arr_integration.sql");
 const MIGRATION_011: &str = include_str!("../migrations/011_add_rank_order.sql");
 const MIGRATION_012: &str = include_str!("../migrations/012_add_racing.sql");
+const MIGRATION_013: &str = include_str!("../migrations/013_add_notifications.sql");
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -45,6 +47,7 @@ pub fn run() {
         MigrationDef { version: 10, sql: MIGRATION_010 },
         MigrationDef { version: 11, sql: MIGRATION_011 },
         MigrationDef { version: 12, sql: MIGRATION_012 },
+        MigrationDef { version: 13, sql: MIGRATION_013 },
     ]);
 
     let migrations = vec![
@@ -118,6 +121,12 @@ pub fn run() {
             version: 12,
             description: "add racing calendar tables",
             sql: MIGRATION_012,
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 13,
+            description: "add notification system",
+            sql: MIGRATION_013,
             kind: MigrationKind::Up,
         },
     ];
@@ -236,6 +245,16 @@ pub fn run() {
             commands::racing::get_racing_config,
             commands::racing::update_racing_config,
             commands::racing::test_racing_notification,
+            // Notification commands
+            commands::notifications::get_notification_settings,
+            commands::notifications::update_notification_settings,
+            commands::notifications::get_notifications,
+            commands::notifications::get_unread_notification_count,
+            commands::notifications::mark_notification_read,
+            commands::notifications::mark_all_notifications_read,
+            commands::notifications::dismiss_notification,
+            commands::notifications::dismiss_all_notifications,
+            commands::notifications::test_in_app_notification,
             // App commands
             commands::app::exit_app,
         ])
