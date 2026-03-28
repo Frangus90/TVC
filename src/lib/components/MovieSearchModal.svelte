@@ -1,6 +1,6 @@
 <script lang="ts">
   import { fade, scale } from "svelte/transition";
-  import { X, Search, Plus, Loader2, Film, Star } from "lucide-svelte";
+  import { X, Search, Plus, Loader2, Film, Star, Check } from "lucide-svelte";
   import {
     isMovieSearchModalOpen,
     closeMovieSearchModal,
@@ -10,12 +10,19 @@
     getMovieSearchResults,
     isMovieSearchLoading,
     addMovie,
+    getTrackedMovies,
     type MovieSearchResult,
   } from "../stores/movies.svelte";
   import { config } from "../config";
 
   let searchInput: HTMLInputElement | undefined = $state();
   let debounceTimer: ReturnType<typeof setTimeout> | null = $state(null);
+  let addingIds = $state(new Set<number>());
+  let addedIds = $state(new Set<number>());
+
+  function isMovieAdded(movieId: number): boolean {
+    return addedIds.has(movieId) || getTrackedMovies().some(m => m.id === movieId);
+  }
 
   // Auto-focus when modal opens
   $effect(() => {
@@ -74,7 +81,16 @@
   }
 
   async function handleAddMovie(movie: MovieSearchResult) {
-    await addMovie(movie);
+    if (addingIds.has(movie.id) || isMovieAdded(movie.id)) return;
+    addingIds = new Set(addingIds).add(movie.id);
+    try {
+      await addMovie(movie);
+      addedIds = new Set(addedIds).add(movie.id);
+    } finally {
+      const next = new Set(addingIds);
+      next.delete(movie.id);
+      addingIds = next;
+    }
   }
 
   function formatYear(date: string | null): string {
@@ -196,13 +212,31 @@
                   </p>
                 {/if}
               </div>
-              <button
-                onclick={() => handleAddMovie(movie)}
-                class="flex-shrink-0 p-2 bg-accent hover:bg-accent-hover text-white rounded-lg transition-colors"
-                aria-label="Add movie"
-              >
-                <Plus class="w-5 h-5" />
-              </button>
+              {#if addingIds.has(movie.id)}
+                <button
+                  disabled
+                  class="flex-shrink-0 p-2 bg-accent text-white rounded-lg transition-colors opacity-70"
+                  aria-label="Adding movie"
+                >
+                  <Loader2 class="w-5 h-5 animate-spin" />
+                </button>
+              {:else if isMovieAdded(movie.id)}
+                <button
+                  disabled
+                  class="flex-shrink-0 p-2 bg-green-600 text-white rounded-lg transition-colors"
+                  aria-label="Movie added"
+                >
+                  <Check class="w-5 h-5" />
+                </button>
+              {:else}
+                <button
+                  onclick={() => handleAddMovie(movie)}
+                  class="flex-shrink-0 p-2 bg-accent hover:bg-accent-hover text-white rounded-lg transition-colors"
+                  aria-label="Add movie"
+                >
+                  <Plus class="w-5 h-5" />
+                </button>
+              {/if}
             </li>
           {/each}
         </ul>

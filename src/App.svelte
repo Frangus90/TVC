@@ -23,6 +23,10 @@
   import { isUpdateModalOpen } from "./lib/stores/updates.svelte";
   import { isModalOpen as isArrSettingsOpen } from "./lib/stores/arr.svelte";
   import { isModalOpen as isPlexSettingsOpen } from "./lib/stores/plex.svelte";
+  import { isWhatsNewOpen } from "./lib/stores/whatsNew.svelte";
+  import { initWhatsNew } from "./lib/stores/whatsNew.svelte";
+  import { getSidebarTab } from "./lib/stores/sidebar.svelte";
+  import { isRacingSettingsOpen } from "./lib/stores/racing.svelte";
   import { showSuccess } from "./lib/stores/toast.svelte";
   import { logger } from "./lib/utils/logger";
   import ErrorBoundary from "./lib/components/common/ErrorBoundary.svelte";
@@ -39,6 +43,9 @@
   let UpdateModalComponent = $state<any>(null);
   let ArrServersComponent = $state<any>(null);
   let PlexSettingsComponent = $state<any>(null);
+  let WhatsNewComponent = $state<any>(null);
+  let RaceCalendarComponent = $state<any>(null);
+  let RacingSettingsComponent = $state<any>(null);
 
   // Load components when modals open
   $effect(() => {
@@ -129,6 +136,30 @@
     }
   });
 
+  $effect(() => {
+    if (isWhatsNewOpen() && !WhatsNewComponent) {
+      import("./lib/components/WhatsNew.svelte").then((mod) => {
+        WhatsNewComponent = mod.default;
+      });
+    }
+  });
+
+  $effect(() => {
+    if (getSidebarTab() === "racing" && !RaceCalendarComponent) {
+      import("./lib/components/racing/RaceCalendar.svelte").then((mod) => {
+        RaceCalendarComponent = mod.default;
+      });
+    }
+  });
+
+  $effect(() => {
+    if (isRacingSettingsOpen() && !RacingSettingsComponent) {
+      import("./lib/components/racing/RacingSettings.svelte").then((mod) => {
+        RacingSettingsComponent = mod.default;
+      });
+    }
+  });
+
   // Lazy load calendar views based on current view mode
   let MonthViewComponent = $state<any>(null);
   let WeekViewComponent = $state<any>(null);
@@ -165,6 +196,11 @@
         logger.error("[TVC] Update check failed", err);
       });
     }, 2000);
+
+    // Initialize What's New (check if user needs to see changelog)
+    initWhatsNew().catch((err) => {
+      logger.error("[TVC] What's New init failed", err);
+    });
 
     // Start the real-time clock so the app tracks the current date/time
     startClock();
@@ -229,43 +265,53 @@
         <Header />
 
         <div class="flex-1 overflow-auto p-6">
-          {#key getViewMode()}
-            <div in:fade={{ duration: 150, delay: 50 }} out:fade={{ duration: 100 }}>
-              {#if getViewMode() === "month"}
-                {#if MonthViewComponent}
-                  <MonthViewComponent />
-                {:else}
-                  <div class="flex items-center justify-center h-full">
-                    <div class="text-text-muted">Loading calendar...</div>
-                  </div>
+          {#if getSidebarTab() === "racing"}
+            {#if RaceCalendarComponent}
+              <RaceCalendarComponent />
+            {:else}
+              <div class="flex items-center justify-center h-full">
+                <div class="text-text-muted">Loading race calendar...</div>
+              </div>
+            {/if}
+          {:else}
+            {#key getViewMode()}
+              <div in:fade={{ duration: 150, delay: 50 }} out:fade={{ duration: 100 }}>
+                {#if getViewMode() === "month"}
+                  {#if MonthViewComponent}
+                    <MonthViewComponent />
+                  {:else}
+                    <div class="flex items-center justify-center h-full">
+                      <div class="text-text-muted">Loading calendar...</div>
+                    </div>
+                  {/if}
+                {:else if getViewMode() === "week"}
+                  {#if WeekViewComponent}
+                    <WeekViewComponent />
+                  {:else}
+                    <div class="flex items-center justify-center h-full">
+                      <div class="text-text-muted">Loading calendar...</div>
+                    </div>
+                  {/if}
+                {:else if getViewMode() === "agenda"}
+                  {#if AgendaViewComponent}
+                    <AgendaViewComponent />
+                  {:else}
+                    <div class="flex items-center justify-center h-full">
+                      <div class="text-text-muted">Loading calendar...</div>
+                    </div>
+                  {/if}
+                {:else if getViewMode() === "tier"}
+                  {#if TierViewComponent}
+                    <TierViewComponent />
+                  {:else}
+                    <div class="flex items-center justify-center h-full">
+                      <div class="text-text-muted">Loading tier list...</div>
+                    </div>
+                  {/if}
                 {/if}
-              {:else if getViewMode() === "week"}
-                {#if WeekViewComponent}
-                  <WeekViewComponent />
-                {:else}
-                  <div class="flex items-center justify-center h-full">
-                    <div class="text-text-muted">Loading calendar...</div>
-                  </div>
-                {/if}
-              {:else if getViewMode() === "agenda"}
-                {#if AgendaViewComponent}
-                  <AgendaViewComponent />
-                {:else}
-                  <div class="flex items-center justify-center h-full">
-                    <div class="text-text-muted">Loading calendar...</div>
-                  </div>
-                {/if}
-              {:else if getViewMode() === "tier"}
-                {#if TierViewComponent}
-                  <TierViewComponent />
-                {:else}
-                  <div class="flex items-center justify-center h-full">
-                    <div class="text-text-muted">Loading tier list...</div>
-                  </div>
-                {/if}
-              {/if}
-            </div>
-          {/key}
+              </div>
+            {/key}
+          {/if}
         </div>
       </main>
     </div>
@@ -302,6 +348,12 @@
     {/if}
     {#if PlexSettingsComponent}
       <PlexSettingsComponent />
+    {/if}
+    {#if WhatsNewComponent}
+      <WhatsNewComponent />
+    {/if}
+    {#if RacingSettingsComponent}
+      <RacingSettingsComponent />
     {/if}
     <ToastContainer />
     <ConfirmDialog />

@@ -3,6 +3,7 @@ mod commands;
 mod db;
 mod error;
 mod plex;
+mod racing;
 mod tmdb;
 mod tvdb;
 
@@ -25,6 +26,7 @@ const MIGRATION_008: &str = include_str!("../migrations/008_add_cast_crew.sql");
 const MIGRATION_009: &str = include_str!("../migrations/009_rating_to_real.sql");
 const MIGRATION_010: &str = include_str!("../migrations/010_add_arr_integration.sql");
 const MIGRATION_011: &str = include_str!("../migrations/011_add_rank_order.sql");
+const MIGRATION_012: &str = include_str!("../migrations/012_add_racing.sql");
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -42,6 +44,7 @@ pub fn run() {
         MigrationDef { version: 9, sql: MIGRATION_009 },
         MigrationDef { version: 10, sql: MIGRATION_010 },
         MigrationDef { version: 11, sql: MIGRATION_011 },
+        MigrationDef { version: 12, sql: MIGRATION_012 },
     ]);
 
     let migrations = vec![
@@ -111,6 +114,12 @@ pub fn run() {
             sql: MIGRATION_011,
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 12,
+            description: "add racing calendar tables",
+            sql: MIGRATION_012,
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
@@ -118,6 +127,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // When a second instance is launched, focus the main window
@@ -214,6 +224,18 @@ pub fn run() {
             commands::plex::stop_plex_server,
             commands::plex::get_plex_server_status,
             commands::plex::get_scrobble_log,
+            // Racing calendar commands
+            commands::racing::get_racing_series,
+            commands::racing::toggle_racing_series,
+            commands::racing::update_racing_series_color,
+            commands::racing::update_racing_series_notification,
+            commands::racing::update_racing_series_ics_url,
+            commands::racing::get_racing_events_for_range,
+            commands::racing::refresh_racing_data,
+            commands::racing::refresh_single_racing_series,
+            commands::racing::get_racing_config,
+            commands::racing::update_racing_config,
+            commands::racing::test_racing_notification,
             // App commands
             commands::app::exit_app,
         ])
@@ -261,6 +283,12 @@ pub fn run() {
             let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 plex::auto_start_if_enabled(app_handle).await;
+            });
+
+            // Start racing notification scheduler
+            let app_handle2 = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                racing::auto_start_scheduler(app_handle2).await;
             });
 
             Ok(())

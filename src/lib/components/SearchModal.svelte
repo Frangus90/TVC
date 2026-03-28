@@ -1,6 +1,6 @@
 <script lang="ts">
   import { fade, scale } from "svelte/transition";
-  import { X, Search, Plus, Loader2 } from "lucide-svelte";
+  import { X, Search, Plus, Loader2, Check } from "lucide-svelte";
   import {
     isSearchModalOpen,
     closeSearchModal,
@@ -10,12 +10,24 @@
     getSearchResults,
     isSearchLoading,
     addShow,
+    getTrackedShows,
     type SearchResult,
   } from "../stores/shows.svelte";
   import { config } from "../config";
 
   let searchInput: HTMLInputElement | undefined = $state();
   let debounceTimer: ReturnType<typeof setTimeout> | null = $state(null);
+  let addingIds = $state(new Set<number>());
+  let addedIds = $state(new Set<number>());
+
+  function getShowId(show: SearchResult): number {
+    return parseInt(show.tvdb_id || show.id || "0");
+  }
+
+  function isShowAdded(show: SearchResult): boolean {
+    const id = getShowId(show);
+    return addedIds.has(id) || getTrackedShows().some(s => s.id === id);
+  }
 
   // Auto-focus when modal opens
   $effect(() => {
@@ -75,7 +87,17 @@
   }
 
   async function handleAddShow(show: SearchResult) {
-    await addShow(show);
+    const id = getShowId(show);
+    if (!id || addingIds.has(id) || isShowAdded(show)) return;
+    addingIds = new Set(addingIds).add(id);
+    try {
+      await addShow(show);
+      addedIds = new Set(addedIds).add(id);
+    } finally {
+      const next = new Set(addingIds);
+      next.delete(id);
+      addingIds = next;
+    }
   }
 </script>
 
@@ -183,13 +205,31 @@
                   </p>
                 {/if}
               </div>
-              <button
-                onclick={() => handleAddShow(show)}
-                class="flex-shrink-0 p-2 bg-accent hover:bg-accent-hover text-white rounded-lg transition-colors"
-                aria-label="Add show"
-              >
-                <Plus class="w-5 h-5" />
-              </button>
+              {#if addingIds.has(getShowId(show))}
+                <button
+                  disabled
+                  class="flex-shrink-0 p-2 bg-accent text-white rounded-lg transition-colors opacity-70"
+                  aria-label="Adding show"
+                >
+                  <Loader2 class="w-5 h-5 animate-spin" />
+                </button>
+              {:else if isShowAdded(show)}
+                <button
+                  disabled
+                  class="flex-shrink-0 p-2 bg-green-600 text-white rounded-lg transition-colors"
+                  aria-label="Show added"
+                >
+                  <Check class="w-5 h-5" />
+                </button>
+              {:else}
+                <button
+                  onclick={() => handleAddShow(show)}
+                  class="flex-shrink-0 p-2 bg-accent hover:bg-accent-hover text-white rounded-lg transition-colors"
+                  aria-label="Add show"
+                >
+                  <Plus class="w-5 h-5" />
+                </button>
+              {/if}
             </li>
           {/each}
         </ul>

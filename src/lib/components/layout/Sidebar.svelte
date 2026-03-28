@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Plus, Tv, Trash2, RefreshCw, Check, Film, Archive, RotateCcw, CalendarX, BarChart3, Database, PanelLeftClose, PanelLeft, Server, Play } from "lucide-svelte";
+  import { Plus, Tv, Trash2, RefreshCw, Check, Film, Archive, RotateCcw, CalendarX, BarChart3, Database, PanelLeftClose, PanelLeft, Server, Play, Sparkles, Flag, Settings } from "lucide-svelte";
   import { onMount } from "svelte";
   import { startDrag } from "../../stores/dragDrop.svelte";
   import {
@@ -35,7 +35,17 @@
   import { openDataManagement } from "../../stores/dataManagement.svelte";
   import { openArrSettings } from "../../stores/arr.svelte";
   import { openPlexSettings } from "../../stores/plex.svelte";
+  import { openWhatsNew, getAppVersion, hasUnseenChanges } from "../../stores/whatsNew.svelte";
   import { isSidebarCollapsed, toggleSidebar, getSidebarTab, setSidebarTab, type SidebarTab } from "../../stores/sidebar.svelte";
+  import {
+    getEnabledSeries,
+    getSeriesColor,
+    openRacingSettings,
+    refreshRacingData,
+    isRacingRefreshing,
+    loadRacingSeries,
+    loadRacingConfig,
+  } from "../../stores/racing.svelte";
   import { getThemeSettings } from "../../stores/theme.svelte";
   import { getViewMode } from "../../stores/calendar.svelte";
   import { openConfirmDialog } from "../../stores/confirmDialog.svelte";
@@ -58,6 +68,8 @@
       loadTrackedMovies(),
       loadArchivedShows(),
       loadArchivedMovies(),
+      loadRacingSeries(),
+      loadRacingConfig(),
     ]).catch((error) => {
       logger.error("Failed to load sidebar data", error);
     });
@@ -243,6 +255,21 @@
       <Archive class="w-3.5 h-3.5 flex-shrink-0" />
       {#if !isSidebarCollapsed()}
         <span>Archive</span>
+      {/if}
+    </button>
+    <button
+      type="button"
+      onclick={() => switchTab("racing")}
+      class="flex-1 flex items-center justify-center gap-1 px-1 py-2.5 text-xs font-medium transition-colors
+        {activeTab === 'racing' ? 'text-accent border-b-2 border-accent bg-accent/5' : 'text-text-muted hover:text-text hover:bg-surface-hover'}
+        {isSidebarCollapsed() ? 'border-b-0 border-l-2' : ''}"
+      aria-label="Racing"
+      aria-pressed={activeTab === 'racing'}
+      title="Racing"
+    >
+      <Flag class="w-3.5 h-3.5 flex-shrink-0" />
+      {#if !isSidebarCollapsed()}
+        <span>Racing</span>
       {/if}
     </button>
   </div>
@@ -572,6 +599,32 @@
       {/if}
     {/if}
 
+    <!-- Racing Tab -->
+    {#if activeTab === "racing"}
+      {#if getEnabledSeries().length === 0}
+        <EmptyState
+          icon={Flag}
+          title="No series enabled"
+          message="Enable racing series to see them on the calendar."
+          action={{ label: "Configure", onclick: openRacingSettings }}
+        />
+      {:else}
+        <ul class="space-y-1">
+          {#each getEnabledSeries() as series}
+            <li>
+              <div class="group w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-hover transition-colors">
+                <span
+                  class="w-3 h-3 rounded-full flex-shrink-0"
+                  style="background-color: {getSeriesColor(series)};"
+                ></span>
+                <span class="flex-1 text-sm truncate">{series.name}</span>
+              </div>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    {/if}
+
   </div>
 
   <!-- Footer -->
@@ -588,6 +641,30 @@
           {activeTab === "shows" ? "Add Show" : "Add Movie"}
         {/if}
       </button>
+    {/if}
+    {#if activeTab === "racing"}
+      <div class="flex gap-2 mb-2">
+        <button
+          type="button"
+          onclick={openRacingSettings}
+          class="flex-1 flex items-center justify-center gap-2 {isSidebarCollapsed() ? 'p-2' : 'px-4 py-2.5'} bg-accent hover:bg-accent-hover text-white rounded-lg transition-colors font-medium text-sm"
+          title="Configure Racing"
+        >
+          <Settings class="w-4 h-4" />
+          {#if !isSidebarCollapsed()}
+            Configure
+          {/if}
+        </button>
+        <button
+          type="button"
+          onclick={() => refreshRacingData()}
+          disabled={isRacingRefreshing()}
+          class="{isSidebarCollapsed() ? 'p-2' : 'px-3 py-2.5'} bg-surface-hover hover:bg-border text-text rounded-lg transition-colors disabled:opacity-50"
+          title="Refresh Data"
+        >
+          <RefreshCw class="w-4 h-4 {isRacingRefreshing() ? 'animate-spin' : ''}" />
+        </button>
+      </div>
     {/if}
     <div class="flex {isSidebarCollapsed() ? 'flex-col' : ''} gap-2 {(activeTab === 'shows' || activeTab === 'movies') ? 'mt-2' : ''}">
       <button
@@ -649,7 +726,20 @@
         <RefreshCw class="w-3 h-3 {isCheckingForUpdates() ? 'animate-spin' : ''}" />
         {isCheckingForUpdates() ? "Checking..." : "Check for Updates"}
       </button>
-      <p class="text-xs text-text-muted text-center mt-2">v0.7.9</p>
+      <button
+        type="button"
+        onclick={openWhatsNew}
+        class="w-full flex items-center justify-center gap-1.5 mt-2 text-xs text-text-muted hover:text-accent transition-colors group"
+        title="What's New"
+      >
+        {#if hasUnseenChanges()}
+          <Sparkles class="w-3 h-3 text-accent" />
+        {/if}
+        <span>v{getAppVersion() || '...'}</span>
+        {#if hasUnseenChanges()}
+          <span class="w-1.5 h-1.5 rounded-full bg-accent"></span>
+        {/if}
+      </button>
     {/if}
   </div>
 </aside>

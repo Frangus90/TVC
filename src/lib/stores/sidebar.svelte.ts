@@ -15,7 +15,7 @@ export function setSidebarCollapsed(value: boolean) {
 }
 
 // Tab state management
-export type SidebarTab = "shows" | "movies" | "archive";
+export type SidebarTab = "shows" | "movies" | "archive" | "racing";
 let activeTab = $state<SidebarTab>("shows");
 
 export function getSidebarTab() {

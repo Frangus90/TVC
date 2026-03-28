@@ -2,6 +2,72 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.9.2]
+
+### Bug Fixes
+
+- **Timezone Fix**: Session times from ICS feeds with TZID offsets (e.g. MotoGP, Moto2, Moto3) are now correctly converted to UTC so the calendar always displays times in your local timezone instead of the venue's local time
+- **Calendar Refresh Fix**: Refreshing racing data (or toggling series) now immediately updates the calendar view instead of requiring a month navigation or series removal/re-add
+
+## [0.9.1]
+
+### Bug Fixes
+
+- **Config Save Fix**: Fixed notification config failing to save due to parameter name mismatch between frontend and backend
+- **Config Data Loss Fix**: Fixed `UPDATE` vs `INSERT OR REPLACE` in racing config — previously wiped `last_refreshed` and `created_at` on every save
+- **Color Reset Fix**: Fixed crash when resetting a series color to default (was sending `null` to a non-optional parameter)
+- **Startup Race Condition**: Fixed racing scheduler querying the database before migrations finished, causing "no such table" errors on first launch
+
+### Improvements
+
+- **Change All Lead Times**: Replaced the non-functional "Default Lead Time" setting with a "Change All Lead Times" action that actually updates all enabled series at once
+- **Responsive Filter Chips**: Series filter chips in the calendar now wrap to multiple lines instead of getting crushed at smaller window sizes
+- **Code Cleanup**: Removed unused `get_upcoming_events` function (dead code)
+
+## [0.9.0]
+
+### Racing Calendar
+
+- **Motorsport Tracking**: A dedicated Racing tab with its own month-view calendar for tracking motorsport sessions (practice, qualifying, sprint, race)
+- **21 Pre-configured Series**: Formula 1, MotoGP, WEC, IndyCar, NASCAR, WRC, Formula E, and more — all ready to enable with one click
+- **ICS Calendar Feeds**: Full season schedules pulled from public ICS/iCalendar feeds with manual refresh
+- **Desktop Notifications**: Get notified before sessions start with configurable per-series lead times
+- **Series Customization**: Override brand colors and ICS feed URLs per series
+- **Filter by Series**: Click series chips above the calendar to filter the view to a single series
+- **Session Details**: Click any day to see a detailed breakdown of all sessions with times, circuits, and series info
+
+## [0.8.2]
+
+### What's New
+
+- **Clickable Version Number**: The version number in the sidebar footer is now a button — click it to see what changed in the latest update
+- **What's New Modal**: Shows the changelog for the current version with section headers and bullet points, plus an expandable list of older versions
+- **Auto-Show After Updates**: When you update to a new version, the What's New modal automatically opens on first launch so you never miss new features
+- **Unseen Indicator**: A sparkle icon and accent dot appear next to the version number when there are unread changes
+- **Dynamic Version Display**: The version number is now fetched from the app instead of being hardcoded
+
+## [0.8.1]
+
+### Add Button Feedback
+
+- **Visual Confirmation**: When adding a movie or show from search results, the `+` button now shows a spinner while adding, then turns into a green checkmark once added
+- Already-tracked items show the green checkmark immediately when search results load
+- Prevents accidental double-adds by disabling the button during and after the add operation
+
+## [0.8.0]
+
+### Calendar Content Filter
+
+- **Show/Movie Filter**: Added an All / Shows / Movies toggle in the header to filter what's displayed on the calendar
+- Works across Month, Week, and Agenda views — hidden on Tier view since it has its own tabs
+- Filter persists when switching between calendar views
+- No re-fetch needed — switching is instant
+
+### Data Management Cleanup
+
+- **Removed History Tab**: Removed the unused History tab from Data Management — activity is already tracked in the Plex and Stats tabs
+- Cleaned up related backend commands, database queries, and frontend code
+
 ## [0.7.9]
 
 ### Live Date & Time Tracking

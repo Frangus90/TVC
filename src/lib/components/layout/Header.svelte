@@ -12,6 +12,7 @@
     nextPeriod,
     goToToday,
   } from "../../stores/calendar.svelte";
+  import { getSidebarTab } from "../../stores/sidebar.svelte";
   import ThemeSelector from "../ThemeSelector.svelte";
   import { openConfirmDialog } from "../../stores/confirmDialog.svelte";
   import { logger } from "../../utils/logger";
@@ -35,9 +36,15 @@
     }
   }
 
+  const isRacing = $derived(getSidebarTab() === "racing");
+
   function getHeaderTitle(): string {
     const date = getCurrentDate();
     const mode = getViewMode();
+
+    if (isRacing) {
+      return formatMonthYearLong(date);
+    }
 
     if (mode === "week") {
       const weekStart = startOfWeek(date, { weekStartsOn: 1 });
@@ -54,12 +61,12 @@
 
 <header class="h-14 bg-surface border-b border-border flex items-center justify-between px-4">
   <div class="flex items-center gap-2">
-    {#if getViewMode() !== "agenda" && getViewMode() !== "tier"}
+    {#if isRacing || (getViewMode() !== "agenda" && getViewMode() !== "tier")}
       <button
         onclick={previousPeriod}
         class="p-1.5 rounded-lg hover:bg-surface-hover transition-colors"
-        aria-label="Previous {getViewMode()}"
-        title="Previous {getViewMode()}"
+        aria-label="Previous month"
+        title="Previous month"
       >
         <ChevronLeft class="w-5 h-5" />
       </button>
@@ -67,8 +74,8 @@
       <button
         onclick={nextPeriod}
         class="p-1.5 rounded-lg hover:bg-surface-hover transition-colors"
-        aria-label="Next {getViewMode()}"
-        title="Next {getViewMode()}"
+        aria-label="Next month"
+        title="Next month"
       >
         <ChevronRight class="w-5 h-5" />
       </button>
@@ -91,38 +98,40 @@
   </h1>
 
   <div class="flex items-center gap-2">
-    {#if getViewMode() !== "tier"}
+    {#if !isRacing}
+      {#if getViewMode() !== "tier"}
+        <div class="flex bg-background rounded-lg p-1">
+          {#each [{ value: "all", label: "All" }, { value: "shows", label: "Shows" }, { value: "movies", label: "Movies" }] as option}
+            <button
+              onclick={() => setCalendarFilter(option.value as "all" | "shows" | "movies")}
+              class="px-3 py-1 text-sm rounded-md transition-colors {getCalendarFilter() === option.value
+                ? 'bg-surface text-text'
+                : 'text-text-muted hover:text-text'}"
+              aria-label="Show {option.label.toLowerCase()}"
+              aria-pressed={getCalendarFilter() === option.value}
+              title="Show {option.label.toLowerCase()}"
+            >
+              {option.label}
+            </button>
+          {/each}
+        </div>
+      {/if}
       <div class="flex bg-background rounded-lg p-1">
-        {#each [{ value: "all", label: "All" }, { value: "shows", label: "Shows" }, { value: "movies", label: "Movies" }] as option}
+        {#each ["month", "week", "agenda", "tier"] as mode}
           <button
-            onclick={() => setCalendarFilter(option.value as "all" | "shows" | "movies")}
-            class="px-3 py-1 text-sm rounded-md transition-colors {getCalendarFilter() === option.value
+            onclick={() => setViewMode(mode as "month" | "week" | "agenda" | "tier")}
+            class="px-3 py-1 text-sm rounded-md transition-colors capitalize {getViewMode() === mode
               ? 'bg-surface text-text'
               : 'text-text-muted hover:text-text'}"
-            aria-label="Show {option.label.toLowerCase()}"
-            aria-pressed={getCalendarFilter() === option.value}
-            title="Show {option.label.toLowerCase()}"
+            aria-label="Switch to {mode} view"
+            aria-pressed={getViewMode() === mode}
+            title="Switch to {mode} view"
           >
-            {option.label}
+            {mode}
           </button>
         {/each}
       </div>
     {/if}
-    <div class="flex bg-background rounded-lg p-1">
-      {#each ["month", "week", "agenda", "tier"] as mode}
-        <button
-          onclick={() => setViewMode(mode as "month" | "week" | "agenda" | "tier")}
-          class="px-3 py-1 text-sm rounded-md transition-colors capitalize {getViewMode() === mode
-            ? 'bg-surface text-text'
-            : 'text-text-muted hover:text-text'}"
-          aria-label="Switch to {mode} view"
-          aria-pressed={getViewMode() === mode}
-          title="Switch to {mode} view"
-        >
-          {mode}
-        </button>
-      {/each}
-    </div>
     <ThemeSelector />
     <button
       onclick={handleExit}

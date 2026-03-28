@@ -8,6 +8,7 @@ pub mod metadata;
 pub mod backup;
 pub mod arr;
 pub mod plex;
+pub mod racing;
 pub mod app;
 pub mod validation;
 
