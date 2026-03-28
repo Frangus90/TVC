@@ -59,11 +59,13 @@
 </script>
 
 {#if visible}
-  <button
-    type="button"
+  <div
     class="w-[380px] rounded-lg border border-border bg-surface shadow-xl cursor-pointer transition-all animate-slide-in overflow-hidden text-left"
-    role="alert"
+    role="button"
+    tabindex="0"
+    aria-label="View notification: {notification.title}"
     onclick={handleClick}
+    onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick(); } }}
   >
     <div class="flex items-start gap-3 p-4">
       <div class="flex-shrink-0 mt-0.5 p-1.5 rounded-md {config.color}">
@@ -92,7 +94,7 @@
         ></div>
       </div>
     {/if}
-  </button>
+  </div>
 {/if}
 
 <style>
