@@ -2,6 +2,16 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.9.5]
+
+### Unified Settings
+
+- **Single Settings Modal**: Consolidated all 5 settings panels (Appearance, Notifications, Racing, Plex, Arr) into one modal with vertical tab navigation
+- **Sidebar Cleanup**: Replaced separate Arr and Plex buttons with a single Settings gear button
+- **Appearance Overhaul**: Reorganized into Theme, Layout, and Accessibility sections with accent color presets, cleaner toggles, and a Reset to Defaults button
+- **Collapsible Racing Categories**: Racing settings categories (Formula, Endurance, etc.) are now collapsible with series counts
+- **Consistent Navigation**: All settings entry points (sidebar, notification center, race calendar) now open the unified modal on the correct tab
+
 ## [0.9.4]
 
 ### Accessibility
