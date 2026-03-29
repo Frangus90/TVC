@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Plus, Tv, Trash2, RefreshCw, Check, Film, Archive, RotateCcw, CalendarX, BarChart3, Database, PanelLeftClose, PanelLeft, Server, Play, Sparkles, Flag, Settings } from "lucide-svelte";
+  import { Plus, Tv, Trash2, RefreshCw, Check, Film, Archive, RotateCcw, CalendarX, BarChart3, Database, PanelLeftClose, PanelLeft, Sparkles, Flag, Settings } from "lucide-svelte";
   import { onMount } from "svelte";
   import { startDrag } from "../../stores/dragDrop.svelte";
   import {
@@ -33,14 +33,12 @@
   } from "../../stores/updates.svelte";
   import { openStatisticsModal } from "../../stores/statistics.svelte";
   import { openDataManagement } from "../../stores/dataManagement.svelte";
-  import { openArrSettings } from "../../stores/arr.svelte";
-  import { openPlexSettings } from "../../stores/plex.svelte";
+  import { openSettings } from "../../stores/settings.svelte";
   import { openWhatsNew, getAppVersion, hasUnseenChanges } from "../../stores/whatsNew.svelte";
   import { isSidebarCollapsed, toggleSidebar, getSidebarTab, setSidebarTab, type SidebarTab } from "../../stores/sidebar.svelte";
   import {
     getEnabledSeries,
     getSeriesColor,
-    openRacingSettings,
     refreshRacingData,
     isRacingRefreshing,
     loadRacingSeries,
@@ -606,7 +604,7 @@
           icon={Flag}
           title="No series enabled"
           message="Enable racing series to see them on the calendar."
-          action={{ label: "Configure", onclick: openRacingSettings }}
+          action={{ label: "Configure", onclick: () => openSettings('racing') }}
         />
       {:else}
         <ul class="space-y-1">
@@ -646,7 +644,7 @@
       <div class="flex gap-2 mb-2">
         <button
           type="button"
-          onclick={openRacingSettings}
+          onclick={() => openSettings('racing')}
           class="flex-1 flex items-center justify-center gap-2 {isSidebarCollapsed() ? 'p-2' : 'px-4 py-2.5'} bg-accent hover:bg-accent-hover text-white rounded-lg transition-colors font-medium text-sm"
           title="Configure Racing"
         >
@@ -693,26 +691,14 @@
       </button>
       <button
         type="button"
-        onclick={openArrSettings}
+        onclick={() => openSettings()}
         class="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-text-muted hover:text-text hover:bg-surface-hover rounded transition-colors"
-        aria-label="Sonarr/Radarr"
-        title="Sonarr/Radarr"
+        aria-label="Settings"
+        title="Settings"
       >
-        <Server class="w-3 h-3" />
+        <Settings class="w-3 h-3" />
         {#if !isSidebarCollapsed()}
-          Arr
-        {/if}
-      </button>
-      <button
-        type="button"
-        onclick={openPlexSettings}
-        class="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-text-muted hover:text-text hover:bg-surface-hover rounded transition-colors"
-        aria-label="Plex Scrobbler"
-        title="Plex Scrobbler"
-      >
-        <Play class="w-3 h-3" />
-        {#if !isSidebarCollapsed()}
-          Plex
+          Settings
         {/if}
       </button>
     </div>

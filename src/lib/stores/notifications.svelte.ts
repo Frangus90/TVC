@@ -40,7 +40,6 @@ let unreadCount = $state(0);
 let settings = $state<NotificationSettings | null>(null);
 let activePopups = $state<AppNotification[]>([]);
 let notificationCenterOpen = $state(false);
-let notificationSettingsOpen = $state(false);
 let popupTimers = new Map<number, ReturnType<typeof setTimeout>>();
 
 // Getters
@@ -64,10 +63,6 @@ export function isNotificationCenterOpen(): boolean {
   return notificationCenterOpen;
 }
 
-export function isNotificationSettingsOpen(): boolean {
-  return notificationSettingsOpen;
-}
-
 // Notification center
 export function openNotificationCenter() {
   notificationCenterOpen = true;
@@ -79,15 +74,6 @@ export function closeNotificationCenter() {
 
 export function toggleNotificationCenter() {
   notificationCenterOpen = !notificationCenterOpen;
-}
-
-// Notification settings modal
-export function openNotificationSettings() {
-  notificationSettingsOpen = true;
-}
-
-export function closeNotificationSettings() {
-  notificationSettingsOpen = false;
 }
 
 // Load notifications from backend

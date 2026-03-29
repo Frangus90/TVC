@@ -21,19 +21,16 @@
   import { isStatisticsModalOpen } from "./lib/stores/statistics.svelte";
   import { isModalOpen as isDataManagementOpen } from "./lib/stores/dataManagement.svelte";
   import { isUpdateModalOpen } from "./lib/stores/updates.svelte";
-  import { isModalOpen as isArrSettingsOpen } from "./lib/stores/arr.svelte";
-  import { isModalOpen as isPlexSettingsOpen } from "./lib/stores/plex.svelte";
   import { isWhatsNewOpen } from "./lib/stores/whatsNew.svelte";
   import { initWhatsNew } from "./lib/stores/whatsNew.svelte";
   import { getSidebarTab } from "./lib/stores/sidebar.svelte";
-  import { isRacingSettingsOpen } from "./lib/stores/racing.svelte";
   import { showSuccess } from "./lib/stores/toast.svelte";
   import {
     setupNotificationListener,
     loadNotificationSettings,
     loadUnreadCount,
-    isNotificationSettingsOpen,
   } from "./lib/stores/notifications.svelte";
+  import { isSettingsOpen } from "./lib/stores/settings.svelte";
   import NotificationPopupContainer from "./lib/components/notifications/NotificationPopupContainer.svelte";
   import { logger } from "./lib/utils/logger";
   import ErrorBoundary from "./lib/components/common/ErrorBoundary.svelte";
@@ -48,12 +45,9 @@
   let StatisticsDashboardComponent = $state<any>(null);
   let DataManagementComponent = $state<any>(null);
   let UpdateModalComponent = $state<any>(null);
-  let ArrServersComponent = $state<any>(null);
-  let PlexSettingsComponent = $state<any>(null);
   let WhatsNewComponent = $state<any>(null);
   let RaceCalendarComponent = $state<any>(null);
-  let RacingSettingsComponent = $state<any>(null);
-  let NotificationSettingsComponent = $state<any>(null);
+  let UnifiedSettingsComponent = $state<any>(null);
 
   // Load components when modals open
   $effect(() => {
@@ -129,22 +123,6 @@
   });
 
   $effect(() => {
-    if (isArrSettingsOpen() && !ArrServersComponent) {
-      import("./lib/components/ArrServers.svelte").then((mod) => {
-        ArrServersComponent = mod.default;
-      });
-    }
-  });
-
-  $effect(() => {
-    if (isPlexSettingsOpen() && !PlexSettingsComponent) {
-      import("./lib/components/PlexSettings.svelte").then((mod) => {
-        PlexSettingsComponent = mod.default;
-      });
-    }
-  });
-
-  $effect(() => {
     if (isWhatsNewOpen() && !WhatsNewComponent) {
       import("./lib/components/WhatsNew.svelte").then((mod) => {
         WhatsNewComponent = mod.default;
@@ -161,17 +139,9 @@
   });
 
   $effect(() => {
-    if (isRacingSettingsOpen() && !RacingSettingsComponent) {
-      import("./lib/components/racing/RacingSettings.svelte").then((mod) => {
-        RacingSettingsComponent = mod.default;
-      });
-    }
-  });
-
-  $effect(() => {
-    if (isNotificationSettingsOpen() && !NotificationSettingsComponent) {
-      import("./lib/components/notifications/NotificationSettings.svelte").then((mod) => {
-        NotificationSettingsComponent = mod.default;
+    if (isSettingsOpen() && !UnifiedSettingsComponent) {
+      import("./lib/components/settings/UnifiedSettings.svelte").then((mod) => {
+        UnifiedSettingsComponent = mod.default;
       });
     }
   });
@@ -369,20 +339,11 @@
     {#if UpdateModalComponent}
       <UpdateModalComponent />
     {/if}
-    {#if ArrServersComponent}
-      <ArrServersComponent />
-    {/if}
-    {#if PlexSettingsComponent}
-      <PlexSettingsComponent />
-    {/if}
     {#if WhatsNewComponent}
       <WhatsNewComponent />
     {/if}
-    {#if RacingSettingsComponent}
-      <RacingSettingsComponent />
-    {/if}
-    {#if NotificationSettingsComponent}
-      <NotificationSettingsComponent />
+    {#if UnifiedSettingsComponent}
+      <UnifiedSettingsComponent />
     {/if}
     <NotificationPopupContainer />
     <ToastContainer />

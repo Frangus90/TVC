@@ -13,7 +13,6 @@
     goToToday,
   } from "../../stores/calendar.svelte";
   import { getSidebarTab } from "../../stores/sidebar.svelte";
-  import ThemeSelector from "../ThemeSelector.svelte";
   import { openConfirmDialog } from "../../stores/confirmDialog.svelte";
   import {
     getUnreadCount,
@@ -138,7 +137,6 @@
         {/each}
       </div>
     {/if}
-    <ThemeSelector />
     <div class="relative">
       <button
         data-notification-bell

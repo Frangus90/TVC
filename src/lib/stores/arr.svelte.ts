@@ -60,7 +60,6 @@ export interface ImportResult {
 }
 
 // State
-let modalOpen = $state(false);
 let activeTab = $state<"servers" | "import">("servers");
 let loading = $state(false);
 let error = $state<string | null>(null);
@@ -80,10 +79,6 @@ let importing = $state(false);
 let importResult = $state<ImportResult | null>(null);
 
 // Getters
-export function isModalOpen() {
-  return modalOpen;
-}
-
 export function getActiveTab() {
   return activeTab;
 }
@@ -137,16 +132,8 @@ export function getImportResult() {
 }
 
 // Actions
-export function openArrSettings() {
-  modalOpen = true;
+export function initArrTab() {
   activeTab = "servers";
-  error = null;
-  successMessage = null;
-  loadServers();
-}
-
-export function closeArrSettings() {
-  modalOpen = false;
   error = null;
   successMessage = null;
   editingServer = null;
@@ -155,6 +142,7 @@ export function closeArrSettings() {
   selectedServer = null;
   libraryItems = [];
   selectedItems = new Set();
+  loadServers();
 }
 
 export function setActiveTab(tab: "servers" | "import") {

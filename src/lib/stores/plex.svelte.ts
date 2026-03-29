@@ -28,7 +28,6 @@ export interface ScrobbleLogEntry {
 }
 
 // State
-let modalOpen = $state(false);
 let loading = $state(false);
 let error = $state<string | null>(null);
 let config = $state<PlexConfig>({ enabled: false, port: 9876 });
@@ -36,10 +35,6 @@ let serverStatus = $state<PlexServerStatus>({ running: false, port: null });
 let scrobbleLog = $state<ScrobbleLogEntry[]>([]);
 
 // Getters
-export function isModalOpen() {
-  return modalOpen;
-}
-
 export function isLoading() {
   return loading;
 }
@@ -61,17 +56,11 @@ export function getScrobbleLog() {
 }
 
 // Actions
-export function openPlexSettings() {
-  modalOpen = true;
+export function initPlexTab() {
   error = null;
   loadConfig();
   loadServerStatus();
   loadScrobbleLog();
-}
-
-export function closePlexSettings() {
-  modalOpen = false;
-  error = null;
 }
 
 // Data loading

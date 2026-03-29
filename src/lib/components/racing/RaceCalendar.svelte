@@ -19,10 +19,10 @@
     getSeriesBySlug,
     getSeriesColor,
     isRacingLoading,
-    openRacingSettings,
     getRefreshSignal,
     type RacingEvent,
   } from "../../stores/racing.svelte";
+  import { openSettings } from "../../stores/settings.svelte";
   import { formatDate } from "../../utils/dateFormat";
 
   // Day detail state
@@ -150,7 +150,7 @@
       {#if getEnabledSeries().length === 0}
         <span class="text-sm text-text-muted">No series enabled.</span>
         <button
-          onclick={openRacingSettings}
+          onclick={() => openSettings('racing')}
           class="text-sm text-accent hover:text-accent/80 transition-colors"
         >
           Configure series

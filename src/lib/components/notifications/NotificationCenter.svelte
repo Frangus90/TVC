@@ -11,8 +11,8 @@
     dismissNotification,
     dismissAllNotifications,
     closeNotificationCenter,
-    openNotificationSettings,
   } from "../../stores/notifications.svelte";
+  import { openSettings } from "../../stores/settings.svelte";
   import type { AppNotification } from "../../stores/notifications.svelte";
 
   let filter = $state<"all" | "unread">("all");
@@ -89,7 +89,7 @@
   function handleOpenSettings(e: MouseEvent) {
     e.stopPropagation();
     closeNotificationCenter();
-    openNotificationSettings();
+    openSettings('notifications');
   }
 </script>
 

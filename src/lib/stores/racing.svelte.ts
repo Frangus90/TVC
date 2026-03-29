@@ -40,7 +40,6 @@ let racingEvents = $state<RacingEvent[]>([]);
 let racingConfig = $state<RacingConfig | null>(null);
 let isLoading = $state(false);
 let isRefreshing = $state(false);
-let racingSettingsOpen = $state(false);
 let currentRacingRange = $state<{ start: string; end: string } | null>(null);
 let refreshSignal = $state(0);
 
@@ -69,9 +68,6 @@ export function isRacingRefreshing(): boolean {
   return isRefreshing;
 }
 
-export function isRacingSettingsOpen(): boolean {
-  return racingSettingsOpen;
-}
 
 // Signal that increments after data changes, so dependent effects re-fire
 export function getRefreshSignal(): number {
@@ -260,14 +256,6 @@ export async function updateAllSeriesLeadTime(
   for (const series of enabledSeries) {
     await updateSeriesNotification(series.slug, true, minutes);
   }
-}
-
-export function openRacingSettings() {
-  racingSettingsOpen = true;
-}
-
-export function closeRacingSettings() {
-  racingSettingsOpen = false;
 }
 
 // Dev: fire a test notification to verify the system works
