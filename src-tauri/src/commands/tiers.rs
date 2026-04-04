@@ -104,12 +104,15 @@ pub async fn delete_tier(
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    // Count affected items before delete (ON DELETE SET NULL handles the FK)
+    let mut tx = pool.begin().await
+        .map_err(|e| format!("Failed to begin transaction: {}", e))?;
+
+    // Count affected items and delete within the same transaction
     let affected_shows: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM shows WHERE tier_id = ?"
     )
     .bind(id)
-    .fetch_one(&pool)
+    .fetch_one(&mut *tx)
     .await
     .map_err(|e| format!("Failed to count affected shows: {}", e))?;
 
@@ -117,16 +120,19 @@ pub async fn delete_tier(
         "SELECT COUNT(*) FROM movies WHERE tier_id = ?"
     )
     .bind(id)
-    .fetch_one(&pool)
+    .fetch_one(&mut *tx)
     .await
     .map_err(|e| format!("Failed to count affected movies: {}", e))?;
 
     // Delete the tier (ON DELETE SET NULL will unrate items)
     sqlx::query("DELETE FROM tiers WHERE id = ?")
         .bind(id)
-        .execute(&pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e| format!("Failed to delete tier: {}", e))?;
+
+    tx.commit().await
+        .map_err(|e| format!("Failed to commit tier deletion: {}", e))?;
 
     Ok(DeleteTierResult {
         affected_shows,
@@ -142,6 +148,9 @@ pub async fn reorder_tiers(
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
+    let mut tx = pool.begin().await
+        .map_err(|e| format!("Failed to begin transaction: {}", e))?;
+
     // Assign positions: first in vec = highest position (best tier)
     let total = tier_ids.len() as i64;
     for (i, tier_id) in tier_ids.iter().enumerate() {
@@ -149,10 +158,13 @@ pub async fn reorder_tiers(
         sqlx::query("UPDATE tiers SET position = ? WHERE id = ?")
             .bind(position)
             .bind(tier_id)
-            .execute(&pool)
+            .execute(&mut *tx)
             .await
             .map_err(|e| format!("Failed to reorder tier: {}", e))?;
     }
+
+    tx.commit().await
+        .map_err(|e| format!("Failed to commit tier reorder: {}", e))?;
 
     Ok(())
 }
@@ -197,20 +209,23 @@ pub async fn apply_tier_preset(
         _ => return Err(format!("Unknown preset: {}", preset)),
     };
 
+    let mut tx = pool.begin().await
+        .map_err(|e| format!("Failed to begin transaction: {}", e))?;
+
     // Unrate all items first
     sqlx::query("UPDATE shows SET tier_id = NULL WHERE tier_id IS NOT NULL")
-        .execute(&pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e| format!("Failed to unrate shows: {}", e))?;
 
     sqlx::query("UPDATE movies SET tier_id = NULL WHERE tier_id IS NOT NULL")
-        .execute(&pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e| format!("Failed to unrate movies: {}", e))?;
 
     // Clear existing tiers
     sqlx::query("DELETE FROM tiers")
-        .execute(&pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e| format!("Failed to clear tiers: {}", e))?;
 
@@ -219,7 +234,7 @@ pub async fn apply_tier_preset(
         sqlx::query("INSERT INTO tiers (position, name, color) VALUES (?, ?, '')")
             .bind(position)
             .bind(name)
-            .execute(&pool)
+            .execute(&mut *tx)
             .await
             .map_err(|e| format!("Failed to insert tier: {}", e))?;
     }
@@ -227,9 +242,12 @@ pub async fn apply_tier_preset(
     // Save preset preference
     sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES ('tier_preset', ?)")
         .bind(&preset)
-        .execute(&pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e| format!("Failed to save preset: {}", e))?;
+
+    tx.commit().await
+        .map_err(|e| format!("Failed to commit preset change: {}", e))?;
 
     Ok(())
 }
@@ -301,7 +319,7 @@ pub async fn get_tier_list_movies(app: AppHandle) -> Result<Vec<TierListMovie>, 
         r#"
         SELECT id, title, poster_url, tier_id, rank_order, tier_only
         FROM movies
-        WHERE tier_id IS NOT NULL AND archived = 0
+        WHERE tier_id IS NOT NULL AND (archived = 0 OR archived IS NULL)
         ORDER BY title
         LIMIT 10000
         "#,
@@ -351,9 +369,21 @@ pub async fn add_show_tier_only(
 
     sqlx::query(
         r#"
-        INSERT OR REPLACE INTO shows
+        INSERT INTO shows
         (id, name, slug, status, poster_url, first_aired, overview, airs_time, airs_days, runtime, added_at, tier_only, tier_id)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), 1, ?)
+        ON CONFLICT(id) DO UPDATE SET
+            name = excluded.name,
+            slug = excluded.slug,
+            status = excluded.status,
+            poster_url = excluded.poster_url,
+            first_aired = excluded.first_aired,
+            overview = excluded.overview,
+            airs_time = excluded.airs_time,
+            airs_days = excluded.airs_days,
+            runtime = excluded.runtime,
+            tier_only = 1,
+            tier_id = excluded.tier_id
         "#,
     )
     .bind(show_details.id)
@@ -393,11 +423,27 @@ pub async fn add_movie_tier_only(
 
     sqlx::query(
         r#"
-        INSERT OR REPLACE INTO movies
+        INSERT INTO movies
         (id, title, tagline, overview, poster_url, backdrop_url, release_date,
          digital_release_date, physical_release_date, runtime, status, genres,
          vote_average, added_at, last_synced, tier_only, tier_id)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'), 1, ?)
+        ON CONFLICT(id) DO UPDATE SET
+            title = excluded.title,
+            tagline = excluded.tagline,
+            overview = excluded.overview,
+            poster_url = excluded.poster_url,
+            backdrop_url = excluded.backdrop_url,
+            release_date = excluded.release_date,
+            digital_release_date = excluded.digital_release_date,
+            physical_release_date = excluded.physical_release_date,
+            runtime = excluded.runtime,
+            status = excluded.status,
+            genres = excluded.genres,
+            vote_average = excluded.vote_average,
+            last_synced = datetime('now'),
+            tier_only = 1,
+            tier_id = excluded.tier_id
         "#,
     )
     .bind(movie_details.id)

@@ -108,7 +108,6 @@ pub async fn merge_duplicates(
     .map(|row| (row.get("season_number"), row.get("episode_number")))
     .collect();
 
-    // Move episodes that don't exist in keep show
     let merge_episodes = sqlx::query(
         r#"SELECT id, season_number, episode_number, watched, scheduled_date, watched_at
            FROM episodes WHERE show_id = ?"#
@@ -117,6 +116,9 @@ pub async fn merge_duplicates(
     .fetch_all(&pool)
     .await
     .map_err(|e| format!("Failed to get merge episodes: {}", e))?;
+
+    let mut tx = pool.begin().await
+        .map_err(|e| format!("Failed to begin transaction: {}", e))?;
 
     let mut moved = 0i64;
     let mut merged = 0i64;
@@ -145,7 +147,7 @@ pub async fn merge_duplicates(
                 .bind(keep_id)
                 .bind(season)
                 .bind(episode)
-                .execute(&pool)
+                .execute(&mut *tx)
                 .await
                 .map_err(|e| format!("Failed to merge episode: {}", e))?;
                 merged += 1;
@@ -153,7 +155,7 @@ pub async fn merge_duplicates(
             // Delete the duplicate episode
             sqlx::query(r#"DELETE FROM episodes WHERE id = ?"#)
                 .bind(ep_id)
-                .execute(&pool)
+                .execute(&mut *tx)
                 .await
                 .map_err(|e| format!("Failed to delete duplicate episode: {}", e))?;
         } else {
@@ -161,7 +163,7 @@ pub async fn merge_duplicates(
             sqlx::query(r#"UPDATE episodes SET show_id = ? WHERE id = ?"#)
                 .bind(keep_id)
                 .bind(ep_id)
-                .execute(&pool)
+                .execute(&mut *tx)
                 .await
                 .map_err(|e| format!("Failed to move episode: {}", e))?;
             moved += 1;
@@ -171,9 +173,12 @@ pub async fn merge_duplicates(
     // Delete the merged show
     sqlx::query(r#"DELETE FROM shows WHERE id = ?"#)
         .bind(merge_id)
-        .execute(&pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e| format!("Failed to delete merged show: {}", e))?;
+
+    tx.commit().await
+        .map_err(|e| format!("Failed to commit merge: {}", e))?;
 
     Ok(MergeResult {
         episodes_moved: moved,

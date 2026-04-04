@@ -248,7 +248,12 @@
       const label = labels[i];
       const lowerLabel = label.toLowerCase().trim();
 
-      const existing = tiers.find(t => t.name.toLowerCase() === lowerLabel);
+      // Try exact match first, then prefix match for labels like "S - Masterpiece" → "S"
+      const existing = tiers.find(t => t.name.toLowerCase() === lowerLabel)
+        || tiers.find(t => {
+          const prefix = lowerLabel.split(/\s*-\s*/)[0];
+          return prefix && t.name.toLowerCase() === prefix;
+        });
       if (existing) {
         tierMap.set(label, existing.id);
         continue;

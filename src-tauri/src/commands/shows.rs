@@ -37,9 +37,19 @@ pub async fn add_show(app: AppHandle, id: i64) -> Result<(), String> {
 
     sqlx::query(
         r#"
-        INSERT OR REPLACE INTO shows 
+        INSERT INTO shows
         (id, name, slug, status, poster_url, first_aired, overview, airs_time, airs_days, runtime, added_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        ON CONFLICT(id) DO UPDATE SET
+            name = excluded.name,
+            slug = excluded.slug,
+            status = excluded.status,
+            poster_url = excluded.poster_url,
+            first_aired = excluded.first_aired,
+            overview = excluded.overview,
+            airs_time = excluded.airs_time,
+            airs_days = excluded.airs_days,
+            runtime = excluded.runtime
         "#,
     )
     .bind(show_details.id)

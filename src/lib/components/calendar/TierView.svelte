@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { Tv, Film, Trash2, MoreVertical, Plus, ArrowUpCircle, ArrowDownCircle, ArrowRight } from "lucide-svelte";
   import { invoke } from "@tauri-apps/api/core";
   import {
@@ -53,8 +54,8 @@
   const tierListShows = $derived(getTierListShows());
   const tierListMovies = $derived(getTierListMovies());
 
-  // Load data on init
-  $effect(() => {
+  // Load data on init (onMount to avoid re-fetching on every reactive cycle)
+  onMount(() => {
     loadTiers();
     loadTierListShows();
     loadTierListMovies();

@@ -84,11 +84,25 @@ pub async fn add_movie(app: AppHandle, id: i64) -> Result<(), String> {
 
     sqlx::query(
         r#"
-        INSERT OR REPLACE INTO movies
+        INSERT INTO movies
         (id, title, tagline, overview, poster_url, backdrop_url, release_date,
          digital_release_date, physical_release_date, runtime, status, genres,
          vote_average, added_at, last_synced)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        ON CONFLICT(id) DO UPDATE SET
+            title = excluded.title,
+            tagline = excluded.tagline,
+            overview = excluded.overview,
+            poster_url = excluded.poster_url,
+            backdrop_url = excluded.backdrop_url,
+            release_date = excluded.release_date,
+            digital_release_date = excluded.digital_release_date,
+            physical_release_date = excluded.physical_release_date,
+            runtime = excluded.runtime,
+            status = excluded.status,
+            genres = excluded.genres,
+            vote_average = excluded.vote_average,
+            last_synced = datetime('now')
         "#,
     )
     .bind(movie_details.id)

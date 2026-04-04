@@ -1,10 +1,10 @@
 //! Input validation utilities for Rust commands
 //! Mirrors the validation.ts patterns from the frontend
 
-/// Validate that an ID is a positive integer
+/// Validate that an ID is a non-zero integer (positive for API entries, negative for manual entries)
 pub fn validate_id(id: i64) -> Result<(), String> {
-    if id <= 0 {
-        return Err("ID must be a positive integer".to_string());
+    if id == 0 {
+        return Err("ID cannot be zero".to_string());
     }
     Ok(())
 }

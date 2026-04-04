@@ -2,6 +2,18 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.10.1]
+
+### Bug Fixes & Reliability
+
+- **Data Safety**: Add/import operations now use UPSERT instead of INSERT OR REPLACE — user data (ratings, tiers, notes, watch status) is no longer wiped when re-adding an existing show or movie
+- **Transaction Safety**: Tier preset apply, tier reorder, tier delete, and duplicate merge operations are now wrapped in database transactions for atomicity
+- **Negative ID Support**: Manual entries with negative IDs are now accepted by the backend validator
+- **Tier List Filter**: Movies query now correctly includes items with NULL archived status, matching the shows query behavior
+- **Lazy Load Error Handling**: All dynamically imported components now have `.catch()` handlers to prevent silent failures
+- **Runtime Display**: Movies with 0-minute runtime now correctly show "0m" instead of nothing
+- **Data Management**: Negative byte values no longer cause NaN display in the format helper
+
 ## [0.10.0]
 
 ### Decoupled Tier List System

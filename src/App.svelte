@@ -56,7 +56,7 @@
     if (isSearchModalOpen() && !SearchModalComponent) {
       import("./lib/components/SearchModal.svelte").then((mod) => {
         SearchModalComponent = mod.default;
-      });
+      }).catch((e) => logger.error("Failed to load component", e));
     }
   });
 
@@ -64,7 +64,7 @@
     if (isMovieSearchModalOpen() && !MovieSearchModalComponent) {
       import("./lib/components/MovieSearchModal.svelte").then((mod) => {
         MovieSearchModalComponent = mod.default;
-      });
+      }).catch((e) => logger.error("Failed to load component", e));
     }
   });
 
@@ -72,7 +72,7 @@
     if (isEpisodePickerOpen() && !EpisodePickerComponent) {
       import("./lib/components/EpisodePicker.svelte").then((mod) => {
         EpisodePickerComponent = mod.default;
-      });
+      }).catch((e) => logger.error("Failed to load component", e));
     }
   });
 
@@ -80,7 +80,7 @@
     if (isDayDetailOpen() && !DayDetailComponent) {
       import("./lib/components/DayDetail.svelte").then((mod) => {
         DayDetailComponent = mod.default;
-      });
+      }).catch((e) => logger.error("Failed to load component", e));
     }
   });
 
@@ -88,7 +88,7 @@
     if (isShowDetailOpen() && !ShowDetailComponent) {
       import("./lib/components/ShowDetail.svelte").then((mod) => {
         ShowDetailComponent = mod.default;
-      });
+      }).catch((e) => logger.error("Failed to load component", e));
     }
   });
 
@@ -96,7 +96,7 @@
     if (isMovieDetailOpen() && !MovieDetailComponent) {
       import("./lib/components/MovieDetail.svelte").then((mod) => {
         MovieDetailComponent = mod.default;
-      });
+      }).catch((e) => logger.error("Failed to load component", e));
     }
   });
 
@@ -104,7 +104,7 @@
     if (isStatisticsModalOpen() && !StatisticsDashboardComponent) {
       import("./lib/components/StatisticsDashboard.svelte").then((mod) => {
         StatisticsDashboardComponent = mod.default;
-      });
+      }).catch((e) => logger.error("Failed to load component", e));
     }
   });
 
@@ -112,7 +112,7 @@
     if (isDataManagementOpen() && !DataManagementComponent) {
       import("./lib/components/DataManagement.svelte").then((mod) => {
         DataManagementComponent = mod.default;
-      });
+      }).catch((e) => logger.error("Failed to load component", e));
     }
   });
 
@@ -120,7 +120,7 @@
     if (isUpdateModalOpen() && !UpdateModalComponent) {
       import("./lib/components/UpdateModal.svelte").then((mod) => {
         UpdateModalComponent = mod.default;
-      });
+      }).catch((e) => logger.error("Failed to load component", e));
     }
   });
 
@@ -128,7 +128,7 @@
     if (isWhatsNewOpen() && !WhatsNewComponent) {
       import("./lib/components/WhatsNew.svelte").then((mod) => {
         WhatsNewComponent = mod.default;
-      });
+      }).catch((e) => logger.error("Failed to load component", e));
     }
   });
 
@@ -136,7 +136,7 @@
     if (getSidebarTab() === "racing" && !RaceCalendarComponent) {
       import("./lib/components/racing/RaceCalendar.svelte").then((mod) => {
         RaceCalendarComponent = mod.default;
-      });
+      }).catch((e) => logger.error("Failed to load component", e));
     }
   });
 
@@ -144,7 +144,7 @@
     if (isSettingsOpen() && !UnifiedSettingsComponent) {
       import("./lib/components/settings/UnifiedSettings.svelte").then((mod) => {
         UnifiedSettingsComponent = mod.default;
-      });
+      }).catch((e) => logger.error("Failed to load component", e));
     }
   });
 
@@ -152,7 +152,7 @@
     if (isTierSearchModalOpen() && !TierSearchModalComponent) {
       import("./lib/components/TierSearchModal.svelte").then((mod) => {
         TierSearchModalComponent = mod.default;
-      });
+      }).catch((e) => logger.error("Failed to load component", e));
     }
   });
 
@@ -167,19 +167,19 @@
     if (viewMode === "month" && !MonthViewComponent) {
       import("./lib/components/calendar/MonthView.svelte").then((mod) => {
         MonthViewComponent = mod.default;
-      });
+      }).catch((e) => logger.error("Failed to load component", e));
     } else if (viewMode === "week" && !WeekViewComponent) {
       import("./lib/components/calendar/WeekView.svelte").then((mod) => {
         WeekViewComponent = mod.default;
-      });
+      }).catch((e) => logger.error("Failed to load component", e));
     } else if (viewMode === "agenda" && !AgendaViewComponent) {
       import("./lib/components/calendar/AgendaView.svelte").then((mod) => {
         AgendaViewComponent = mod.default;
-      });
+      }).catch((e) => logger.error("Failed to load component", e));
     } else if (viewMode === "tier" && !TierViewComponent) {
       import("./lib/components/calendar/TierView.svelte").then((mod) => {
         TierViewComponent = mod.default;
-      });
+      }).catch((e) => logger.error("Failed to load component", e));
     }
   });
 
