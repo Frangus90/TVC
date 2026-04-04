@@ -31,6 +31,7 @@
     loadUnreadCount,
   } from "./lib/stores/notifications.svelte";
   import { isSettingsOpen } from "./lib/stores/settings.svelte";
+  import { isTierSearchModalOpen } from "./lib/stores/tiers.svelte";
   import NotificationPopupContainer from "./lib/components/notifications/NotificationPopupContainer.svelte";
   import { logger } from "./lib/utils/logger";
   import ErrorBoundary from "./lib/components/common/ErrorBoundary.svelte";
@@ -48,6 +49,7 @@
   let WhatsNewComponent = $state<any>(null);
   let RaceCalendarComponent = $state<any>(null);
   let UnifiedSettingsComponent = $state<any>(null);
+  let TierSearchModalComponent = $state<any>(null);
 
   // Load components when modals open
   $effect(() => {
@@ -142,6 +144,14 @@
     if (isSettingsOpen() && !UnifiedSettingsComponent) {
       import("./lib/components/settings/UnifiedSettings.svelte").then((mod) => {
         UnifiedSettingsComponent = mod.default;
+      });
+    }
+  });
+
+  $effect(() => {
+    if (isTierSearchModalOpen() && !TierSearchModalComponent) {
+      import("./lib/components/TierSearchModal.svelte").then((mod) => {
+        TierSearchModalComponent = mod.default;
       });
     }
   });
@@ -317,6 +327,9 @@
     {/if}
     {#if MovieSearchModalComponent}
       <MovieSearchModalComponent />
+    {/if}
+    {#if TierSearchModalComponent}
+      <TierSearchModalComponent />
     {/if}
     {#if EpisodePickerComponent}
       <EpisodePickerComponent />

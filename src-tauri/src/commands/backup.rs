@@ -12,6 +12,17 @@ pub struct BackupData {
     pub shows: Vec<ShowBackup>,
     pub episodes: Vec<EpisodeBackup>,
     pub movies: Vec<MovieBackup>,
+    #[serde(default)]
+    pub tiers: Vec<TierBackup>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TierBackup {
+    pub id: i64,
+    pub position: i64,
+    pub name: String,
+    pub color: String,
+    pub created_at: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -34,6 +45,12 @@ pub struct ShowBackup {
     pub tags: Option<String>,
     pub archived: i32,
     pub rating: Option<f64>,
+    #[serde(default)]
+    pub tier_id: Option<i64>,
+    #[serde(default)]
+    pub tier_only: i32,
+    #[serde(default)]
+    pub rank_order: Option<i32>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -79,6 +96,12 @@ pub struct MovieBackup {
     pub archived: i32,
     pub added_at: Option<String>,
     pub last_synced: Option<String>,
+    #[serde(default)]
+    pub tier_id: Option<i64>,
+    #[serde(default)]
+    pub tier_only: i32,
+    #[serde(default)]
+    pub rank_order: Option<i32>,
 }
 
 /// Export all user data to JSON
@@ -88,11 +111,31 @@ pub async fn export_database(app: AppHandle) -> Result<BackupData, String> {
         .await
         .map_err(|e| format!("Database error: {}", e))?;
 
+    // Export tiers
+    let tier_rows = sqlx::query(
+        r#"SELECT id, position, name, color, created_at FROM tiers ORDER BY position DESC"#,
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| format!("Failed to export tiers: {}", e))?;
+
+    let tiers: Vec<TierBackup> = tier_rows
+        .into_iter()
+        .map(|row| TierBackup {
+            id: row.get("id"),
+            position: row.get("position"),
+            name: row.get("name"),
+            color: row.get("color"),
+            created_at: row.get("created_at"),
+        })
+        .collect();
+
     // Export shows
     let show_rows = sqlx::query(
         r#"SELECT id, name, slug, status, poster_url, first_aired, network, overview,
                   airs_time, airs_days, runtime, added_at, last_synced, color, notes, tags,
-                  COALESCE(archived, 0) as archived, rating
+                  COALESCE(archived, 0) as archived, rating, tier_id,
+                  COALESCE(tier_only, 0) as tier_only, rank_order
            FROM shows"#,
     )
     .fetch_all(&pool)
@@ -120,6 +163,9 @@ pub async fn export_database(app: AppHandle) -> Result<BackupData, String> {
             tags: row.get("tags"),
             archived: row.get("archived"),
             rating: row.get::<Option<f64>, _>("rating"),
+            tier_id: row.get("tier_id"),
+            tier_only: row.get("tier_only"),
+            rank_order: row.get("rank_order"),
         })
         .collect();
 
@@ -158,7 +204,8 @@ pub async fn export_database(app: AppHandle) -> Result<BackupData, String> {
         r#"SELECT id, title, tagline, overview, poster_url, backdrop_url, release_date,
                   digital_release_date, physical_release_date, runtime, status, genres,
                   vote_average, scheduled_date, watched, watched_at, rating, notes, color,
-                  tags, COALESCE(archived, 0) as archived, added_at, last_synced
+                  tags, COALESCE(archived, 0) as archived, added_at, last_synced,
+                  tier_id, COALESCE(tier_only, 0) as tier_only, rank_order
            FROM movies"#,
     )
     .fetch_all(&pool)
@@ -191,6 +238,9 @@ pub async fn export_database(app: AppHandle) -> Result<BackupData, String> {
             archived: row.get("archived"),
             added_at: row.get("added_at"),
             last_synced: row.get("last_synced"),
+            tier_id: row.get("tier_id"),
+            tier_only: row.get("tier_only"),
+            rank_order: row.get("rank_order"),
         })
         .collect();
 
@@ -200,6 +250,7 @@ pub async fn export_database(app: AppHandle) -> Result<BackupData, String> {
         shows,
         episodes,
         movies,
+        tiers,
     })
 }
 
@@ -240,13 +291,40 @@ pub async fn import_database(app: AppHandle, data: BackupData) -> Result<ImportR
         return Err(format!("Failed to clear movies: {}", e));
     }
 
+    if let Err(e) = sqlx::query("DELETE FROM tiers")
+        .execute(&mut *tx)
+        .await
+    {
+        let _ = tx.rollback().await;
+        return Err(format!("Failed to clear tiers: {}", e));
+    }
+
+    // Import tiers first (shows/movies reference them via tier_id FK)
+    for tier in &data.tiers {
+        if let Err(e) = sqlx::query(
+            r#"INSERT INTO tiers (id, position, name, color, created_at)
+               VALUES (?, ?, ?, ?, ?)"#,
+        )
+        .bind(tier.id)
+        .bind(tier.position)
+        .bind(&tier.name)
+        .bind(&tier.color)
+        .bind(&tier.created_at)
+        .execute(&mut *tx)
+        .await
+        {
+            let _ = tx.rollback().await;
+            return Err(format!("Failed to import tier {}: {}", tier.name, e));
+        }
+    }
+
     // Import shows
     for show in &data.shows {
         if let Err(e) = sqlx::query(
             r#"INSERT INTO shows (id, name, slug, status, poster_url, first_aired, network,
                                   overview, airs_time, airs_days, runtime, added_at, last_synced,
-                                  color, notes, tags, archived, rating)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#,
+                                  color, notes, tags, archived, rating, tier_id, tier_only, rank_order)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#,
         )
         .bind(show.id)
         .bind(&show.name)
@@ -266,6 +344,9 @@ pub async fn import_database(app: AppHandle, data: BackupData) -> Result<ImportR
         .bind(&show.tags)
         .bind(show.archived)
         .bind(show.rating)
+        .bind(show.tier_id)
+        .bind(show.tier_only)
+        .bind(show.rank_order)
         .execute(&mut *tx)
         .await
         {
@@ -310,8 +391,9 @@ pub async fn import_database(app: AppHandle, data: BackupData) -> Result<ImportR
             r#"INSERT INTO movies (id, title, tagline, overview, poster_url, backdrop_url,
                                    release_date, digital_release_date, physical_release_date,
                                    runtime, status, genres, vote_average, scheduled_date, watched,
-                                   watched_at, rating, notes, color, tags, archived, added_at, last_synced)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#,
+                                   watched_at, rating, notes, color, tags, archived, added_at, last_synced,
+                                   tier_id, tier_only, rank_order)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#,
         )
         .bind(movie.id)
         .bind(&movie.title)
@@ -336,6 +418,9 @@ pub async fn import_database(app: AppHandle, data: BackupData) -> Result<ImportR
         .bind(movie.archived)
         .bind(&movie.added_at)
         .bind(&movie.last_synced)
+        .bind(movie.tier_id)
+        .bind(movie.tier_only)
+        .bind(movie.rank_order)
         .execute(&mut *tx)
         .await
         {

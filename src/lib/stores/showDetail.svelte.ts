@@ -30,6 +30,8 @@ export interface ShowDetail {
   notes: string | null;
   tags: string | null;
   rating: number | null;
+  tier_id: number | null;
+  tier_only: boolean;
 }
 
 // Use shared database utility
@@ -80,12 +82,14 @@ export async function openShowDetail(showId: number): Promise<void> {
   try {
     // Get show details from database
     const database = await getDb();
-    const shows = await database.select<ShowDetail[]>(
-      `SELECT id, name, slug, status, poster_url, first_aired, network, overview, 
-       airs_time, airs_days, runtime, added_at, last_synced, color, notes, tags, rating
+    const rows = await database.select<(Omit<ShowDetail, "tier_only"> & { tier_only: number })[]>(
+      `SELECT id, name, slug, status, poster_url, first_aired, network, overview,
+       airs_time, airs_days, runtime, added_at, last_synced, color, notes, tags, rating,
+       tier_id, tier_only
        FROM shows WHERE id = $1`,
       [showId]
     );
+    const shows = rows.map((r) => ({ ...r, tier_only: r.tier_only === 1 }));
 
     if (shows.length === 0) {
       error = "Show not found";

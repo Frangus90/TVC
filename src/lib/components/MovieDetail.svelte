@@ -1,6 +1,6 @@
 <script lang="ts">
   import { fade, scale } from "svelte/transition";
-  import { X, Trash2, RefreshCw, ExternalLink, Star, Eye, EyeOff, Calendar, Archive, Play, Users, FileText } from "lucide-svelte";
+  import { X, Trash2, RefreshCw, ExternalLink, Star, Eye, EyeOff, Calendar, Archive, Play, Users, FileText, ArrowUpCircle } from "lucide-svelte";
   import { invoke } from "@tauri-apps/api/core";
   import {
     isMovieDetailOpen,
@@ -9,7 +9,6 @@
     getMovieDetailError,
     closeMovieDetail,
     markMovieWatched,
-    updateMovieRating,
     unscheduleMovie,
     archiveMovie,
     removeMovie,
@@ -21,7 +20,8 @@
   } from "../stores/movies.svelte";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import CastCrew from "./CastCrew.svelte";
-  import StarRating from "./StarRating.svelte";
+  import RatingWidget from "./RatingWidget.svelte";
+  import { updateMovieTier, promoteMovieToTracked, loadTierPreset, loadTiers } from "../stores/tiers.svelte";
   import { openConfirmDialog } from "../stores/confirmDialog.svelte";
   import { logger } from "../utils/logger";
   import { formatDate } from "../utils/dateFormat";
@@ -49,6 +49,8 @@
       localTrailer = null;
       localTrailerLoading = false;
       localTrailerError = null;
+      loadTiers();
+      loadTierPreset();
     }
   });
 
@@ -91,11 +93,18 @@
     }
   }
 
-  async function handleRatingChange(newRating: number | null) {
+  async function handleTierChange(newTierId: number | null) {
     const movie = getCurrentMovie();
     if (!movie) return;
 
-    await updateMovieRating(movie.id, newRating);
+    await updateMovieTier(movie.id, newTierId);
+  }
+
+  async function handlePromoteToTracked() {
+    const movie = getCurrentMovie();
+    if (!movie || movie.id < 0) return;
+
+    await promoteMovieToTracked(movie.id);
   }
 
   async function handleRemove() {
@@ -269,11 +278,14 @@
             </div>
           {/if}
 
-          <!-- User Rating -->
+          <!-- User Tier Rating -->
           <div class="flex items-center gap-2 mt-3">
-            <span class="text-sm text-text-muted">Your Rating:</span>
-            <StarRating rating={movie.rating} onRatingChange={(r) => handleRatingChange(r)} />
+            <span class="text-sm text-text-muted">Tier:</span>
+            <RatingWidget tierId={movie.tier_id} onTierChange={handleTierChange} />
           </div>
+          {#if movie.tier_only}
+            <span class="inline-block mt-2 px-2 py-0.5 text-xs rounded bg-accent/10 text-accent">Tier Only</span>
+          {/if}
         </div>
       </div>
 
@@ -295,55 +307,78 @@
 
       <!-- Actions -->
       <div class="flex items-center gap-2 p-4 border-b border-border">
-        <button
-          type="button"
-          onclick={handleToggleWatched}
-          class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
-        >
-          {#if movie.watched}
-            <EyeOff class="w-4 h-4" />
-            Mark Unwatched
-          {:else}
-            <Eye class="w-4 h-4" />
-            Mark Watched
+        {#if movie.tier_only}
+          <!-- Tier-only movie actions -->
+          {#if movie.id > 0}
+            <button
+              type="button"
+              onclick={handlePromoteToTracked}
+              class="px-3 py-1.5 text-sm bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg transition-colors flex items-center gap-2"
+            >
+              <ArrowUpCircle class="w-4 h-4" />
+              Start Tracking
+            </button>
+            <button
+              type="button"
+              onclick={handleOpenTMDB}
+              class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
+            >
+              <ExternalLink class="w-4 h-4" />
+              TMDB
+            </button>
           {/if}
-        </button>
-        <button
-          type="button"
-          onclick={handleSync}
-          class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
-        >
-          <RefreshCw class="w-4 h-4" />
-          Refresh
-        </button>
-        <button
-          type="button"
-          onclick={handleOpenTMDB}
-          class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
-        >
-          <ExternalLink class="w-4 h-4" />
-          TMDB
-        </button>
-        <button
-          type="button"
-          onclick={handleOpenIMDB}
-          class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
-        >
-          <ExternalLink class="w-4 h-4" />
-          IMDB
-        </button>
-        <button
-          type="button"
-          onclick={handleArchive}
-          class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2 ml-auto"
-        >
-          <Archive class="w-4 h-4" />
-          Archive
-        </button>
+        {:else}
+          <!-- Tracked movie: full action bar -->
+          <button
+            type="button"
+            onclick={handleToggleWatched}
+            class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
+          >
+            {#if movie.watched}
+              <EyeOff class="w-4 h-4" />
+              Mark Unwatched
+            {:else}
+              <Eye class="w-4 h-4" />
+              Mark Watched
+            {/if}
+          </button>
+          <button
+            type="button"
+            onclick={handleSync}
+            class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
+          >
+            <RefreshCw class="w-4 h-4" />
+            Refresh
+          </button>
+          <button
+            type="button"
+            onclick={handleOpenTMDB}
+            class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
+          >
+            <ExternalLink class="w-4 h-4" />
+            TMDB
+          </button>
+          <button
+            type="button"
+            onclick={handleOpenIMDB}
+            class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
+          >
+            <ExternalLink class="w-4 h-4" />
+            IMDB
+          </button>
+          <button
+            type="button"
+            onclick={handleArchive}
+            class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2 ml-auto"
+          >
+            <Archive class="w-4 h-4" />
+            Archive
+          </button>
+        {/if}
         <button
           type="button"
           onclick={handleRemove}
-          class="px-3 py-1.5 text-sm bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors flex items-center gap-2"
+          class="px-3 py-1.5 text-sm bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors flex items-center gap-2 {movie.tier_only ? 'ml-auto' : ''}"
         >
           <Trash2 class="w-4 h-4" />
           Remove
@@ -447,8 +482,8 @@
         {/key}
       </div>
 
-      <!-- Footer with Scheduling -->
-      {#if movie.scheduled_date}
+      <!-- Footer with Scheduling (not for tier-only) -->
+      {#if !movie.tier_only && movie.scheduled_date}
         <div class="p-4 border-t border-border bg-accent/5">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">

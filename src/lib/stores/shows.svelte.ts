@@ -14,6 +14,8 @@ export interface TrackedShow {
   tags: string | null;
   rating: number | null;
   rank_order: number | null;
+  tier_id: number | null;
+  tier_only: boolean;
 }
 
 export interface SearchResult {

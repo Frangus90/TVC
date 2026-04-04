@@ -87,8 +87,9 @@ pub async fn get_episodes_for_range(
             s.poster_url
         FROM episodes e
         JOIN shows s ON e.show_id = s.id
-        WHERE (e.aired >= ? AND e.aired <= ?)
-           OR (e.scheduled_date >= ? AND e.scheduled_date <= ?)
+        WHERE s.tier_only = 0
+          AND ((e.aired >= ? AND e.aired <= ?)
+           OR (e.scheduled_date >= ? AND e.scheduled_date <= ?))
         ORDER BY COALESCE(e.scheduled_date, e.aired), s.name
         LIMIT 10000
         "#,

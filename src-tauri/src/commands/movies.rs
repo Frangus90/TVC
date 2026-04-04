@@ -20,6 +20,8 @@ pub struct TrackedMovie {
     pub color: Option<String>,
     pub archived: bool,
     pub rank_order: Option<i32>,
+    pub tier_id: Option<i64>,
+    pub tier_only: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -133,9 +135,10 @@ pub async fn get_tracked_movies(app: AppHandle) -> Result<Vec<TrackedMovie>, Str
     let rows = sqlx::query(
         r#"
         SELECT id, title, tagline, poster_url, release_date, digital_release_date,
-               runtime, status, scheduled_date, watched, rating, color, archived, rank_order
+               runtime, status, scheduled_date, watched, rating, color, archived, rank_order,
+               tier_id, tier_only
         FROM movies
-        WHERE archived = 0
+        WHERE archived = 0 AND tier_only = 0
         ORDER BY title
         LIMIT 10000
         "#,
@@ -161,6 +164,8 @@ pub async fn get_tracked_movies(app: AppHandle) -> Result<Vec<TrackedMovie>, Str
             color: row.get("color"),
             archived: row.get::<i32, _>("archived") == 1,
             rank_order: row.get("rank_order"),
+            tier_id: row.get("tier_id"),
+            tier_only: row.get::<i32, _>("tier_only") == 1,
         })
         .collect();
 
@@ -175,9 +180,10 @@ pub async fn get_archived_movies(app: AppHandle) -> Result<Vec<TrackedMovie>, St
     let rows = sqlx::query(
         r#"
         SELECT id, title, tagline, poster_url, release_date, digital_release_date,
-               runtime, status, scheduled_date, watched, rating, color, archived, rank_order
+               runtime, status, scheduled_date, watched, rating, color, archived, rank_order,
+               tier_id, tier_only
         FROM movies
-        WHERE archived = 1
+        WHERE archived = 1 AND tier_only = 0
         ORDER BY title
         LIMIT 10000
         "#,
@@ -203,6 +209,8 @@ pub async fn get_archived_movies(app: AppHandle) -> Result<Vec<TrackedMovie>, St
             color: row.get("color"),
             archived: row.get::<i32, _>("archived") == 1,
             rank_order: row.get("rank_order"),
+            tier_id: row.get("tier_id"),
+            tier_only: row.get::<i32, _>("tier_only") == 1,
         })
         .collect();
 
@@ -452,7 +460,7 @@ pub async fn get_movies_for_range(
         r#"
         SELECT id, title, poster_url, runtime, scheduled_date, digital_release_date, watched, color
         FROM movies
-        WHERE archived = 0
+        WHERE archived = 0 AND tier_only = 0
           AND scheduled_date >= ? AND scheduled_date <= ?
         ORDER BY scheduled_date, title
         LIMIT 10000
@@ -492,7 +500,7 @@ pub async fn get_movie_details(app: AppHandle, id: i64) -> Result<MovieDetail, S
                release_date, digital_release_date, physical_release_date,
                runtime, status, genres, vote_average, scheduled_date,
                watched, watched_at, rating, notes, color, tags, archived,
-               added_at, last_synced
+               added_at, last_synced, tier_id, tier_only
         FROM movies
         WHERE id = ?
         "#,
@@ -527,6 +535,8 @@ pub async fn get_movie_details(app: AppHandle, id: i64) -> Result<MovieDetail, S
             archived: row.get::<i32, _>("archived") == 1,
             added_at: row.get("added_at"),
             last_synced: row.get("last_synced"),
+            tier_id: row.get("tier_id"),
+            tier_only: row.get::<i32, _>("tier_only") == 1,
         }),
         None => Err("Movie not found".to_string()),
     }
@@ -557,4 +567,6 @@ pub struct MovieDetail {
     pub archived: bool,
     pub added_at: Option<String>,
     pub last_synced: Option<String>,
+    pub tier_id: Option<i64>,
+    pub tier_only: bool,
 }

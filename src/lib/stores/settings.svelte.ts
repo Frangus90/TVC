@@ -1,4 +1,4 @@
-export type SettingsTab = 'appearance' | 'notifications' | 'racing' | 'plex' | 'arr';
+export type SettingsTab = 'appearance' | 'notifications' | 'tierlist' | 'racing' | 'plex' | 'arr';
 
 let settingsOpen = $state(false);
 let activeTab = $state<SettingsTab>('appearance');

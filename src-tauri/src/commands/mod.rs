@@ -10,6 +10,7 @@ pub mod arr;
 pub mod plex;
 pub mod racing;
 pub mod notifications;
+pub mod tiers;
 pub mod app;
 pub mod validation;
 

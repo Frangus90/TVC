@@ -1,6 +1,6 @@
 <script lang="ts">
   import { fade, scale } from "svelte/transition";
-  import { X, Trash2, RefreshCw, ExternalLink, Check, CheckCheck, Circle, CheckCircle, Users, List, Play } from "lucide-svelte";
+  import { X, Trash2, RefreshCw, ExternalLink, Check, CheckCheck, Circle, CheckCircle, Users, List, Play, ArrowUpCircle } from "lucide-svelte";
   import { invoke } from "@tauri-apps/api/core";
   import {
     isShowDetailOpen,
@@ -10,7 +10,6 @@
     getError,
     closeShowDetail,
     syncShowEpisodes,
-    updateShowRating,
     markSeasonWatched,
     markShowWatched,
     markEpisodeWatched,
@@ -20,7 +19,8 @@
   import { type TrailerData } from "../stores/movies.svelte";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import CastCrew from "./CastCrew.svelte";
-  import StarRating from "./StarRating.svelte";
+  import RatingWidget from "./RatingWidget.svelte";
+  import { updateShowTier, promoteShowToTracked, loadTierPreset, loadTiers } from "../stores/tiers.svelte";
   import { openConfirmDialog } from "../stores/confirmDialog.svelte";
   import { logger } from "../utils/logger";
   import { formatDate } from "../utils/dateFormat";
@@ -46,6 +46,9 @@
       localTrailer = null;
       localTrailerLoading = false;
       localTrailerError = null;
+      // Load tier data for rating widget
+      loadTiers();
+      loadTierPreset();
     }
   });
 
@@ -85,11 +88,18 @@
     }
   }
 
-  async function handleRatingChange(newRating: number | null) {
+  async function handleTierChange(newTierId: number | null) {
     const show = getCurrentShow();
     if (!show) return;
 
-    await updateShowRating(show.id, newRating);
+    await updateShowTier(show.id, newTierId);
+  }
+
+  async function handlePromoteToTracked() {
+    const show = getCurrentShow();
+    if (!show || show.id < 0) return;
+
+    await promoteShowToTracked(show.id);
   }
 
   async function handleRemove() {
@@ -270,56 +280,86 @@
           {/if}
 
           <div class="flex items-center gap-4 mt-4">
-            <span class="text-sm text-text-muted">
-              {watchedCount}/{totalCount} episodes watched
-            </span>
+            {#if !show.tier_only}
+              <span class="text-sm text-text-muted">
+                {watchedCount}/{totalCount} episodes watched
+              </span>
+            {/if}
             {#if show.runtime}
               <span class="text-sm text-text-muted">{show.runtime} min</span>
+            {/if}
+            {#if show.tier_only}
+              <span class="px-2 py-0.5 text-xs rounded bg-accent/10 text-accent">Tier Only</span>
             {/if}
           </div>
 
           <!-- Rating -->
           <div class="flex items-center gap-2 mt-3">
-            <span class="text-sm text-text-muted">Rating:</span>
-            <StarRating rating={show.rating} onRatingChange={(r) => handleRatingChange(r)} />
+            <span class="text-sm text-text-muted">Tier:</span>
+            <RatingWidget tierId={show.tier_id} onTierChange={handleTierChange} />
           </div>
         </div>
       </div>
 
       <!-- Actions -->
       <div class="flex items-center gap-2 p-4 border-b border-border">
-        <button
-          type="button"
-          onclick={handleSync}
-          class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
-        >
-          <RefreshCw class="w-4 h-4" />
-          Refresh Show
-        </button>
-        <button
-          type="button"
-          onclick={handleMarkShowWatched}
-          class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
-        >
-          <CheckCheck class="w-4 h-4" />
-          {isAllWatched(episodes) ? "Mark All Unwatched" : "Mark All Watched"}
-        </button>
-        <button
-          type="button"
-          onclick={handleOpenTVDB}
-          class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
-        >
-          <ExternalLink class="w-4 h-4" />
-          TVDB
-        </button>
-        <button
-          type="button"
-          onclick={handleOpenWikipedia}
-          class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
-        >
-          <ExternalLink class="w-4 h-4" />
-          Wikipedia
-        </button>
+        {#if show.tier_only}
+          <!-- Tier-only: promote button (only for API items, not manual) -->
+          {#if show.id > 0}
+            <button
+              type="button"
+              onclick={handlePromoteToTracked}
+              class="px-3 py-1.5 text-sm bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg transition-colors flex items-center gap-2"
+            >
+              <ArrowUpCircle class="w-4 h-4" />
+              Start Tracking
+            </button>
+          {/if}
+          {#if show.id > 0}
+            <button
+              type="button"
+              onclick={handleOpenTVDB}
+              class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
+            >
+              <ExternalLink class="w-4 h-4" />
+              TVDB
+            </button>
+          {/if}
+        {:else}
+          <!-- Tracked show: full action bar -->
+          <button
+            type="button"
+            onclick={handleSync}
+            class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
+          >
+            <RefreshCw class="w-4 h-4" />
+            Refresh Show
+          </button>
+          <button
+            type="button"
+            onclick={handleMarkShowWatched}
+            class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
+          >
+            <CheckCheck class="w-4 h-4" />
+            {isAllWatched(episodes) ? "Mark All Unwatched" : "Mark All Watched"}
+          </button>
+          <button
+            type="button"
+            onclick={handleOpenTVDB}
+            class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
+          >
+            <ExternalLink class="w-4 h-4" />
+            TVDB
+          </button>
+          <button
+            type="button"
+            onclick={handleOpenWikipedia}
+            class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
+          >
+            <ExternalLink class="w-4 h-4" />
+            Wikipedia
+          </button>
+        {/if}
         <button
           type="button"
           onclick={handleRemove}
@@ -332,16 +372,18 @@
 
       <!-- Tabs -->
       <div class="flex border-b border-border">
-        <button
-          type="button"
-          onclick={() => (activeTab = "episodes")}
-          class="flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors border-b-2 {activeTab === 'episodes'
-            ? 'text-accent border-accent'
-            : 'text-text-muted border-transparent hover:text-text hover:border-border'}"
-        >
-          <List class="w-4 h-4" />
-          Episodes
-        </button>
+        {#if !show.tier_only}
+          <button
+            type="button"
+            onclick={() => (activeTab = "episodes")}
+            class="flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors border-b-2 {activeTab === 'episodes'
+              ? 'text-accent border-accent'
+              : 'text-text-muted border-transparent hover:text-text hover:border-border'}"
+          >
+            <List class="w-4 h-4" />
+            Episodes
+          </button>
+        {/if}
         <button
           type="button"
           onclick={() => (activeTab = "info")}

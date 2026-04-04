@@ -1,6 +1,6 @@
 <script lang="ts">
   import { fade, scale } from "svelte/transition";
-  import { Palette, Bell, Flag, Play, Server, X } from "lucide-svelte";
+  import { Palette, Bell, Flag, Play, Server, X, ListOrdered } from "lucide-svelte";
   import {
     isSettingsOpen,
     closeSettings,
@@ -13,10 +13,12 @@
   import RacingTab from "./RacingTab.svelte";
   import PlexTab from "./PlexTab.svelte";
   import ArrTab from "./ArrTab.svelte";
+  import TierListTab from "./TierListTab.svelte";
 
   const tabs: { id: SettingsTab; label: string; icon: typeof Palette }[] = [
     { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'tierlist', label: 'Tier List', icon: ListOrdered },
     { id: 'racing', label: 'Racing', icon: Flag },
     { id: 'plex', label: 'Plex', icon: Play },
     { id: 'arr', label: 'Sonarr / Radarr', icon: Server },
@@ -81,6 +83,8 @@
           <AppearanceTab />
         {:else if getActiveSettingsTab() === 'notifications'}
           <NotificationsTab />
+        {:else if getActiveSettingsTab() === 'tierlist'}
+          <TierListTab />
         {:else if getActiveSettingsTab() === 'racing'}
           <RacingTab />
         {:else if getActiveSettingsTab() === 'plex'}

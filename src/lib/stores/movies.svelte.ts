@@ -18,6 +18,8 @@ export interface TrackedMovie {
   color: string | null;
   archived: boolean;
   rank_order: number | null;
+  tier_id: number | null;
+  tier_only: boolean;
 }
 
 export interface MovieSearchResult {
@@ -64,6 +66,8 @@ export interface MovieDetail {
   archived: boolean;
   added_at: string | null;
   last_synced: string | null;
+  tier_id: number | null;
+  tier_only: boolean;
 }
 
 export interface MovieCastMember {

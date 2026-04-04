@@ -29,6 +29,7 @@ const MIGRATION_010: &str = include_str!("../migrations/010_add_arr_integration.
 const MIGRATION_011: &str = include_str!("../migrations/011_add_rank_order.sql");
 const MIGRATION_012: &str = include_str!("../migrations/012_add_racing.sql");
 const MIGRATION_013: &str = include_str!("../migrations/013_add_notifications.sql");
+const MIGRATION_014: &str = include_str!("../migrations/014_add_tiers.sql");
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -48,6 +49,7 @@ pub fn run() {
         MigrationDef { version: 11, sql: MIGRATION_011 },
         MigrationDef { version: 12, sql: MIGRATION_012 },
         MigrationDef { version: 13, sql: MIGRATION_013 },
+        MigrationDef { version: 14, sql: MIGRATION_014 },
     ]);
 
     let migrations = vec![
@@ -127,6 +129,12 @@ pub fn run() {
             version: 13,
             description: "add notification system",
             sql: MIGRATION_013,
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 14,
+            description: "add tier system and tier-only decoupling",
+            sql: MIGRATION_014,
             kind: MigrationKind::Up,
         },
     ];
@@ -245,6 +253,26 @@ pub fn run() {
             commands::racing::get_racing_config,
             commands::racing::update_racing_config,
             commands::racing::test_racing_notification,
+            // Tier commands
+            commands::tiers::get_tiers,
+            commands::tiers::create_tier,
+            commands::tiers::update_tier,
+            commands::tiers::delete_tier,
+            commands::tiers::reorder_tiers,
+            commands::tiers::get_tier_preset,
+            commands::tiers::apply_tier_preset,
+            commands::tiers::get_tier_list_shows,
+            commands::tiers::get_tier_list_movies,
+            commands::tiers::add_show_tier_only,
+            commands::tiers::add_movie_tier_only,
+            commands::tiers::add_manual_show,
+            commands::tiers::add_manual_movie,
+            commands::tiers::promote_show_to_tracked,
+            commands::tiers::promote_movie_to_tracked,
+            commands::tiers::demote_show_to_tier_only,
+            commands::tiers::demote_movie_to_tier_only,
+            commands::tiers::update_show_tier,
+            commands::tiers::update_movie_tier,
             // Notification commands
             commands::notifications::get_notification_settings,
             commands::notifications::update_notification_settings,

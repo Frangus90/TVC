@@ -2,6 +2,22 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.10.0]
+
+### Decoupled Tier List System
+
+- **Tier-Only Entries**: Rank shows and movies in tier lists without tracking/following them — no episode syncing, no calendar clutter
+- **Customizable Tiers**: Fully customizable tier names, colors, drag-to-reorder, add/remove — Tiermaker-style
+- **Tier Presets**: Choose between 10-Star, 5-Star, or fully Custom tier layouts
+- **Manual Entries**: Add shows/movies not found in TVDB/TMDB as manual entries with negative IDs
+- **Smart Rating Widget**: Star ratings for star presets, tier picker dropdown for custom presets — adapts automatically
+- **Tier Search Modal**: Dedicated "Add to Tier List" modal with TVDB/TMDB search and manual entry modes
+- **Tiermaker Import**: Paste HTML from any Tiermaker list to bulk-import items — auto-creates matching tiers, batch-searches TMDB/TVDB, and supports manual matching for unresolved items
+- **Context Menus**: Move items between tiers, promote/demote between tracked and tier-only, remove from tier list
+- **Detail Modal Integration**: Rate shows/movies from their detail modals; tier-only items hide calendar-specific controls
+- **Backup Support**: Tier data included in backup/restore with backwards-compatible JSON format
+- **Tier List Settings Tab**: New settings tab for managing tiers, presets, and Tiermaker imports
+
 ## [0.9.5]
 
 ### Unified Settings

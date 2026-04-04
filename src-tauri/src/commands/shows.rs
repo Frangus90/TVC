@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
+use sqlx::{FromRow, Row};
 use tauri::AppHandle;
 use crate::db::connection;
 
@@ -14,6 +14,8 @@ pub struct TrackedShow {
     pub tags: Option<String>,
     pub rating: Option<f64>,
     pub rank_order: Option<i32>,
+    pub tier_id: Option<i64>,
+    pub tier_only: bool,
 }
 
 #[tauri::command]
@@ -78,11 +80,11 @@ pub async fn get_tracked_shows(app: AppHandle) -> Result<Vec<TrackedShow>, Strin
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    let shows = sqlx::query_as::<_, TrackedShow>(
+    let rows = sqlx::query(
         r#"
-        SELECT id, name, poster_url, status, color, notes, tags, rating, rank_order
+        SELECT id, name, poster_url, status, color, notes, tags, rating, rank_order, tier_id, tier_only
         FROM shows
-        WHERE archived = 0 OR archived IS NULL
+        WHERE (archived = 0 OR archived IS NULL) AND tier_only = 0
         ORDER BY name
         LIMIT 10000
         "#,
@@ -90,6 +92,20 @@ pub async fn get_tracked_shows(app: AppHandle) -> Result<Vec<TrackedShow>, Strin
     .fetch_all(&pool)
     .await
     .map_err(|e| format!("Failed to get tracked shows: {}", e))?;
+
+    let shows = rows.into_iter().map(|row| TrackedShow {
+        id: row.get("id"),
+        name: row.get("name"),
+        poster_url: row.get("poster_url"),
+        status: row.get("status"),
+        color: row.get("color"),
+        notes: row.get("notes"),
+        tags: row.get("tags"),
+        rating: row.get("rating"),
+        rank_order: row.get("rank_order"),
+        tier_id: row.get("tier_id"),
+        tier_only: row.get::<i32, _>("tier_only") == 1,
+    }).collect();
 
     Ok(shows)
 }
@@ -99,11 +115,11 @@ pub async fn get_archived_shows(app: AppHandle) -> Result<Vec<TrackedShow>, Stri
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    let shows = sqlx::query_as::<_, TrackedShow>(
+    let rows = sqlx::query(
         r#"
-        SELECT id, name, poster_url, status, color, notes, tags, rating, rank_order
+        SELECT id, name, poster_url, status, color, notes, tags, rating, rank_order, tier_id, tier_only
         FROM shows
-        WHERE archived = 1
+        WHERE archived = 1 AND tier_only = 0
         ORDER BY name
         LIMIT 10000
         "#,
@@ -111,6 +127,20 @@ pub async fn get_archived_shows(app: AppHandle) -> Result<Vec<TrackedShow>, Stri
     .fetch_all(&pool)
     .await
     .map_err(|e| format!("Failed to get archived shows: {}", e))?;
+
+    let shows = rows.into_iter().map(|row| TrackedShow {
+        id: row.get("id"),
+        name: row.get("name"),
+        poster_url: row.get("poster_url"),
+        status: row.get("status"),
+        color: row.get("color"),
+        notes: row.get("notes"),
+        tags: row.get("tags"),
+        rating: row.get("rating"),
+        rank_order: row.get("rank_order"),
+        tier_id: row.get("tier_id"),
+        tier_only: row.get::<i32, _>("tier_only") == 1,
+    }).collect();
 
     Ok(shows)
 }
