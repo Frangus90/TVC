@@ -20,8 +20,8 @@
   } from "../stores/movies.svelte";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import CastCrew from "./CastCrew.svelte";
-  import RatingWidget from "./RatingWidget.svelte";
-  import { updateMovieTier, promoteMovieToTracked, loadTierPreset, loadTiers } from "../stores/tiers.svelte";
+  import TierPicker from "./TierPicker.svelte";
+  import { updateMovieTier, promoteMovieToTracked, loadTiers } from "../stores/tiers.svelte";
   import { openConfirmDialog } from "../stores/confirmDialog.svelte";
   import { logger } from "../utils/logger";
   import { formatDate } from "../utils/dateFormat";
@@ -50,7 +50,6 @@
       localTrailerLoading = false;
       localTrailerError = null;
       loadTiers();
-      loadTierPreset();
     }
   });
 
@@ -281,7 +280,7 @@
           <!-- User Tier Rating -->
           <div class="flex items-center gap-2 mt-3">
             <span class="text-sm text-text-muted">Tier:</span>
-            <RatingWidget tierId={movie.tier_id} onTierChange={handleTierChange} />
+            <TierPicker tierId={movie.tier_id} onTierChange={handleTierChange} />
           </div>
           {#if movie.tier_only}
             <span class="inline-block mt-2 px-2 py-0.5 text-xs rounded bg-accent/10 text-accent">Tier Only</span>

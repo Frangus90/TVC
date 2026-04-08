@@ -19,8 +19,8 @@
   import { type TrailerData } from "../stores/movies.svelte";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import CastCrew from "./CastCrew.svelte";
-  import RatingWidget from "./RatingWidget.svelte";
-  import { updateShowTier, promoteShowToTracked, loadTierPreset, loadTiers } from "../stores/tiers.svelte";
+  import TierPicker from "./TierPicker.svelte";
+  import { updateShowTier, promoteShowToTracked, loadTiers } from "../stores/tiers.svelte";
   import { openConfirmDialog } from "../stores/confirmDialog.svelte";
   import { logger } from "../utils/logger";
   import { formatDate } from "../utils/dateFormat";
@@ -48,7 +48,6 @@
       localTrailerError = null;
       // Load tier data for rating widget
       loadTiers();
-      loadTierPreset();
     }
   });
 
@@ -296,7 +295,7 @@
           <!-- Rating -->
           <div class="flex items-center gap-2 mt-3">
             <span class="text-sm text-text-muted">Tier:</span>
-            <RatingWidget tierId={show.tier_id} onTierChange={handleTierChange} />
+            <TierPicker tierId={show.tier_id} onTierChange={handleTierChange} />
           </div>
         </div>
       </div>

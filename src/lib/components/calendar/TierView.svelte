@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { Tv, Film, Trash2, MoreVertical, Plus, ArrowUpCircle, ArrowDownCircle, ArrowRight } from "lucide-svelte";
+  import { Tv, Film, Trash2, MoreVertical, Plus, ArrowUpCircle, ArrowDownCircle, ArrowRight, Search, X } from "lucide-svelte";
   import { invoke } from "@tauri-apps/api/core";
   import {
     getTiers,
@@ -33,6 +33,7 @@
   // Sync sidebar when sub-tab changes
   function switchSubTab(tab: TierSubTab) {
     subTab = tab;
+    searchQuery = "";
     setSidebarTab(tab);
   }
 
@@ -136,6 +137,36 @@
     const tiered = items.filter(i => i.tier_id !== null);
     return { tiered: tiered.length, total: items.length };
   });
+
+  // Search/filter state
+  let searchQuery = $state("");
+  const isSearching = $derived(searchQuery.trim().length > 0);
+
+  function matchesSearch(name: string): boolean {
+    if (!isSearching) return true;
+    return name.toLowerCase().includes(searchQuery.trim().toLowerCase());
+  }
+
+  // Hover preview state
+  let hoverPreview = $state<{ url: string; name: string; x: number; y: number } | null>(null);
+  let hoverTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  function showPreview(e: MouseEvent, url: string | null, name: string) {
+    if (!url || isDragging) return;
+    if (hoverTimeout) clearTimeout(hoverTimeout);
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    hoverPreview = {
+      url,
+      name,
+      x: rect.left + rect.width / 2,
+      y: rect.top,
+    };
+  }
+
+  function hidePreview() {
+    if (hoverTimeout) clearTimeout(hoverTimeout);
+    hoverTimeout = setTimeout(() => { hoverPreview = null; }, 50);
+  }
 
   // Handle drop for tier assignment or reordering
   async function handleTierDrop(data: DragData, tierId: number | null, dropX?: number, _dropY?: number) {
@@ -286,6 +317,28 @@
     </div>
 
     <div class="flex items-center gap-4">
+      <!-- Search input -->
+      {#if stats.total > 0}
+        <div class="relative">
+          <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted pointer-events-none" />
+          <input
+            type="text"
+            bind:value={searchQuery}
+            placeholder="Find in list..."
+            class="w-44 pl-8 pr-7 py-1.5 text-sm bg-surface border border-border rounded-lg text-text placeholder:text-text-muted/50 focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent transition-colors"
+          />
+          {#if isSearching}
+            <button
+              type="button"
+              onclick={() => { searchQuery = ""; }}
+              class="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text transition-colors"
+            >
+              <X class="w-3.5 h-3.5" />
+            </button>
+          {/if}
+        </div>
+      {/if}
+
       <!-- Stats -->
       {#if stats.total > 0}
         <div class="flex items-center gap-4 text-sm">
@@ -371,12 +424,15 @@
               <span class="text-text-muted text-sm self-center">Drop here</span>
             {:else if subTab === "shows"}
               {#each showItems as show (show.id)}
-                <div class="group flex flex-col items-center w-16 relative context-menu-container">
+                {@const isMatch = matchesSearch(show.name)}
+                <div class="group flex flex-col items-center w-16 relative context-menu-container transition-opacity {isSearching && !isMatch ? 'opacity-20' : ''}">
                   <!-- svelte-ignore a11y_no_static_element_interactions -->
                   <div
                     onmousedown={(e) => { if (!(e.target as HTMLElement).closest('.context-menu-btn')) startDrag({ type: "show", id: show.id }, e.clientX, e.clientY); }}
                     onclick={() => { if (!consumeWasDragging()) openShowDetail(show.id); }}
                     onkeydown={(e) => { if (e.key === 'Enter') openShowDetail(show.id); }}
+                    onmouseenter={(e) => showPreview(e, show.poster_url, show.name)}
+                    onmouseleave={hidePreview}
                     title={show.name}
                     role="button"
                     tabindex="0"
@@ -386,16 +442,19 @@
                       <img
                         src={show.poster_url}
                         alt={show.name}
-                        class="w-16 h-24 rounded object-cover shadow-lg group-hover:ring-2 group-hover:ring-accent pointer-events-none"
+                        class="w-16 h-24 rounded object-cover shadow-lg pointer-events-none
+                          {isSearching && isMatch ? 'ring-2 ring-accent shadow-accent/30' : 'group-hover:ring-2 group-hover:ring-accent'}"
                         loading="lazy"
                         decoding="async"
                       />
                     {:else}
-                      <div class="w-16 h-24 rounded bg-border flex items-center justify-center shadow-lg group-hover:ring-2 group-hover:ring-accent">
+                      <div class="w-16 h-24 rounded bg-border flex items-center justify-center shadow-lg
+                        {isSearching && isMatch ? 'ring-2 ring-accent shadow-accent/30' : 'group-hover:ring-2 group-hover:ring-accent'}">
                         <Tv class="w-6 h-6 text-text-muted" />
                       </div>
                     {/if}
-                    <span class="text-xs text-text-muted mt-1 truncate w-full text-center group-hover:text-text pointer-events-none">{show.name}</span>
+                    <span class="text-xs mt-1 truncate w-full text-center pointer-events-none
+                      {isSearching && isMatch ? 'text-accent font-medium' : 'text-text-muted group-hover:text-text'}">{show.name}</span>
                   </div>
                   <!-- Context menu button -->
                   <button
@@ -475,12 +534,15 @@
               {/each}
             {:else}
               {#each movieItems as movie (movie.id)}
-                <div class="group flex flex-col items-center w-16 relative context-menu-container">
+                {@const isMatch = matchesSearch(movie.title)}
+                <div class="group flex flex-col items-center w-16 relative context-menu-container transition-opacity {isSearching && !isMatch ? 'opacity-20' : ''}">
                   <!-- svelte-ignore a11y_no_static_element_interactions -->
                   <div
                     onmousedown={(e) => { if (!(e.target as HTMLElement).closest('.context-menu-btn')) startDrag({ type: "movie", id: movie.id }, e.clientX, e.clientY); }}
                     onclick={() => { if (!consumeWasDragging()) openMovieDetail(movie.id); }}
                     onkeydown={(e) => { if (e.key === 'Enter') openMovieDetail(movie.id); }}
+                    onmouseenter={(e) => showPreview(e, movie.poster_url, movie.title)}
+                    onmouseleave={hidePreview}
                     title={movie.title}
                     role="button"
                     tabindex="0"
@@ -490,16 +552,19 @@
                       <img
                         src={movie.poster_url}
                         alt={movie.title}
-                        class="w-16 h-24 rounded object-cover shadow-lg group-hover:ring-2 group-hover:ring-accent pointer-events-none"
+                        class="w-16 h-24 rounded object-cover shadow-lg pointer-events-none
+                          {isSearching && isMatch ? 'ring-2 ring-accent shadow-accent/30' : 'group-hover:ring-2 group-hover:ring-accent'}"
                         loading="lazy"
                         decoding="async"
                       />
                     {:else}
-                      <div class="w-16 h-24 rounded bg-border flex items-center justify-center shadow-lg group-hover:ring-2 group-hover:ring-accent">
+                      <div class="w-16 h-24 rounded bg-border flex items-center justify-center shadow-lg
+                        {isSearching && isMatch ? 'ring-2 ring-accent shadow-accent/30' : 'group-hover:ring-2 group-hover:ring-accent'}">
                         <Film class="w-6 h-6 text-text-muted" />
                       </div>
                     {/if}
-                    <span class="text-xs text-text-muted mt-1 truncate w-full text-center group-hover:text-text pointer-events-none">{movie.title}</span>
+                    <span class="text-xs mt-1 truncate w-full text-center pointer-events-none
+                      {isSearching && isMatch ? 'text-accent font-medium' : 'text-text-muted group-hover:text-text'}">{movie.title}</span>
                   </div>
                   <!-- Context menu button -->
                   <button
@@ -585,25 +650,28 @@
           <div class="flex flex-wrap gap-3">
             {#if subTab === "shows"}
               {#each untieredShows as show (show.id)}
-                <div class="group flex flex-col items-center w-16 relative context-menu-container">
+                {@const isMatch = matchesSearch(show.name)}
+                <div class="group flex flex-col items-center w-16 relative context-menu-container transition-opacity {isSearching && !isMatch ? 'opacity-20' : ''}">
                   <!-- svelte-ignore a11y_no_static_element_interactions -->
                   <div
                     onmousedown={(e) => { if (!(e.target as HTMLElement).closest('.context-menu-btn')) startDrag({ type: "show", id: show.id }, e.clientX, e.clientY); }}
                     onclick={() => { if (!consumeWasDragging()) openShowDetail(show.id); }}
                     onkeydown={(e) => { if (e.key === 'Enter') openShowDetail(show.id); }}
+                    onmouseenter={(e) => showPreview(e, show.poster_url, show.name)}
+                    onmouseleave={hidePreview}
                     title={show.name}
                     role="button"
                     tabindex="0"
                     class="flex flex-col items-center w-full transition-transform hover:scale-105 hover:z-10 cursor-grab active:cursor-grabbing"
                   >
                     {#if show.poster_url}
-                      <img src={show.poster_url} alt={show.name} class="w-16 h-24 rounded object-cover shadow-lg group-hover:ring-2 group-hover:ring-accent pointer-events-none" loading="lazy" decoding="async" />
+                      <img src={show.poster_url} alt={show.name} class="w-16 h-24 rounded object-cover shadow-lg pointer-events-none {isSearching && isMatch ? 'ring-2 ring-accent shadow-accent/30' : 'group-hover:ring-2 group-hover:ring-accent'}" loading="lazy" decoding="async" />
                     {:else}
-                      <div class="w-16 h-24 rounded bg-border flex items-center justify-center shadow-lg group-hover:ring-2 group-hover:ring-accent">
+                      <div class="w-16 h-24 rounded bg-border flex items-center justify-center shadow-lg {isSearching && isMatch ? 'ring-2 ring-accent shadow-accent/30' : 'group-hover:ring-2 group-hover:ring-accent'}">
                         <Tv class="w-6 h-6 text-text-muted" />
                       </div>
                     {/if}
-                    <span class="text-xs text-text-muted mt-1 truncate w-full text-center group-hover:text-text pointer-events-none">{show.name}</span>
+                    <span class="text-xs mt-1 truncate w-full text-center pointer-events-none {isSearching && isMatch ? 'text-accent font-medium' : 'text-text-muted group-hover:text-text'}">{show.name}</span>
                   </div>
                   <button
                     type="button"
@@ -643,25 +711,28 @@
               {/each}
             {:else}
               {#each untieredMovies as movie (movie.id)}
-                <div class="group flex flex-col items-center w-16 relative context-menu-container">
+                {@const isMatch = matchesSearch(movie.title)}
+                <div class="group flex flex-col items-center w-16 relative context-menu-container transition-opacity {isSearching && !isMatch ? 'opacity-20' : ''}">
                   <!-- svelte-ignore a11y_no_static_element_interactions -->
                   <div
                     onmousedown={(e) => { if (!(e.target as HTMLElement).closest('.context-menu-btn')) startDrag({ type: "movie", id: movie.id }, e.clientX, e.clientY); }}
                     onclick={() => { if (!consumeWasDragging()) openMovieDetail(movie.id); }}
                     onkeydown={(e) => { if (e.key === 'Enter') openMovieDetail(movie.id); }}
+                    onmouseenter={(e) => showPreview(e, movie.poster_url, movie.title)}
+                    onmouseleave={hidePreview}
                     title={movie.title}
                     role="button"
                     tabindex="0"
                     class="flex flex-col items-center w-full transition-transform hover:scale-105 hover:z-10 cursor-grab active:cursor-grabbing"
                   >
                     {#if movie.poster_url}
-                      <img src={movie.poster_url} alt={movie.title} class="w-16 h-24 rounded object-cover shadow-lg group-hover:ring-2 group-hover:ring-accent pointer-events-none" loading="lazy" decoding="async" />
+                      <img src={movie.poster_url} alt={movie.title} class="w-16 h-24 rounded object-cover shadow-lg pointer-events-none {isSearching && isMatch ? 'ring-2 ring-accent shadow-accent/30' : 'group-hover:ring-2 group-hover:ring-accent'}" loading="lazy" decoding="async" />
                     {:else}
-                      <div class="w-16 h-24 rounded bg-border flex items-center justify-center shadow-lg group-hover:ring-2 group-hover:ring-accent">
+                      <div class="w-16 h-24 rounded bg-border flex items-center justify-center shadow-lg {isSearching && isMatch ? 'ring-2 ring-accent shadow-accent/30' : 'group-hover:ring-2 group-hover:ring-accent'}">
                         <Film class="w-6 h-6 text-text-muted" />
                       </div>
                     {/if}
-                    <span class="text-xs text-text-muted mt-1 truncate w-full text-center group-hover:text-text pointer-events-none">{movie.title}</span>
+                    <span class="text-xs mt-1 truncate w-full text-center pointer-events-none {isSearching && isMatch ? 'text-accent font-medium' : 'text-text-muted group-hover:text-text'}">{movie.title}</span>
                   </div>
                   <button
                     type="button"
@@ -718,6 +789,24 @@
           Drop here to remove from tier
         </span>
       </div>
+    </div>
+  {/if}
+
+  <!-- Hover poster preview -->
+  {#if hoverPreview && !isDragging}
+    {@const previewW = 128}
+    {@const previewH = 192}
+    {@const left = Math.max(8, Math.min(hoverPreview.x - previewW / 2, window.innerWidth - previewW - 8))}
+    {@const top = hoverPreview.y - previewH - 12 > 0 ? hoverPreview.y - previewH - 12 : hoverPreview.y + 100 + 8}
+    <div
+      class="fixed z-[9999] pointer-events-none"
+      style="left: {left}px; top: {top}px;"
+    >
+      <img
+        src={hoverPreview.url}
+        alt={hoverPreview.name}
+        class="w-32 h-48 rounded-lg object-cover shadow-2xl ring-1 ring-border"
+      />
     </div>
   {/if}
 </div>

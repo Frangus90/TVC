@@ -2,6 +2,35 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.10.5]
+
+### Bug Fixes
+
+- **Update Modal Markdown**: Fixed update dialog not rendering `**bold**`, `` `code` ``, and em dashes — inline markdown now displays correctly
+
+## [0.10.4]
+
+### Tier List Improvements
+
+- **Hover Preview**: Hovering over a poster in the tier list shows a 2x enlarged version
+
+### Tier Rating Simplified
+
+- **Tier Dropdown Everywhere**: Replaced star ratings with the tier dropdown picker in show and movie detail views — rating is now always a direct tier assignment
+- **Removed Star UI**: Removed `RatingWidget` and `StarRating` components — the tier system no longer has a star abstraction layer
+
+## [0.10.3]
+
+### Tier List Search
+
+- **Find in List**: Search bar in the tier view header lets you quickly locate movies or shows — matching items get highlighted with an accent ring while non-matches fade out
+
+## [0.10.2]
+
+###
+
+- **More bug fixes**
+
 ## [0.10.1]
 
 ### Bug Fixes & Reliability
