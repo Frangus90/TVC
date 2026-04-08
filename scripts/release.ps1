@@ -374,7 +374,7 @@ try {
 # Step 5: Mark changelog as released
 Write-Step "Marking changelog entry as released..."
 $changelogContent = Get-Content $changelogPath -Raw
-$releaseDate = Get-Date -Format 'yyyy-MM-dd'
+$releaseDate = Get-Date -Format 'dd.MM.yyyy'
 $updatedChangelog = $changelogContent -replace "## \[$Version\]\s*-\s*Unreleased", "## [$Version] - $releaseDate"
 if ($updatedChangelog -ne $changelogContent) {
     Set-Content $changelogPath $updatedChangelog -NoNewline
