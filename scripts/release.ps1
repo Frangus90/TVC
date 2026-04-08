@@ -36,41 +36,29 @@ if ($latestRelease) {
     Write-Info "No existing releases found on GitHub"
 }
 
-# Auto-detect version from CHANGELOG.md
+# Auto-detect version from CHANGELOG.md (look for "Unreleased" marker)
 $changelogPath = "$ProjectRoot\CHANGELOG.md"
 $detectedVersion = $null
 $changelogVersions = @()
 
 if (Test-Path $changelogPath) {
-    Write-Step "Scanning CHANGELOG.md for versions..."
+    Write-Step "Scanning CHANGELOG.md for unreleased versions..."
     $changelogLines = Get-Content $changelogPath
 
-    # Extract all versions from changelog
+    # Extract all versions and check for Unreleased marker
     foreach ($line in $changelogLines) {
-        if ($line -match "^## \[([0-9]+\.[0-9]+\.[0-9]+)\]") {
+        if ($line -match "^## \[([0-9]+\.[0-9]+\.[0-9]+)\]\s*-\s*Unreleased") {
+            if (-not $detectedVersion) {
+                $detectedVersion = $Matches[1]
+            }
+            $changelogVersions += "$($Matches[1]) (unreleased)"
+        } elseif ($line -match "^## \[([0-9]+\.[0-9]+\.[0-9]+)\]") {
             $changelogVersions += $Matches[1]
         }
     }
 
     if ($changelogVersions.Count -gt 0) {
         Write-Host "  Found versions: $($changelogVersions -join ', ')" -ForegroundColor DarkGray
-
-        # Find the first version that's newer than the latest release
-        if ($latestReleaseVersion) {
-            foreach ($v in $changelogVersions) {
-                if ($v -ne $latestReleaseVersion) {
-                    # Simple version comparison - assumes versions are in order in changelog
-                    $detectedVersion = $v
-                    break
-                } else {
-                    # Hit the already-released version, stop looking
-                    break
-                }
-            }
-        } else {
-            # No releases yet, use the first version in changelog
-            $detectedVersion = $changelogVersions[0]
-        }
     }
 }
 
@@ -381,6 +369,29 @@ try {
 } finally {
     Pop-Location
     Remove-Item $releaseNotesFile -ErrorAction SilentlyContinue
+}
+
+# Step 5: Mark changelog as released
+Write-Step "Marking changelog entry as released..."
+$changelogContent = Get-Content $changelogPath -Raw
+$releaseDate = Get-Date -Format 'yyyy-MM-dd'
+$updatedChangelog = $changelogContent -replace "## \[$Version\]\s*-\s*Unreleased", "## [$Version] - $releaseDate"
+if ($updatedChangelog -ne $changelogContent) {
+    Set-Content $changelogPath $updatedChangelog -NoNewline
+    Write-Success "  Updated CHANGELOG.md: marked v$Version as released ($releaseDate)"
+
+    # Commit and push the changelog update
+    Push-Location $ProjectRoot
+    try {
+        git add CHANGELOG.md
+        git commit -m "Mark v$Version as released in CHANGELOG.md"
+        git push
+        Write-Success "  Pushed changelog update"
+    } finally {
+        Pop-Location
+    }
+} else {
+    Write-Info "  No 'Unreleased' marker found for v$Version in CHANGELOG.md (already stamped?)"
 }
 
 Write-Host "`n========================================" -ForegroundColor Green
