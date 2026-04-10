@@ -2,11 +2,12 @@
 
 All notable changes to TVC will be documented in this file.
 
-## [0.10.5] - Unreleased
+## [0.10.5] - 11.04.2026
 
 ### Bug Fixes
 
 - **Update Modal Markdown**: Fixed update dialog not rendering `**bold**`, `` `code` ``, and em dashes — inline markdown now displays correctly
+- **Tier Search Modal Category**: Search modal now defaults to the correct category (shows/movies) based on which tier list tab is active
 
 ## [0.10.4]
 
