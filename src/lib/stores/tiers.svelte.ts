@@ -39,6 +39,7 @@ let tierListShows = $state<TierListShow[]>([]);
 let tierListMovies = $state<TierListMovie[]>([]);
 let tiersLoading = $state(false);
 let tierSearchModalOpen = $state(false);
+let tierSearchModalMode = $state<"shows" | "movies">("shows");
 
 // Getters
 export function getTiers(): Tier[] {
@@ -69,8 +70,13 @@ export function isTierSearchModalOpen(): boolean {
   return tierSearchModalOpen;
 }
 
+export function getTierSearchModalMode(): "shows" | "movies" {
+  return tierSearchModalMode;
+}
+
 // Actions
-export function openTierSearchModal() {
+export function openTierSearchModal(mode: "shows" | "movies" = "shows") {
+  tierSearchModalMode = mode;
   tierSearchModalOpen = true;
 }
 

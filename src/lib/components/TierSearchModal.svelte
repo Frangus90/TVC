@@ -7,6 +7,7 @@
     getTiers,
     getTierListShows,
     getTierListMovies,
+    getTierSearchModalMode,
     addShowTierOnly,
     addMovieTierOnly,
     addManualShow,
@@ -31,7 +32,7 @@
 
   let searchInput: HTMLInputElement | undefined = $state();
   let debounceTimer: ReturnType<typeof setTimeout> | null = $state(null);
-  let searchMode = $state<SearchMode>("shows");
+  let searchMode = $state<SearchMode>(getTierSearchModalMode());
   let query = $state("");
   let addingIds = $state(new Set<string>());
   let addedIds = $state(new Set<string>());
@@ -62,6 +63,8 @@
   // Reset state when modal opens
   $effect(() => {
     if (isTierSearchModalOpen()) {
+      searchMode = getTierSearchModalMode();
+      manualType = getTierSearchModalMode() === "movies" ? "movie" : "show";
       query = "";
       addingIds = new Set();
       addedIds = new Set();
