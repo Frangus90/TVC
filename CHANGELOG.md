@@ -2,6 +2,14 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.10.6] - 18.04.2026
+
+### Bug Fixes
+
+- **Calendar Stale After Sync**: Syncing all data, refreshing a single show, or refreshing a single movie now reloads the calendar view — episodes that moved days on TVDB (or movies with shifted release dates) appear on their correct day immediately instead of requiring navigation or a restart
+- **Show Detail Blanking During Sync**: The show detail modal no longer blanks out with a full-screen spinner while syncing — the episode list stays readable during the fetch, matching how movie detail already behaved
+- **Update Modal H2 Headers**: Version headers like `## [X.Y.Z]` from CHANGELOG notes now render correctly in the update dialog instead of appearing as raw text (H2 version lines are skipped since the modal header already shows the version)
+
 ## [0.10.5] - 11.04.2026
 
 ### Bug Fixes
