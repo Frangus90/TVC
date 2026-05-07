@@ -2,7 +2,7 @@
 
 All notable changes to TVC will be documented in this file.
 
-## [0.10.7] - Unreleased
+## [0.10.7] - 07.05.2026
 
 ### Sonarr Import
 
