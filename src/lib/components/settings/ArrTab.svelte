@@ -10,6 +10,8 @@
     AlertTriangle,
     Download,
     ChevronRight,
+    ChevronDown,
+    ListFilter,
     CheckSquare,
     Square,
   } from "lucide-svelte";
@@ -24,7 +26,10 @@
     getTestResult,
     getSelectedServer,
     getLibraryItems,
+    getFilteredLibraryItems,
     getSelectedItems,
+    getSonarrFilters,
+    getActiveSonarrFilterCount,
     isImporting,
     getImportResult,
     setActiveTab,
@@ -35,6 +40,8 @@
     updateServer,
     deleteServer,
     setSelectedServer,
+    setSonarrFilter,
+    clearSonarrFilters,
     toggleItemSelection,
     selectAllItems,
     deselectAllItems,
@@ -57,6 +64,7 @@
   let formBaseUrl = $state("");
   let formApiKey = $state("");
   let showApiKey = $state(false);
+  let filterMenuOpen = $state(false);
 
   // Reset form when editing server changes
   $effect(() => {
@@ -120,6 +128,19 @@
     setSelectedServer(server);
   }
 
+  function handleSonarrFilterChange(
+    filter: "monitored" | "continuing",
+    event: Event
+  ) {
+    const checkbox = event.currentTarget as HTMLInputElement;
+    setSonarrFilter(filter, checkbox.checked);
+  }
+
+  function formatStatus(status: string | null): string {
+    if (!status) return "";
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  }
+
   const activeTab = $derived(getActiveTab());
   const loading = $derived(isLoading());
   const error = $derived(getError());
@@ -130,7 +151,10 @@
   const testResult = $derived(getTestResult());
   const selectedServer = $derived(getSelectedServer());
   const libraryItems = $derived(getLibraryItems());
+  const filteredLibraryItems = $derived(getFilteredLibraryItems());
   const selectedItems = $derived(getSelectedItems());
+  const sonarrFilters = $derived(getSonarrFilters());
+  const activeSonarrFilterCount = $derived(getActiveSonarrFilterCount());
   const importing = $derived(isImporting());
   const importResult = $derived(getImportResult());
 </script>
@@ -402,7 +426,10 @@
         <div class="flex items-center justify-between">
           <button
             type="button"
-            onclick={() => setSelectedServer(null)}
+            onclick={() => {
+              filterMenuOpen = false;
+              setSelectedServer(null);
+            }}
             class="text-sm text-text-muted hover:text-text flex items-center gap-1"
           >
             <ChevronRight class="w-4 h-4 rotate-180" />
@@ -412,7 +439,7 @@
             <span class="text-sm text-text-muted">
               {getSelectedItemsCount()} selected
             </span>
-            {#if libraryItems.filter((i) => !i.already_tracked).length > 0}
+            {#if filteredLibraryItems.filter((i) => !i.already_tracked).length > 0}
               <button
                 type="button"
                 onclick={selectAllItems}
@@ -432,20 +459,84 @@
           </div>
         </div>
 
-        <div class="bg-background rounded-lg p-3 border border-border flex items-center gap-3">
-          <div
-            class="w-10 h-10 rounded-lg flex items-center justify-center {selectedServer.type === 'sonarr'
-              ? 'bg-blue-500/20 text-blue-400'
-              : 'bg-orange-500/20 text-orange-400'}"
-          >
-            <Server class="w-5 h-5" />
+        <div class="bg-background rounded-lg p-3 border border-border flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3 min-w-0">
+            <div
+              class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 {selectedServer.type === 'sonarr'
+                ? 'bg-blue-500/20 text-blue-400'
+                : 'bg-orange-500/20 text-orange-400'}"
+            >
+              <Server class="w-5 h-5" />
+            </div>
+            <div class="min-w-0">
+              <p class="font-medium truncate">{selectedServer.name}</p>
+              <p class="text-sm text-text-muted">
+                {#if selectedServer.type === "sonarr" && activeSonarrFilterCount > 0}
+                  {filteredLibraryItems.length} of {libraryItems.length} shows in library
+                {:else}
+                  {libraryItems.length} {selectedServer.type === "sonarr" ? "shows" : "movies"} in library
+                {/if}
+              </p>
+            </div>
           </div>
-          <div>
-            <p class="font-medium">{selectedServer.name}</p>
-            <p class="text-sm text-text-muted">
-              {libraryItems.length} {selectedServer.type === "sonarr" ? "shows" : "movies"} in library
-            </p>
-          </div>
+
+          {#if selectedServer.type === "sonarr"}
+            <div class="relative flex-shrink-0">
+              <button
+                type="button"
+                onclick={() => (filterMenuOpen = !filterMenuOpen)}
+                class="px-3 py-1.5 text-sm bg-surface hover:bg-surface-hover border border-border rounded-lg transition-colors flex items-center gap-2"
+                aria-label="Filter Sonarr import"
+                aria-expanded={filterMenuOpen}
+              >
+                <ListFilter class="w-4 h-4" />
+                Filters
+                {#if activeSonarrFilterCount > 0}
+                  <span class="min-w-[18px] h-[18px] px-1 bg-accent text-white text-[11px] font-semibold rounded-full flex items-center justify-center">
+                    {activeSonarrFilterCount}
+                  </span>
+                {/if}
+                <ChevronDown class="w-4 h-4 transition-transform {filterMenuOpen ? 'rotate-180' : ''}" />
+              </button>
+
+              {#if filterMenuOpen}
+                <div class="absolute right-0 z-20 mt-2 w-52 rounded-lg border border-border bg-surface shadow-xl p-2">
+                  <label class="flex items-center gap-2 px-2 py-2 rounded hover:bg-surface-hover cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={sonarrFilters.monitored}
+                      onchange={(event) => handleSonarrFilterChange("monitored", event)}
+                      class="w-4 h-4 accent-accent"
+                    />
+                    <span class="text-sm">Monitored</span>
+                  </label>
+
+                  <label class="flex items-center gap-2 px-2 py-2 rounded hover:bg-surface-hover cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={sonarrFilters.continuing}
+                      onchange={(event) => handleSonarrFilterChange("continuing", event)}
+                      class="w-4 h-4 accent-accent"
+                    />
+                    <span class="text-sm">Continuing</span>
+                  </label>
+
+                  {#if activeSonarrFilterCount > 0}
+                    <button
+                      type="button"
+                      onclick={() => {
+                        clearSonarrFilters();
+                        filterMenuOpen = false;
+                      }}
+                      class="w-full mt-1 px-2 py-1.5 text-xs text-text-muted hover:text-text hover:bg-surface-hover rounded text-left"
+                    >
+                      Clear filters
+                    </button>
+                  {/if}
+                </div>
+              {/if}
+            </div>
+          {/if}
         </div>
 
         {#if loading}
@@ -456,10 +547,14 @@
           <div class="text-center py-12 text-text-muted">
             <p>No items found in library</p>
           </div>
+        {:else if filteredLibraryItems.length === 0}
+          <div class="text-center py-12 text-text-muted">
+            <p>No shows match the selected filters</p>
+          </div>
         {:else}
           <!-- Library List -->
           <div class="flex-1 overflow-y-auto border border-border rounded-lg">
-            {#each libraryItems as item}
+            {#each filteredLibraryItems as item}
               {@const isSelected = selectedItems.has(item.arr_id)}
               <button
                 type="button"
@@ -490,6 +585,19 @@
                 <!-- Year -->
                 {#if item.year}
                   <span class="flex-shrink-0 text-sm text-text-muted">{item.year}</span>
+                {/if}
+
+                {#if selectedServer.type === "sonarr"}
+                  {#if item.monitored}
+                    <span class="flex-shrink-0 px-2 py-0.5 bg-blue-500/15 text-blue-300 text-xs font-medium rounded">
+                      Monitored
+                    </span>
+                  {/if}
+                  {#if item.status}
+                    <span class="flex-shrink-0 px-2 py-0.5 bg-surface-hover text-text-muted text-xs font-medium rounded">
+                      {formatStatus(item.status)}
+                    </span>
+                  {/if}
                 {/if}
 
                 <!-- Tracked Badge -->

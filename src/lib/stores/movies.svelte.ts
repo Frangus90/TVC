@@ -404,7 +404,7 @@ export async function updateMovieRating(
 export async function syncMovie(movieId: number): Promise<void> {
   try {
     await invoke("sync_movie", { id: movieId });
-    await loadTrackedMovies();
+    await refreshMoviesCalendar();
     if (currentMovie && currentMovie.id === movieId) {
       await openMovieDetail(movieId);
     }

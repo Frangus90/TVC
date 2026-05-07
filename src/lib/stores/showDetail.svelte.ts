@@ -169,24 +169,6 @@ export async function fetchShowCast(showId: number): Promise<void> {
   }
 }
 
-export async function syncShowEpisodes(showId: number): Promise<void> {
-  loading = true;
-  error = null;
-
-  try {
-    await invoke("sync_show_episodes", { showId });
-    // Reload episodes
-    if (currentShow) {
-      await openShowDetail(showId);
-    }
-  } catch (err) {
-    logger.error("Failed to sync episodes", err);
-    error = err instanceof Error ? err.message : "Failed to sync episodes";
-  } finally {
-    loading = false;
-  }
-}
-
 export async function updateShowRating(
   showId: number,
   rating: number | null

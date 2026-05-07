@@ -36,10 +36,20 @@
       if (trimmed === "" || trimmed === "-") continue;
       if (/^v?\[?\d+\.\d+\.\d+\]?$/.test(trimmed)) continue;
 
-      // Headers
+      // H3 headers (e.g. "### Bug Fixes")
       const headerMatch = trimmed.match(/^###\s*(.+)/);
       if (headerMatch) {
         result.push(`<h3 class="text-base font-semibold text-text mt-4 mb-2">${inlineMarkdown(headerMatch[1])}</h3>`);
+        continue;
+      }
+
+      // H2 headers — typically CHANGELOG version lines like "## [0.10.6]" or "## [0.10.6] - 11.04.2026".
+      // The modal header already shows the version, so skip version H2s; render any other H2 normally.
+      const h2Match = trimmed.match(/^##\s+(.+)/);
+      if (h2Match) {
+        const h2Content = h2Match[1].trim();
+        if (/^v?\[?\d+\.\d+\.\d+\]?(\s*[-–—]\s*.+)?$/.test(h2Content)) continue;
+        result.push(`<h2 class="text-lg font-semibold text-text mt-4 mb-2">${inlineMarkdown(h2Content)}</h2>`);
         continue;
       }
 

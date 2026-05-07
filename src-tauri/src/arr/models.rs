@@ -141,6 +141,7 @@ pub struct LibraryItem {
     pub title: String,
     pub year: Option<i32>,
     pub poster_url: Option<String>,
+    pub status: Option<String>,
     pub monitored: bool,
     pub tvdb_id: Option<i64>,
     pub tmdb_id: Option<i64>,

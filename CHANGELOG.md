@@ -2,6 +2,12 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.10.7] - Unreleased
+
+### Sonarr Import
+
+- **Import Filters**: Sonarr library import now has a filter dropdown for monitored and continuing shows, with select-all/import actions limited to the filtered results
+
 ## [0.10.6] - 18.04.2026
 
 ### Bug Fixes

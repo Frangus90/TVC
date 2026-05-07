@@ -31,6 +31,7 @@ Thumbs.db
 #AI files
 .claude/
 .cursor/
+AGENTS.md
 
 # Plans
 plans/

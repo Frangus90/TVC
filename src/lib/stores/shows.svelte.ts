@@ -276,13 +276,8 @@ export async function addShow(show: SearchResult): Promise<void> {
     // Update UI immediately
     await loadTrackedShows();
 
-    // Sync episodes in background (don't await)
-    syncShowEpisodes(showId).then(() => {
-      // Refresh calendar after sync completes
-      if (currentCalendarRange) {
-        loadEpisodesForRange(currentCalendarRange.start, currentCalendarRange.end);
-      }
-    });
+    // Sync episodes in background (don't await) — syncShowEpisodes refreshes the calendar itself
+    syncShowEpisodes(showId);
   } catch (error) {
     logger.error("Failed to add show", error);
   }
@@ -336,8 +331,8 @@ export async function unarchiveShow(showId: number): Promise<void> {
 
 export async function syncShowEpisodes(showId: number): Promise<void> {
   try {
-    // Use backend command to sync episodes
     await invoke("sync_show_episodes", { showId });
+    await refreshCalendar();
   } catch (error) {
     logger.error("Failed to sync episodes", error);
   }

@@ -34,10 +34,16 @@ export interface LibraryItem {
   title: string;
   year: number | null;
   poster_url: string | null;
+  status: string | null;
   monitored: boolean;
   tvdb_id: number | null;
   tmdb_id: number | null;
   already_tracked: boolean;
+}
+
+export interface SonarrImportFilters {
+  monitored: boolean;
+  continuing: boolean;
 }
 
 export interface ImportItem {
@@ -75,6 +81,10 @@ let testResult = $state<{ success: boolean; message: string } | null>(null);
 let selectedServer = $state<ArrServer | null>(null);
 let libraryItems = $state<LibraryItem[]>([]);
 let selectedItems = $state<Set<number>>(new Set());
+let sonarrFilters = $state<SonarrImportFilters>({
+  monitored: false,
+  continuing: false,
+});
 let importing = $state(false);
 let importResult = $state<ImportResult | null>(null);
 
@@ -117,6 +127,32 @@ export function getSelectedServer() {
 
 export function getLibraryItems() {
   return libraryItems;
+}
+
+export function getFilteredLibraryItems() {
+  if (!selectedServer || selectedServer.type !== "sonarr") {
+    return libraryItems;
+  }
+
+  return libraryItems.filter((item) => {
+    if (sonarrFilters.monitored && !item.monitored) {
+      return false;
+    }
+
+    if (sonarrFilters.continuing && item.status?.toLowerCase() !== "continuing") {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+export function getSonarrFilters() {
+  return sonarrFilters;
+}
+
+export function getActiveSonarrFilterCount() {
+  return Number(sonarrFilters.monitored) + Number(sonarrFilters.continuing);
 }
 
 export function getSelectedItems() {
@@ -171,10 +207,38 @@ export function clearTestResult() {
   testResult = null;
 }
 
+function pruneSelectionToFilteredItems() {
+  const visibleIds = new Set(getFilteredLibraryItems().map((item) => item.arr_id));
+  selectedItems = new Set([...selectedItems].filter((arrId) => visibleIds.has(arrId)));
+}
+
+export function setSonarrFilter(
+  filter: keyof SonarrImportFilters,
+  enabled: boolean
+) {
+  sonarrFilters = {
+    ...sonarrFilters,
+    [filter]: enabled,
+  };
+  pruneSelectionToFilteredItems();
+}
+
+export function clearSonarrFilters() {
+  sonarrFilters = {
+    monitored: false,
+    continuing: false,
+  };
+  pruneSelectionToFilteredItems();
+}
+
 export function setSelectedServer(server: ArrServer | null) {
   selectedServer = server;
   libraryItems = [];
   selectedItems = new Set();
+  sonarrFilters = {
+    monitored: false,
+    continuing: false,
+  };
   importResult = null;
 
   if (server) {
@@ -194,7 +258,7 @@ export function toggleItemSelection(arrId: number) {
 
 export function selectAllItems() {
   const newSet = new Set<number>();
-  for (const item of libraryItems) {
+  for (const item of getFilteredLibraryItems()) {
     if (!item.already_tracked) {
       newSet.add(item.arr_id);
     }
@@ -381,7 +445,7 @@ export function getRadarrServers(): ArrServer[] {
 }
 
 export function getUnselectedItemsCount(): number {
-  return libraryItems.filter((i) => !i.already_tracked && !selectedItems.has(i.arr_id)).length;
+  return getFilteredLibraryItems().filter((i) => !i.already_tracked && !selectedItems.has(i.arr_id)).length;
 }
 
 export function getSelectedItemsCount(): number {

@@ -9,13 +9,13 @@
     isLoading,
     getError,
     closeShowDetail,
-    syncShowEpisodes,
+    openShowDetail,
     markSeasonWatched,
     markShowWatched,
     markEpisodeWatched,
     type CastMember,
   } from "../stores/showDetail.svelte";
-  import { removeShow } from "../stores/shows.svelte";
+  import { removeShow, syncShowEpisodes } from "../stores/shows.svelte";
   import { type TrailerData } from "../stores/movies.svelte";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import CastCrew from "./CastCrew.svelte";
@@ -124,6 +124,7 @@
     if (!show) return;
 
     await syncShowEpisodes(show.id);
+    await openShowDetail(show.id);
   }
 
   async function handleOpenTVDB() {

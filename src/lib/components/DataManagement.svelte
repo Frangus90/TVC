@@ -25,8 +25,8 @@
   } from "../stores/dataManagement.svelte";
   import { openConfirmDialog } from "../stores/confirmDialog.svelte";
   import { simulateDummyUpdate } from "../stores/updates.svelte";
-  import type { TrackedShow, Episode } from "../stores/shows.svelte";
-  import type { TrackedMovie } from "../stores/movies.svelte";
+  import { refreshCalendar, type TrackedShow, type Episode } from "../stores/shows.svelte";
+  import { refreshMoviesCalendar, type TrackedMovie } from "../stores/movies.svelte";
 
   let cleanupMessage = $state<string | null>(null);
   let dummyUpdateVersion = $state("0.8.0");
@@ -140,7 +140,9 @@
         invoke<number>("sync_all_shows"),
         invoke<number>("sync_all_movies"),
       ]);
-      
+
+      await Promise.all([refreshCalendar(), refreshMoviesCalendar()]);
+
       const parts: string[] = [];
       if (showsSynced > 0) {
         parts.push(`${showsSynced} show${showsSynced !== 1 ? "s" : ""} from TVDB`);
