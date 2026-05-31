@@ -21,7 +21,7 @@
   let addedIds = $state(new Set<number>());
 
   function getShowId(show: SearchResult): number {
-    return parseInt(show.tvdb_id || show.id || "0");
+    return show.tmdb_id ?? 0;
   }
 
   function isShowAdded(show: SearchResult): boolean {
@@ -194,10 +194,8 @@
                 <h3 class="font-semibold text-text truncate">
                   {show.name || "Unknown"}
                 </h3>
-                {#if show.year || show.network}
-                  <p class="text-sm text-text-muted mt-0.5">
-                    {[show.year, show.network].filter(Boolean).join(" - ")}
-                  </p>
+                {#if show.year}
+                  <p class="text-sm text-text-muted mt-0.5">{show.year}</p>
                 {/if}
                 {#if show.overview}
                   <p class="text-sm text-text-muted mt-2 line-clamp-2">

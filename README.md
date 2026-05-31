@@ -6,7 +6,7 @@ A modern desktop application for tracking TV shows and movies, scheduling episod
 
 ### Core Functionality
 
-- **Search & Track**: Search for TV shows and movies via TVDB/TMDB APIs and add them to your library
+- **Search & Track**: Search for TV shows and movies via the TMDB API and add them to your library
 - **Calendar Views**: Multiple calendar views (Month, Week, Agenda, Tier) for organizing your content
 - **Episode Scheduling**: Schedule episodes manually with multi-select and season scheduling
 - **Watch Tracking**: Mark episodes and movies as watched with detailed tracking
@@ -48,7 +48,7 @@ A modern desktop application for tracking TV shows and movies, scheduling episod
 - **Frontend**: Svelte 5 + TypeScript
 - **Styling**: Tailwind CSS v4
 - **Database**: SQLite (local storage)
-- **APIs**: TVDB (TV shows), TMDB (movies)
+- **APIs**: TMDB (TV shows and movies)
 - **Updates**: Tauri updater plugin with GitHub Releases
 
 ## Installation
@@ -107,7 +107,7 @@ TVC/
 │   ├── src/
 │   │   ├── commands/      # Tauri commands
 │   │   ├── db/            # Database utilities
-│   │   ├── tvdb/          # TVDB API client
+│   │   ├── tmdb/          # TMDB API client
 │   │   ├── plex/          # Plex integration
 │   │   └── arr/           # Sonarr/Radarr integration
 │   └── migrations/        # Database migrations

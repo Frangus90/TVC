@@ -355,32 +355,25 @@ pub async fn add_show_tier_only(
 ) -> Result<(), String> {
     crate::commands::validation::validate_id(id)?;
 
-    // Fetch from TVDB
-    let show_details = crate::tvdb::get_series_extended(id)
+    let show_details = crate::tmdb::get_tv_details(id)
         .await
         .map_err(|e| format!("Failed to fetch show details: {}", e))?;
 
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    let airs_days_json = show_details.airs_days
-        .as_ref()
-        .and_then(|days| serde_json::to_string(days).ok());
-
     sqlx::query(
         r#"
         INSERT INTO shows
-        (id, name, slug, status, poster_url, first_aired, overview, airs_time, airs_days, runtime, added_at, tier_only, tier_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), 1, ?)
+        (id, name, status, poster_url, first_aired, overview, network, runtime, added_at, tier_only, tier_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), 1, ?)
         ON CONFLICT(id) DO UPDATE SET
             name = excluded.name,
-            slug = excluded.slug,
             status = excluded.status,
             poster_url = excluded.poster_url,
             first_aired = excluded.first_aired,
             overview = excluded.overview,
-            airs_time = excluded.airs_time,
-            airs_days = excluded.airs_days,
+            network = excluded.network,
             runtime = excluded.runtime,
             tier_only = 1,
             tier_id = excluded.tier_id
@@ -388,14 +381,12 @@ pub async fn add_show_tier_only(
     )
     .bind(show_details.id)
     .bind(&show_details.name)
-    .bind(show_details.slug.as_ref())
-    .bind(show_details.status.as_ref().and_then(|s| s.name.as_ref()))
-    .bind(show_details.image.as_ref())
-    .bind(show_details.first_aired.as_ref())
+    .bind(show_details.status.as_ref())
+    .bind(show_details.poster_url())
+    .bind(show_details.first_air_date.as_ref())
     .bind(show_details.overview.as_ref())
-    .bind(show_details.airs_time.as_ref())
-    .bind(airs_days_json.as_deref())
-    .bind(show_details.average_runtime)
+    .bind(show_details.network_name())
+    .bind(show_details.runtime())
     .bind(tier_id)
     .execute(&pool)
     .await

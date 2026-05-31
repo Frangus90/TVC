@@ -6,7 +6,6 @@ mod notifications;
 mod plex;
 mod racing;
 mod tmdb;
-mod tvdb;
 
 use db::migration_repair::{repair_migration_checksums, MigrationDef};
 use db::get_db_connection_string;
@@ -30,6 +29,7 @@ const MIGRATION_011: &str = include_str!("../migrations/011_add_rank_order.sql")
 const MIGRATION_012: &str = include_str!("../migrations/012_add_racing.sql");
 const MIGRATION_013: &str = include_str!("../migrations/013_add_notifications.sql");
 const MIGRATION_014: &str = include_str!("../migrations/014_add_tiers.sql");
+const MIGRATION_015: &str = include_str!("../migrations/015_tvdb_to_tmdb.sql");
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -50,6 +50,7 @@ pub fn run() {
         MigrationDef { version: 12, sql: MIGRATION_012 },
         MigrationDef { version: 13, sql: MIGRATION_013 },
         MigrationDef { version: 14, sql: MIGRATION_014 },
+        MigrationDef { version: 15, sql: MIGRATION_015 },
     ]);
 
     let migrations = vec![
@@ -137,6 +138,12 @@ pub fn run() {
             sql: MIGRATION_014,
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 15,
+            description: "prep shows/episodes for TVDB->TMDB remap",
+            sql: MIGRATION_015,
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
@@ -172,6 +179,11 @@ pub fn run() {
             commands::shows::unarchive_show,
             commands::shows::update_show_rating,
             commands::shows::reorder_show_in_tier,
+            commands::shows::get_unmigrated_shows,
+            commands::shows::resolve_unmigrated_show,
+            commands::shows::delete_unmigrated_show,
+            commands::shows::search_tmdb_tv,
+            commands::shows::dev_force_rerun_migration,
             // Episode commands
             commands::episodes::sync_show_episodes,
             commands::episodes::sync_all_shows,
@@ -325,6 +337,12 @@ pub fn run() {
                     }
                 })
                 .build(app)?;
+
+            // Run TVDB -> TMDB live remap (no-op once settings flag is set).
+            let app_handle_migration = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                db::tvdb_remap::run_migration_if_needed(app_handle_migration).await;
+            });
 
             // Start Plex scrobbler if enabled
             let app_handle = app.handle().clone();

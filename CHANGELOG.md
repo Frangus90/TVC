@@ -2,6 +2,20 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.11.0] - Unreleased
+
+### Metadata Provider
+
+- **TMDB-only metadata**: TV shows now use TMDB as the single source of truth, replacing the previous TVDB integration. All show details, episodes, cast, trailers, and search results come from one provider, and the Open-in-Browser action on a show points to themoviedb.org
+- **Automatic library migration**: Existing libraries are auto-mapped on first launch via TMDB's external-id lookup — show IDs, episode IDs, watched/scheduled state, ratings, tier placement, cast/crew records, title mappings, and Plex scrobble history are all rewritten in place with a progress modal, and old TVDB-format backups are remapped during restore
+- **Quarantine resolver for unmapped shows**: Shows that TMDB can't auto-resolve are flagged in Data Management with a dedicated resolver where you can search TMDB manually to finish the mapping or delete the entry — affected shows surface a clear CTA in the show detail view instead of silently failing sync/trailer/cast actions
+- **English-first metadata with original-language fallback**: Show titles, overviews, and episode names now request `en-US` from TMDB, falling back to the show's original language (e.g., Japanese for anime) only when an English translation isn't available — gives consistent English-by-default output without leaving anime/foreign shows with empty fields
+
+### Migration Notes
+
+- **Season 0 specials may show as unwatched**: TMDB catalogs behind-the-scenes content, trailers, and recaps (Season 0 entries) more sparingly than TVDB. After migration, watched/scheduled state on these aux entries may be lost. Main-series progress (Season 1 onward) is preserved 1:1
+- **Already-migrated libraries with non-English titles**: If your library was migrated on a build before the en-US fix landed, anime / regional shows may still display their original-language titles. Open Data Management and click **Sync All** once — it refetches every show with the new language preference. New first-time migrations and v1.0 backup restores get English titles automatically
+
 ## [0.10.7] - 07.05.2026
 
 ### Sonarr Import

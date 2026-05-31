@@ -15,14 +15,11 @@ export interface CastMember {
 export interface ShowDetail {
   id: number;
   name: string;
-  slug: string | null;
   status: string | null;
   poster_url: string | null;
   first_aired: string | null;
   network: string | null;
   overview: string | null;
-  airs_time: string | null;
-  airs_days: string | null;
   runtime: number | null;
   added_at: string | null;
   last_synced: string | null;
@@ -32,6 +29,7 @@ export interface ShowDetail {
   rating: number | null;
   tier_id: number | null;
   tier_only: boolean;
+  unmigrated: boolean;
 }
 
 // Use shared database utility
@@ -82,14 +80,23 @@ export async function openShowDetail(showId: number): Promise<void> {
   try {
     // Get show details from database
     const database = await getDb();
-    const rows = await database.select<(Omit<ShowDetail, "tier_only"> & { tier_only: number })[]>(
-      `SELECT id, name, slug, status, poster_url, first_aired, network, overview,
-       airs_time, airs_days, runtime, added_at, last_synced, color, notes, tags, rating,
-       tier_id, tier_only
+    const rows = await database.select<
+      (Omit<ShowDetail, "tier_only" | "unmigrated"> & {
+        tier_only: number;
+        unmigrated: number;
+      })[]
+    >(
+      `SELECT id, name, status, poster_url, first_aired, network, overview,
+       runtime, added_at, last_synced, color, notes, tags, rating,
+       tier_id, tier_only, COALESCE(unmigrated, 0) as unmigrated
        FROM shows WHERE id = $1`,
       [showId]
     );
-    const shows = rows.map((r) => ({ ...r, tier_only: r.tier_only === 1 }));
+    const shows = rows.map((r) => ({
+      ...r,
+      tier_only: r.tier_only === 1,
+      unmigrated: r.unmigrated === 1,
+    }));
 
     if (shows.length === 0) {
       error = "Show not found";

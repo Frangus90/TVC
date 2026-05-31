@@ -1,6 +1,7 @@
 // Database operations module
 pub mod connection;
 pub mod migration_repair;
+pub mod tvdb_remap;
 
 /// Get the database filename based on build mode.
 /// - Debug (dev): tvc_dev.db

@@ -195,17 +195,17 @@
       }));
     } else {
       const results = await invoke<Array<{
-        tvdb_id: string | null;
-        name: string;
+        tmdb_id: number | null;
+        name: string | null;
         image_url: string | null;
-        year: string | null;
+        year: number | null;
       }>>("search_shows", { query: name });
 
       return results.slice(0, 5).map(r => ({
-        id: parseInt(r.tvdb_id ?? "0", 10),
-        title: r.name,
+        id: r.tmdb_id ?? 0,
+        title: r.name ?? "",
         poster_url: r.image_url,
-        year: r.year,
+        year: r.year != null ? String(r.year) : null,
       }));
     }
   }
@@ -546,7 +546,7 @@
             ? 'border-accent bg-accent/10 text-accent font-medium'
             : 'border-border text-text-muted hover:text-text hover:bg-surface-hover'}"
       >
-        TV Shows (TVDB)
+        TV Shows (TMDB)
       </button>
     </div>
 
@@ -582,7 +582,7 @@
 
       {#if parsedItems.length > 0 && isSearching}
         <span class="text-xs text-text-muted">
-          Found {parsedItems.length} items, searching {contentType === "movies" ? "TMDB" : "TVDB"}...
+          Found {parsedItems.length} items, searching TMDB...
         </span>
       {/if}
     </div>

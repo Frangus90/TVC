@@ -1,6 +1,11 @@
 <script lang="ts">
   import { fade, scale } from "svelte/transition";
-  import { X, Database, Copy, RefreshCw, AlertTriangle, Check, CloudDownload, Download, Upload, ChevronDown } from "lucide-svelte";
+  import { X, Database, Copy, RefreshCw, AlertTriangle, Check, CloudDownload, Download, Upload, ChevronDown, HelpCircle } from "lucide-svelte";
+  import UnmigratedShowsResolver from "./UnmigratedShowsResolver.svelte";
+  import {
+    getUnmigratedShows,
+    loadUnmigratedShows,
+  } from "../stores/migration.svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { save, open } from "@tauri-apps/plugin-dialog";
   import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
@@ -25,8 +30,25 @@
   } from "../stores/dataManagement.svelte";
   import { openConfirmDialog } from "../stores/confirmDialog.svelte";
   import { simulateDummyUpdate } from "../stores/updates.svelte";
-  import { refreshCalendar, type TrackedShow, type Episode } from "../stores/shows.svelte";
-  import { refreshMoviesCalendar, type TrackedMovie } from "../stores/movies.svelte";
+  import {
+    refreshCalendar,
+    loadTrackedShows,
+    loadArchivedShows,
+    type TrackedShow,
+    type Episode,
+  } from "../stores/shows.svelte";
+  import {
+    refreshMoviesCalendar,
+    loadTrackedMovies,
+    loadArchivedMovies,
+    type TrackedMovie,
+  } from "../stores/movies.svelte";
+  import {
+    isShowDetailOpen,
+    getCurrentShow,
+    openShowDetail,
+  } from "../stores/showDetail.svelte";
+  import { loadTierListShows, loadTierListMovies } from "../stores/tiers.svelte";
 
   let cleanupMessage = $state<string | null>(null);
   let dummyUpdateVersion = $state("0.8.0");
@@ -47,6 +69,30 @@
   let importing = $state(false);
   let orphanedExpanded = $state(false);
   let unairedExpanded = $state(false);
+  let resolverOpen = $state(false);
+  let devFakeQuarantineCount = $state(3);
+  let devMigrationRunning = $state(false);
+  let devMigrationError = $state<string | null>(null);
+
+  async function handleDevForceRerunMigration() {
+    devMigrationRunning = true;
+    devMigrationError = null;
+    try {
+      await invoke<number>("dev_force_rerun_migration", {
+        fakeQuarantineCount: devFakeQuarantineCount,
+      });
+    } catch (e) {
+      devMigrationError = e instanceof Error ? e.message : String(e);
+    } finally {
+      devMigrationRunning = false;
+    }
+  }
+
+  $effect(() => {
+    if (isModalOpen()) {
+      loadUnmigratedShows();
+    }
+  });
 
   interface BackupData {
     version: string;
@@ -141,11 +187,34 @@
         invoke<number>("sync_all_movies"),
       ]);
 
-      await Promise.all([refreshCalendar(), refreshMoviesCalendar()]);
+      // Reload the cached frontend stores so refreshed names/posters/overviews
+      // surface in the sidebar, calendar, and tier list without a restart. The
+      // sync mutated shows/movies/episodes rows in place; without these reloads
+      // the UI keeps showing the pre-sync (e.g. Japanese) titles.
+      await Promise.all([
+        loadTrackedShows(),
+        loadArchivedShows(),
+        loadTrackedMovies(),
+        loadArchivedMovies(),
+        loadTierListShows(),
+        loadTierListMovies(),
+        refreshCalendar(),
+        refreshMoviesCalendar(),
+      ]);
+
+      // If the show detail modal is open, re-fetch it so the modal contents
+      // (title, overview, episode names) update too. Guard against the user
+      // closing it during the awaits above.
+      if (isShowDetailOpen()) {
+        const current = getCurrentShow();
+        if (current) {
+          await openShowDetail(current.id);
+        }
+      }
 
       const parts: string[] = [];
       if (showsSynced > 0) {
-        parts.push(`${showsSynced} show${showsSynced !== 1 ? "s" : ""} from TVDB`);
+        parts.push(`${showsSynced} show${showsSynced !== 1 ? "s" : ""} from TMDB`);
       }
       if (moviesSynced > 0) {
         parts.push(`${moviesSynced} movie${moviesSynced !== 1 ? "s" : ""} from TMDB`);
@@ -238,6 +307,7 @@
   {@const duplicates = getDuplicates()}
   {@const orphanedEpisodesList = getOrphanedEpisodes()}
   {@const unairedEpisodesList = getUnairedEpisodes()}
+  {@const unmappedCount = getUnmigratedShows().length}
 
   <!-- Backdrop -->
   <button
@@ -339,6 +409,27 @@
             </div>
           </div>
 
+          {#if unmappedCount > 0}
+            <div class="mt-6 p-4 bg-accent/10 border border-accent/30 rounded-lg">
+              <div class="flex items-start gap-3">
+                <HelpCircle class="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
+                <div class="flex-1">
+                  <p class="text-sm text-text">
+                    {unmappedCount} show{unmappedCount !== 1 ? "s" : ""} couldn't be matched to TMDB
+                    automatically and need manual resolution.
+                  </p>
+                  <button
+                    type="button"
+                    onclick={() => (resolverOpen = true)}
+                    class="text-sm text-accent hover:underline mt-1"
+                  >
+                    Resolve unmapped shows
+                  </button>
+                </div>
+              </div>
+            </div>
+          {/if}
+
           {#if stats.orphaned_episodes > 0 || stats.unaired_unscheduled_episodes > 0}
             <div class="mt-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
               <div class="flex items-start gap-3">
@@ -439,6 +530,48 @@
                 >
                   <CloudDownload class="w-4 h-4" />
                   Simulate Update
+                </button>
+              </div>
+            </div>
+
+            <div class="mt-6 p-4 bg-background rounded-lg border border-border border-dashed">
+              <h3 class="text-sm font-medium text-text mb-3">Development: Force TVDB&rarr;TMDB Migration</h3>
+              <p class="text-xs text-text-muted mb-4">
+                Resets every migrated show back to <code>unmigrated=1</code> and seeds N
+                synthetic shows with negative legacy ids (so TMDB <code>/find</code> returns
+                no match and they land in the quarantine bucket). Re-spawns the migration
+                runner so the progress modal and resolver UI can be exercised on demand.
+              </p>
+              <div class="space-y-3">
+                <div>
+                  <label for="dev-fake-quarantine" class="block text-xs font-medium text-text-muted mb-1">
+                    Fake quarantine rows
+                  </label>
+                  <input
+                    id="dev-fake-quarantine"
+                    type="number"
+                    min="0"
+                    max="50"
+                    bind:value={devFakeQuarantineCount}
+                    class="w-full px-3 py-2 text-sm rounded border border-border bg-surface text-text outline-none focus:ring-2 focus:ring-accent"
+                  />
+                </div>
+                {#if devMigrationError}
+                  <p class="text-xs text-red-400">{devMigrationError}</p>
+                {/if}
+                <button
+                  type="button"
+                  disabled={devMigrationRunning}
+                  onclick={handleDevForceRerunMigration}
+                  class="w-full px-3 py-2 text-sm bg-accent/20 hover:bg-accent/30 text-accent rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {#if devMigrationRunning}
+                    <RefreshCw class="w-4 h-4 animate-spin" />
+                    Running...
+                  {:else}
+                    <RefreshCw class="w-4 h-4" />
+                    Force Re-run Migration
+                  {/if}
                 </button>
               </div>
             </div>
@@ -649,7 +782,7 @@
                   <CloudDownload class="w-5 h-5 text-accent" />
                   <div>
                     <h3 class="font-medium">Sync All</h3>
-                    <p class="text-sm text-text-muted">Refresh all show data from TVDB and movie data from TMDB</p>
+                    <p class="text-sm text-text-muted">Refresh all show and movie data from TMDB</p>
                   </div>
                 </div>
                 <button
@@ -696,4 +829,6 @@
       </div>
     {/if}
   </div>
+
+  <UnmigratedShowsResolver open={resolverOpen} onClose={() => (resolverOpen = false)} />
 {/if}

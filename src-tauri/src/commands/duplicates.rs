@@ -25,8 +25,8 @@ pub struct MergeResult {
     pub deleted_show_id: i64,
 }
 
-/// Find potential duplicate shows based on name similarity
-/// Note: shows.id IS the TVDB ID (primary key), so same-TVDB-ID duplicates are impossible
+/// Find potential duplicate shows based on name similarity.
+/// shows.id is the TMDB id (primary key), so same-id duplicates are impossible.
 #[tauri::command]
 pub async fn find_duplicates(app: AppHandle) -> Result<Vec<DuplicatePair>, String> {
     let pool = connection::get_pool(&app).await

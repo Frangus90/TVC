@@ -8,7 +8,6 @@ use crate::arr::{
 };
 use crate::db::connection;
 use crate::tmdb;
-use crate::tvdb;
 
 // ============================================================================
 // Server Management Commands
@@ -192,8 +191,14 @@ pub async fn get_sonarr_library(
     let items: Vec<LibraryItem> = series
         .into_iter()
         .map(|s| {
-            let tvdb_id = s.tvdb_id;
             let poster_url = s.poster_url();
+            // already_tracked check uses TMDB id when Sonarr provides it.
+            // When tmdbId is missing we leave already_tracked=false; import_from_sonarr
+            // will resolve the TVDB id via TMDB /find and check again at that point.
+            let already_tracked = s
+                .tmdb_id
+                .map(|id| tracked_ids.contains(&id))
+                .unwrap_or(false);
             LibraryItem {
                 arr_id: s.id,
                 title: s.title,
@@ -201,9 +206,9 @@ pub async fn get_sonarr_library(
                 poster_url,
                 status: s.status,
                 monitored: s.monitored,
-                tvdb_id,
-                tmdb_id: None,
-                already_tracked: tvdb_id.map(|id| tracked_ids.contains(&id)).unwrap_or(false),
+                tvdb_id: s.tvdb_id,
+                tmdb_id: s.tmdb_id,
+                already_tracked,
             }
         })
         .collect();
@@ -305,22 +310,43 @@ pub async fn import_from_sonarr(
     };
 
     for item in request.items {
-        // Skip items without TVDB ID
-        let tvdb_id = match item.tvdb_id {
+        // Resolve a TMDB id for this item. Prefer Sonarr's own tmdbId; fall
+        // back to TMDB's /find?external_source=tvdb_id bridge when missing.
+        let tmdb_id = match item.tmdb_id {
             Some(id) => id,
             None => {
-                result.skipped += 1;
-                result.errors.push(format!(
-                    "Skipped arr_id {}: No TVDB ID available",
-                    item.arr_id
-                ));
-                continue;
+                let Some(tvdb_id) = item.tvdb_id else {
+                    result.skipped += 1;
+                    result.errors.push(format!(
+                        "Skipped arr_id {}: No TVDB or TMDB ID available",
+                        item.arr_id
+                    ));
+                    continue;
+                };
+                match tmdb::find_tv_by_tvdb_id(tvdb_id).await {
+                    Ok(Some(id)) => id,
+                    Ok(None) => {
+                        result.skipped += 1;
+                        result.errors.push(format!(
+                            "Skipped arr_id {}: No TMDB match for TVDB id {}",
+                            item.arr_id, tvdb_id
+                        ));
+                        continue;
+                    }
+                    Err(e) => {
+                        result.failed += 1;
+                        result.errors.push(format!(
+                            "TMDB /find failed for TVDB id {}: {}",
+                            tvdb_id, e
+                        ));
+                        continue;
+                    }
+                }
             }
         };
 
-        // Check if already tracked
         let exists: Option<i64> = sqlx::query_scalar("SELECT id FROM shows WHERE id = ?")
-            .bind(tvdb_id)
+            .bind(tmdb_id)
             .fetch_optional(&pool)
             .await
             .map_err(|e| format!("Database error: {}", e))?;
@@ -330,17 +356,15 @@ pub async fn import_from_sonarr(
             continue;
         }
 
-        // Fetch show details from TVDB and add to database
-        match add_show_from_tvdb(&app, tvdb_id).await {
+        match add_show_from_tmdb(&app, tmdb_id).await {
             Ok(_) => {
-                // Record the import
                 let _ = sqlx::query(
                     r#"
                     INSERT INTO sonarr_imports (show_id, sonarr_series_id, arr_server_id, monitored)
                     VALUES (?, ?, ?, 1)
                     "#,
                 )
-                .bind(tvdb_id)
+                .bind(tmdb_id)
                 .bind(item.arr_id)
                 .bind(request.server_id)
                 .execute(&pool)
@@ -350,7 +374,7 @@ pub async fn import_from_sonarr(
             }
             Err(e) => {
                 result.failed += 1;
-                result.errors.push(format!("Failed to import TVDB {}: {}", tvdb_id, e));
+                result.errors.push(format!("Failed to import TMDB {}: {}", tmdb_id, e));
             }
         }
     }
@@ -446,38 +470,31 @@ pub async fn import_from_radarr(
 // Helper Functions
 // ============================================================================
 
-/// Add a show from TVDB (simplified version of shows::add_show)
-async fn add_show_from_tvdb(app: &AppHandle, tvdb_id: i64) -> Result<(), String> {
+/// Add a show by TMDB id (mirrors `shows::add_show`, simplified for arr import).
+async fn add_show_from_tmdb(app: &AppHandle, tmdb_id: i64) -> Result<(), String> {
     let pool = connection::get_pool(app)
         .await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    // Fetch show details from TVDB
-    let show = tvdb::get_series_extended(tvdb_id)
+    let show = tmdb::get_tv_details(tmdb_id)
         .await
-        .map_err(|e| format!("Failed to fetch show from TVDB: {}", e))?;
-
-    let airs_days_json = show.airs_days
-        .as_ref()
-        .and_then(|days| serde_json::to_string(days).ok());
+        .map_err(|e| format!("Failed to fetch show from TMDB: {}", e))?;
 
     sqlx::query(
         r#"
         INSERT OR REPLACE INTO shows
-        (id, name, slug, status, poster_url, first_aired, overview, airs_time, airs_days, runtime, added_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        (id, name, status, poster_url, first_aired, overview, network, runtime, added_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
         "#,
     )
     .bind(show.id)
     .bind(&show.name)
-    .bind(show.slug.as_ref())
-    .bind(show.status.as_ref().and_then(|s| s.name.as_ref()))
-    .bind(show.image.as_ref())
-    .bind(show.first_aired.as_ref())
+    .bind(show.status.as_ref())
+    .bind(show.poster_url())
+    .bind(show.first_air_date.as_ref())
     .bind(show.overview.as_ref())
-    .bind(show.airs_time.as_ref())
-    .bind(airs_days_json.as_deref())
-    .bind(show.average_runtime)
+    .bind(show.network_name())
+    .bind(show.runtime())
     .execute(&pool)
     .await
     .map_err(|e| format!("Failed to add show: {}", e))?;

@@ -16,19 +16,16 @@ export interface TrackedShow {
   rank_order: number | null;
   tier_id: number | null;
   tier_only: boolean;
+  unmigrated: boolean;
 }
 
 export interface SearchResult {
-  tvdb_id: string | null;
-  id: string | null;
+  tmdb_id: number | null;
   name: string | null;
-  slug: string | null;
   image_url: string | null;
-  status: string | null;
-  first_air_time: string | null;
+  first_air_date: string | null;
   overview: string | null;
-  network: string | null;
-  year: string | null;
+  year: number | null;
 }
 
 export interface Episode {
@@ -201,9 +198,9 @@ export function setSearchQuery(query: string) {
 }
 
 /**
- * Search for TV shows using the TVDB API.
+ * Search for TV shows using TMDB.
  * Validates input, performs search, and sorts results by relevance.
- * 
+ *
  * @param query - The search query string (will be validated)
  */
 export async function searchShows(query: string): Promise<void> {
@@ -253,10 +250,17 @@ export async function loadTrackedShows(): Promise<void> {
     // Fallback to database if backend command fails
     try {
       const database = await getDb();
-      const rows = await database.select<TrackedShow[]>(
-        "SELECT id, name, poster_url, status, color, notes, tags FROM shows ORDER BY name"
+      const rows = await database.select<(Omit<TrackedShow, "tier_only" | "unmigrated"> & {
+        tier_only: number;
+        unmigrated: number;
+      })[]>(
+        "SELECT id, name, poster_url, status, color, notes, tags, rating, rank_order, tier_id, COALESCE(tier_only, 0) as tier_only, COALESCE(unmigrated, 0) as unmigrated FROM shows ORDER BY name"
       );
-      trackedShows = rows;
+      trackedShows = rows.map((r) => ({
+        ...r,
+        tier_only: r.tier_only === 1,
+        unmigrated: r.unmigrated === 1,
+      }));
     } catch (dbError) {
       logger.error("Database fallback also failed", dbError);
     }
@@ -266,7 +270,7 @@ export async function loadTrackedShows(): Promise<void> {
 }
 
 export async function addShow(show: SearchResult): Promise<void> {
-  const showId = parseInt(show.tvdb_id || show.id || "0");
+  const showId = show.tmdb_id ?? 0;
   if (!showId) return;
 
   try {

@@ -127,14 +127,13 @@
     await openShowDetail(show.id);
   }
 
-  async function handleOpenTVDB() {
+  async function handleOpenTMDB() {
     const show = getCurrentShow();
-    if (!show) return;
+    if (!show || show.unmigrated) return;
 
-    // Validate URL before opening - only allow trusted domains
-    const url = `https://thetvdb.com/series/${show.slug || show.id}`;
-    if (!url.startsWith("https://thetvdb.com")) {
-      logger.error("Invalid TVDB URL", { url });
+    const url = `https://www.themoviedb.org/tv/${show.id}`;
+    if (!url.startsWith("https://www.themoviedb.org")) {
+      logger.error("Invalid TMDB URL", { url });
       return;
     }
     await openUrl(url);
@@ -303,7 +302,12 @@
 
       <!-- Actions -->
       <div class="flex items-center gap-2 p-4 border-b border-border">
-        {#if show.tier_only}
+        {#if show.unmigrated}
+          <div class="flex-1 flex items-center gap-3 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-sm text-yellow-300">
+            <span class="font-medium">Needs TMDB mapping.</span>
+            <span class="text-text-muted">Open Data Management → Resolve unmapped shows to finish migrating this entry.</span>
+          </div>
+        {:else if show.tier_only}
           <!-- Tier-only: promote button (only for API items, not manual) -->
           {#if show.id > 0}
             <button
@@ -318,11 +322,11 @@
           {#if show.id > 0}
             <button
               type="button"
-              onclick={handleOpenTVDB}
+              onclick={handleOpenTMDB}
               class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
             >
               <ExternalLink class="w-4 h-4" />
-              TVDB
+              TMDB
             </button>
           {/if}
         {:else}
@@ -345,11 +349,11 @@
           </button>
           <button
             type="button"
-            onclick={handleOpenTVDB}
+            onclick={handleOpenTMDB}
             class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
           >
             <ExternalLink class="w-4 h-4" />
-            TVDB
+            TMDB
           </button>
           <button
             type="button"
@@ -405,7 +409,7 @@
           <div class="p-6">
             {#if episodes.length === 0}
               <div class="text-center py-10 text-text-muted">
-                <p>No episodes found. Click "Refresh Show" to fetch data from TVDB.</p>
+                <p>No episodes found. Click "Refresh Show" to fetch data from TMDB.</p>
               </div>
             {:else}
               <div class="space-y-6">

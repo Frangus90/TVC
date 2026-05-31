@@ -27,6 +27,10 @@ fn get_cache() -> &'static TmdbCache {
 struct TmdbCache {
     search_cache: Cache<String, Vec<MovieSearchResult>>,
     movie_cache: Cache<i64, MovieDetails>,
+    tv_search_cache: Cache<String, Vec<TvShowSearchResult>>,
+    tv_details_cache: Cache<i64, TvShowDetails>,
+    tv_season_cache: Cache<(i64, i32), TvSeasonDetails>,
+    tv_credits_cache: Cache<i64, TvCredits>,
 }
 
 impl TmdbCache {
@@ -38,6 +42,22 @@ impl TmdbCache {
                 .build(),
             // Movie details: 24 hours TTL
             movie_cache: Cache::builder()
+                .time_to_live(Duration::from_secs(86400))
+                .build(),
+            // TV search: 1 hour TTL
+            tv_search_cache: Cache::builder()
+                .time_to_live(Duration::from_secs(3600))
+                .build(),
+            // TV details: 24 hours TTL
+            tv_details_cache: Cache::builder()
+                .time_to_live(Duration::from_secs(86400))
+                .build(),
+            // TV seasons: 6 hours TTL
+            tv_season_cache: Cache::builder()
+                .time_to_live(Duration::from_secs(21600))
+                .build(),
+            // TV credits: 24 hours TTL
+            tv_credits_cache: Cache::builder()
                 .time_to_live(Duration::from_secs(86400))
                 .build(),
         }
@@ -437,39 +457,6 @@ pub async fn get_movie_trailer(
     Ok(videos.iter().find(|v| v.site == "YouTube").cloned())
 }
 
-// TV Show search result from TMDB
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TvSearchResult {
-    pub id: i64,
-    pub name: String,
-    pub first_air_date: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct TvSearchResponse {
-    results: Vec<TvSearchResult>,
-}
-
-/// Search for a TV show on TMDB by name
-pub async fn search_tv_show(
-    query: &str,
-) -> Result<Vec<TvSearchResult>, Box<dyn std::error::Error + Send + Sync>> {
-    let client = create_http_client();
-    let response = client
-        .get(format!("{}/search/tv", API_BASE))
-        .query(&[("query", query)])
-        .bearer_auth(READ_ACCESS_TOKEN)
-        .send()
-        .await?;
-
-    if !response.status().is_success() {
-        return Err(format!("TMDB API error: {}", response.status()).into());
-    }
-
-    let search: TvSearchResponse = response.json().await?;
-    Ok(search.results)
-}
-
 /// Get videos/trailers for a TV show
 pub async fn get_tv_videos(
     id: i64,
@@ -508,4 +495,478 @@ pub async fn get_tv_trailer(
 
     // Fallback to any YouTube video (teaser, featurette, etc.)
     Ok(videos.iter().find(|v| v.site == "YouTube").cloned())
+}
+
+// ---------------------------------------------------------------------------
+// Full TV show support (search, details, seasons, episodes, credits, external)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TvShowSearchResult {
+    pub id: i64,
+    pub name: String,
+    pub original_name: Option<String>,
+    pub overview: Option<String>,
+    pub poster_path: Option<String>,
+    pub backdrop_path: Option<String>,
+    pub first_air_date: Option<String>,
+    pub vote_average: Option<f64>,
+    pub vote_count: Option<i64>,
+    pub popularity: Option<f64>,
+    pub origin_country: Option<Vec<String>>,
+    pub genre_ids: Option<Vec<i64>>,
+}
+
+impl TvShowSearchResult {
+    pub fn poster_url(&self) -> Option<String> {
+        self.poster_path
+            .as_ref()
+            .map(|p| format!("{}{}", IMAGE_BASE, p))
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TvNetwork {
+    pub id: Option<i64>,
+    pub name: Option<String>,
+    pub logo_path: Option<String>,
+    pub origin_country: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TvSeasonSummary {
+    pub id: i64,
+    pub season_number: i32,
+    pub episode_count: Option<i32>,
+    pub air_date: Option<String>,
+    pub name: Option<String>,
+    pub overview: Option<String>,
+    pub poster_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TvShowDetails {
+    pub id: i64,
+    pub name: String,
+    pub original_name: Option<String>,
+    pub tagline: Option<String>,
+    pub overview: Option<String>,
+    pub poster_path: Option<String>,
+    pub backdrop_path: Option<String>,
+    pub first_air_date: Option<String>,
+    pub last_air_date: Option<String>,
+    pub status: Option<String>,
+    pub vote_average: Option<f64>,
+    pub vote_count: Option<i64>,
+    pub episode_run_time: Option<Vec<i32>>,
+    pub number_of_seasons: Option<i32>,
+    pub number_of_episodes: Option<i32>,
+    pub genres: Option<Vec<Genre>>,
+    pub networks: Option<Vec<TvNetwork>>,
+    pub seasons: Option<Vec<TvSeasonSummary>>,
+    pub homepage: Option<String>,
+    pub in_production: Option<bool>,
+    pub original_language: Option<String>,
+    pub origin_country: Option<Vec<String>>,
+}
+
+impl TvShowDetails {
+    pub fn poster_url(&self) -> Option<String> {
+        self.poster_path
+            .as_ref()
+            .map(|p| format!("{}{}", IMAGE_BASE, p))
+    }
+
+    /// Best-effort runtime in minutes (TMDB returns an array; take the first value).
+    pub fn runtime(&self) -> Option<i32> {
+        self.episode_run_time
+            .as_ref()
+            .and_then(|v| v.iter().copied().find(|r| *r > 0))
+    }
+
+    /// Primary network name (first entry, if any).
+    pub fn network_name(&self) -> Option<String> {
+        self.networks
+            .as_ref()
+            .and_then(|n| n.first())
+            .and_then(|n| n.name.clone())
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TvEpisode {
+    pub id: i64,
+    pub name: Option<String>,
+    pub overview: Option<String>,
+    pub air_date: Option<String>,
+    pub episode_number: i32,
+    pub season_number: i32,
+    pub runtime: Option<i32>,
+    pub still_path: Option<String>,
+    pub vote_average: Option<f64>,
+    pub vote_count: Option<i64>,
+}
+
+impl TvEpisode {
+    pub fn image_url(&self) -> Option<String> {
+        self.still_path
+            .as_ref()
+            .map(|p| format!("{}{}", IMAGE_BASE, p))
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TvSeasonDetails {
+    pub id: i64,
+    pub season_number: i32,
+    pub name: Option<String>,
+    pub overview: Option<String>,
+    pub air_date: Option<String>,
+    pub poster_path: Option<String>,
+    #[serde(default)]
+    pub episodes: Vec<TvEpisode>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TvCastMember {
+    pub id: i64,
+    pub name: String,
+    pub character: Option<String>,
+    pub profile_path: Option<String>,
+    pub order: Option<i32>,
+}
+
+impl TvCastMember {
+    pub fn image_url(&self) -> Option<String> {
+        self.profile_path
+            .as_ref()
+            .map(|p| format!("{}{}", IMAGE_BASE, p))
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TvCrewMember {
+    pub id: i64,
+    pub name: String,
+    pub job: Option<String>,
+    pub department: Option<String>,
+    pub profile_path: Option<String>,
+}
+
+impl TvCrewMember {
+    pub fn image_url(&self) -> Option<String> {
+        self.profile_path
+            .as_ref()
+            .map(|p| format!("{}{}", IMAGE_BASE, p))
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TvCredits {
+    pub id: i64,
+    #[serde(default)]
+    pub cast: Vec<TvCastMember>,
+    #[serde(default)]
+    pub crew: Vec<TvCrewMember>,
+}
+
+/// Response from `GET /find/{external_id}`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExternalIdFindResponse {
+    #[serde(default)]
+    pub movie_results: Vec<MovieSearchResult>,
+    #[serde(default)]
+    pub tv_results: Vec<TvShowSearchResult>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TvShowSearchResponse {
+    results: Vec<TvShowSearchResult>,
+}
+
+/// Preferred display language for TMDB metadata. Anything missing in this
+/// language falls back to the show's `original_language`.
+const PRIMARY_LANGUAGE: &str = "en-US";
+
+fn is_blank_opt(s: &Option<String>) -> bool {
+    s.as_ref().map_or(true, |v| v.trim().is_empty())
+}
+
+/// Search for TV shows by title (cached).
+pub async fn search_tv(
+    query: &str,
+) -> Result<Vec<TvShowSearchResult>, Box<dyn std::error::Error + Send + Sync>> {
+    let cache = get_cache();
+    if let Some(cached) = cache.tv_search_cache.get(query).await {
+        return Ok(cached);
+    }
+
+    let client = create_http_client();
+    let response = client
+        .get(format!("{}/search/tv", API_BASE))
+        .query(&[
+            ("query", query),
+            ("include_adult", "false"),
+            ("language", PRIMARY_LANGUAGE),
+        ])
+        .bearer_auth(READ_ACCESS_TOKEN)
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(format!("TMDB API error: {}", response.status()).into());
+    }
+
+    let search: TvShowSearchResponse = response.json().await?;
+    let results = search.results;
+
+    cache
+        .tv_search_cache
+        .insert(query.to_string(), results.clone())
+        .await;
+
+    Ok(results)
+}
+
+async fn fetch_tv_details_in(
+    id: i64,
+    language: &str,
+) -> Result<TvShowDetails, Box<dyn std::error::Error + Send + Sync>> {
+    let client = create_http_client();
+    let response = client
+        .get(format!("{}/tv/{}", API_BASE, id))
+        .bearer_auth(READ_ACCESS_TOKEN)
+        .query(&[("language", language)])
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(format!("TMDB API error: {}", response.status()).into());
+    }
+
+    Ok(response.json().await?)
+}
+
+/// Fetch full TV show details (cached, 24h). Tries `en-US` first and falls
+/// back to the show's `original_language` for any blank `name` / `overview`
+/// — so anime that only have Japanese metadata still render with the
+/// original title rather than empty fields.
+pub async fn get_tv_details(
+    id: i64,
+) -> Result<TvShowDetails, Box<dyn std::error::Error + Send + Sync>> {
+    let cache = get_cache();
+    if let Some(cached) = cache.tv_details_cache.get(&id).await {
+        return Ok(cached);
+    }
+
+    let mut details = fetch_tv_details_in(id, PRIMARY_LANGUAGE).await?;
+
+    let needs_fallback = details.name.trim().is_empty() || is_blank_opt(&details.overview);
+    if needs_fallback {
+        if let Some(orig) = details.original_language.clone() {
+            if !orig.is_empty() && orig != "en" {
+                if let Ok(orig_details) = fetch_tv_details_in(id, &orig).await {
+                    if details.name.trim().is_empty() {
+                        details.name = orig_details.name;
+                    }
+                    if is_blank_opt(&details.overview) {
+                        details.overview = orig_details.overview;
+                    }
+                }
+            }
+        }
+    }
+
+    cache.tv_details_cache.insert(id, details.clone()).await;
+    Ok(details)
+}
+
+async fn fetch_tv_season_in(
+    tv_id: i64,
+    season_number: i32,
+    language: &str,
+) -> Result<TvSeasonDetails, Box<dyn std::error::Error + Send + Sync>> {
+    let client = create_http_client();
+    let response = client
+        .get(format!(
+            "{}/tv/{}/season/{}",
+            API_BASE, tv_id, season_number
+        ))
+        .bearer_auth(READ_ACCESS_TOKEN)
+        .query(&[("language", language)])
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(format!("TMDB API error: {}", response.status()).into());
+    }
+
+    Ok(response.json().await?)
+}
+
+/// Fetch a single season's full details, including episode list (cached, 6h).
+/// Like `get_tv_details`, falls back to the show's `original_language` for
+/// blank season/episode names and overviews.
+pub async fn get_tv_season(
+    tv_id: i64,
+    season_number: i32,
+) -> Result<TvSeasonDetails, Box<dyn std::error::Error + Send + Sync>> {
+    let cache = get_cache();
+    let key = (tv_id, season_number);
+    if let Some(cached) = cache.tv_season_cache.get(&key).await {
+        return Ok(cached);
+    }
+
+    let mut season = fetch_tv_season_in(tv_id, season_number, PRIMARY_LANGUAGE).await?;
+
+    let needs_fallback = is_blank_opt(&season.overview)
+        || season
+            .episodes
+            .iter()
+            .any(|e| is_blank_opt(&e.name) || is_blank_opt(&e.overview));
+
+    if needs_fallback {
+        // Look up the show's original language; this call is cached after the
+        // first hit so the overhead is one extra request per show, not per season.
+        if let Ok(details) = get_tv_details(tv_id).await {
+            if let Some(orig) = details.original_language {
+                if !orig.is_empty() && orig != "en" {
+                    if let Ok(orig_season) =
+                        fetch_tv_season_in(tv_id, season_number, &orig).await
+                    {
+                        if is_blank_opt(&season.overview) {
+                            season.overview = orig_season.overview;
+                        }
+                        for ep in &mut season.episodes {
+                            if !(is_blank_opt(&ep.name) || is_blank_opt(&ep.overview)) {
+                                continue;
+                            }
+                            if let Some(orig_ep) = orig_season.episodes.iter().find(|oe| {
+                                oe.season_number == ep.season_number
+                                    && oe.episode_number == ep.episode_number
+                            }) {
+                                if is_blank_opt(&ep.name) {
+                                    ep.name = orig_ep.name.clone();
+                                }
+                                if is_blank_opt(&ep.overview) {
+                                    ep.overview = orig_ep.overview.clone();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    cache.tv_season_cache.insert(key, season.clone()).await;
+    Ok(season)
+}
+
+/// Fan-out all seasons (including season 0 / specials) and return a flat,
+/// sorted list of episodes. Failures on individual seasons are skipped so a
+/// single 404 doesn't blow up the whole fetch.
+pub async fn get_tv_episodes(
+    tv_id: i64,
+) -> Result<Vec<TvEpisode>, Box<dyn std::error::Error + Send + Sync>> {
+    let details = get_tv_details(tv_id).await?;
+    let seasons = details.seasons.unwrap_or_default();
+
+    let mut all_episodes: Vec<TvEpisode> = Vec::new();
+    for summary in seasons {
+        match get_tv_season(tv_id, summary.season_number).await {
+            Ok(season) => all_episodes.extend(season.episodes),
+            Err(e) => {
+                eprintln!(
+                    "tmdb: failed to fetch season {} of tv {}: {}",
+                    summary.season_number, tv_id, e
+                );
+            }
+        }
+    }
+
+    all_episodes.sort_by(|a, b| {
+        a.season_number
+            .cmp(&b.season_number)
+            .then(a.episode_number.cmp(&b.episode_number))
+    });
+
+    Ok(all_episodes)
+}
+
+/// Cast and crew for a TV show (cached, 24h).
+pub async fn get_tv_credits(
+    id: i64,
+) -> Result<TvCredits, Box<dyn std::error::Error + Send + Sync>> {
+    let cache = get_cache();
+    if let Some(cached) = cache.tv_credits_cache.get(&id).await {
+        return Ok(cached);
+    }
+
+    let client = create_http_client();
+    let response = client
+        .get(format!("{}/tv/{}/credits", API_BASE, id))
+        .bearer_auth(READ_ACCESS_TOKEN)
+        .query(&[("language", PRIMARY_LANGUAGE)])
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(format!("TMDB API error: {}", response.status()).into());
+    }
+
+    let credits: TvCredits = response.json().await?;
+    cache.tv_credits_cache.insert(id, credits.clone()).await;
+    Ok(credits)
+}
+
+/// Generic external-id lookup, e.g. `find_by_external_id("tvdb_id", "12345")`.
+/// Not cached — used during one-shot migration so caching adds no value.
+pub async fn find_by_external_id(
+    source: &str,
+    external_id: &str,
+) -> Result<ExternalIdFindResponse, Box<dyn std::error::Error + Send + Sync>> {
+    let client = create_http_client();
+    let response = client
+        .get(format!("{}/find/{}", API_BASE, external_id))
+        .query(&[("external_source", source)])
+        .bearer_auth(READ_ACCESS_TOKEN)
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(format!("TMDB API error: {}", response.status()).into());
+    }
+
+    let found: ExternalIdFindResponse = response.json().await?;
+    Ok(found)
+}
+
+/// Convenience helper: look up the TMDB TV id for a known TVDB id. Returns
+/// `Ok(None)` when TMDB has no mapping (the most common quarantine case).
+pub async fn find_tv_by_tvdb_id(
+    tvdb_id: i64,
+) -> Result<Option<i64>, Box<dyn std::error::Error + Send + Sync>> {
+    let result = find_by_external_id("tvdb_id", &tvdb_id.to_string()).await?;
+    Ok(result.tv_results.into_iter().next().map(|r| r.id))
+}
+
+/// Invalidate all cache entries tied to a specific TV show id.
+pub async fn invalidate_tv_show_cache(id: i64) {
+    let cache = get_cache();
+    cache.tv_details_cache.invalidate(&id).await;
+    cache.tv_credits_cache.invalidate(&id).await;
+    // Best-effort season invalidation: drop the entire season cache. Seasons
+    // are small enough that a full clear is cheaper than tracking which season
+    // numbers a given show has cached.
+    cache.tv_season_cache.invalidate_all();
+}
+
+/// Clear every TV-related cache. Used before bulk resync operations.
+pub async fn clear_all_tv_caches() {
+    let cache = get_cache();
+    cache.tv_search_cache.invalidate_all();
+    cache.tv_details_cache.invalidate_all();
+    cache.tv_season_cache.invalidate_all();
+    cache.tv_credits_cache.invalidate_all();
 }

@@ -33,6 +33,8 @@
   import { isSettingsOpen } from "./lib/stores/settings.svelte";
   import { isTierSearchModalOpen } from "./lib/stores/tiers.svelte";
   import NotificationPopupContainer from "./lib/components/notifications/NotificationPopupContainer.svelte";
+  import MigrationProgress from "./lib/components/MigrationProgress.svelte";
+  import { setupMigrationListener } from "./lib/stores/migration.svelte";
   import { logger } from "./lib/utils/logger";
   import ErrorBoundary from "./lib/components/common/ErrorBoundary.svelte";
 
@@ -215,6 +217,7 @@
       logger.error("[TVC] Notification unread count load failed", err);
     });
     const unlistenNotifications = setupNotificationListener();
+    const unlistenMigration = setupMigrationListener();
 
     // Listen for Plex scrobble events to refresh calendar
     let unlistenScrobble: UnlistenFn | undefined;
@@ -240,6 +243,7 @@
       unsubDayChange();
       unlistenScrobble?.();
       unlistenNotifications();
+      unlistenMigration();
     };
   });
 
@@ -359,6 +363,7 @@
       <UnifiedSettingsComponent />
     {/if}
     <NotificationPopupContainer />
+    <MigrationProgress />
     <ToastContainer />
     <ConfirmDialog />
     <DragGhost />

@@ -115,7 +115,7 @@
   }
 
   function getShowId(show: SearchResult): number {
-    return parseInt(show.tvdb_id || show.id || "0");
+    return show.tmdb_id ?? 0;
   }
 
   async function handleAddShow(show: SearchResult) {
@@ -280,7 +280,7 @@
         <!-- Manual entry form -->
         <div class="p-6 space-y-4">
           <p class="text-sm text-text-muted">
-            Add a show or movie that isn't in TVDB/TMDB. These entries exist only in your tier list.
+            Add a show or movie that isn't in TMDB. These entries exist only in your tier list.
           </p>
 
           <div class="flex gap-2">
@@ -377,8 +377,8 @@
                 {/if}
                 <div class="flex-1 min-w-0">
                   <h3 class="font-semibold text-text truncate">{show.name || "Unknown"}</h3>
-                  {#if show.year || show.network}
-                    <p class="text-sm text-text-muted mt-0.5">{[show.year, show.network].filter(Boolean).join(" - ")}</p>
+                  {#if show.year}
+                    <p class="text-sm text-text-muted mt-0.5">{show.year}</p>
                   {/if}
                   {#if show.overview}
                     <p class="text-sm text-text-muted mt-2 line-clamp-2">{show.overview}</p>

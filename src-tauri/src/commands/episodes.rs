@@ -1,7 +1,20 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row};
+use std::collections::HashMap;
 use tauri::AppHandle;
 use crate::db::connection;
+use crate::tmdb;
+
+/// User-controlled per-episode state. Preserved across re-syncs by keying on
+/// (season, episode) — TMDB episode IDs can change when the show is updated.
+#[derive(Debug, Clone, Default)]
+struct PreservedEpisodeState {
+    watched: bool,
+    watched_at: Option<String>,
+    scheduled_date: Option<String>,
+    rating: Option<f64>,
+    tags: Option<String>,
+}
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct Episode {
@@ -124,63 +137,47 @@ pub async fn get_episodes_for_range(
 
 #[tauri::command]
 pub async fn sync_show_episodes(app: AppHandle, show_id: i64) -> Result<(), String> {
-    // Clear cache first to force fresh data from TVDB
-    crate::tvdb::invalidate_show_cache(show_id).await;
+    crate::commands::ensure_show_is_mapped(&app, show_id).await?;
 
-    // Fetch show details from TVDB
-    let show_details = crate::tvdb::get_series_extended(show_id)
+    tmdb::invalidate_tv_show_cache(show_id).await;
+
+    let show_details = tmdb::get_tv_details(show_id)
         .await
         .map_err(|e| format!("Failed to fetch show details: {}", e))?;
 
-    // Get episodes from TVDB
-    let episodes = crate::tvdb::get_series_episodes(show_id)
+    let episodes = tmdb::get_tv_episodes(show_id)
         .await
         .map_err(|e| format!("Failed to fetch episodes: {}", e))?;
 
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
+    let preserved = snapshot_episode_state(&pool, show_id).await?;
+
     let mut tx = pool.begin().await
         .map_err(|e| format!("Failed to begin transaction: {}", e))?;
 
-    // Update show metadata (preserves user data: color, notes, tags, rating)
-    let airs_days_json = show_details.airs_days
-        .as_ref()
-        .and_then(|days| serde_json::to_string(days).ok());
-
-    // Extract network name from originalNetwork
-    let network_name = show_details.original_network
-        .as_ref()
-        .and_then(|n| n.name.as_ref());
-
-    // Execute operations with explicit rollback on error
     if let Err(e) = sqlx::query(
         r#"
         UPDATE shows SET
             name = ?,
-            slug = ?,
             status = ?,
             poster_url = ?,
             first_aired = ?,
             network = ?,
             overview = ?,
-            airs_time = ?,
-            airs_days = ?,
             runtime = ?,
             last_synced = datetime('now')
         WHERE id = ?
         "#,
     )
     .bind(&show_details.name)
-    .bind(show_details.slug.as_ref())
-    .bind(show_details.status.as_ref().and_then(|s| s.name.as_ref()))
-    .bind(show_details.image.as_ref())
-    .bind(show_details.first_aired.as_ref())
-    .bind(network_name)
+    .bind(show_details.status.as_ref())
+    .bind(show_details.poster_url())
+    .bind(show_details.first_air_date.as_ref())
+    .bind(show_details.network_name())
     .bind(show_details.overview.as_ref())
-    .bind(show_details.airs_time.as_ref())
-    .bind(airs_days_json.as_deref())
-    .bind(show_details.average_runtime)
+    .bind(show_details.runtime())
     .bind(show_id)
     .execute(&mut *tx)
     .await
@@ -189,38 +186,46 @@ pub async fn sync_show_episodes(app: AppHandle, show_id: i64) -> Result<(), Stri
         return Err(format!("Failed to update show: {}", e));
     }
 
-    // Update episodes
-    for episode in episodes {
-        // Use INSERT ... ON CONFLICT to properly update existing episodes
-        // - New episodes: insert with scheduled_date = aired
-        // - Existing episodes: update metadata AND scheduled_date to new aired date
-        // - Preserves: watched, watched_at, rating, tags (user data)
+    // Drop existing episodes — TMDB episode IDs are not stable across re-syncs.
+    // change_history rows for the gone IDs are cascaded by FK; user state is
+    // restored below by (season, episode) lookup.
+    if let Err(e) = sqlx::query("DELETE FROM episodes WHERE show_id = ?")
+        .bind(show_id)
+        .execute(&mut *tx)
+        .await
+    {
+        let _ = tx.rollback().await;
+        return Err(format!("Failed to clear old episodes: {}", e));
+    }
+
+    for ep in episodes {
+        let state = preserved
+            .get(&(ep.season_number, ep.episode_number))
+            .cloned()
+            .unwrap_or_default();
+
         if let Err(e) = sqlx::query(
             r#"
             INSERT INTO episodes
-            (id, show_id, season_number, episode_number, name, overview, aired, runtime, image_url, scheduled_date)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET
-                season_number = excluded.season_number,
-                episode_number = excluded.episode_number,
-                name = excluded.name,
-                overview = excluded.overview,
-                aired = excluded.aired,
-                runtime = excluded.runtime,
-                image_url = excluded.image_url,
-                scheduled_date = excluded.aired
+            (id, show_id, season_number, episode_number, name, overview, aired,
+             runtime, image_url, scheduled_date, watched, watched_at, rating, tags)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
         )
-        .bind(episode.id)
+        .bind(ep.id)
         .bind(show_id)
-        .bind(episode.season_number)
-        .bind(episode.episode_number)
-        .bind(episode.name.as_ref())
-        .bind(episode.overview.as_ref())
-        .bind(episode.aired.as_ref())
-        .bind(episode.runtime)
-        .bind(episode.image.as_ref())
-        .bind(episode.aired.as_ref()) // scheduled_date = aired for new episodes
+        .bind(ep.season_number)
+        .bind(ep.episode_number)
+        .bind(ep.name.as_ref())
+        .bind(ep.overview.as_ref())
+        .bind(ep.air_date.as_ref())
+        .bind(ep.runtime)
+        .bind(ep.image_url())
+        .bind(state.scheduled_date.or_else(|| ep.air_date.clone()))
+        .bind(if state.watched { 1 } else { 0 })
+        .bind(state.watched_at)
+        .bind(state.rating)
+        .bind(state.tags)
         .execute(&mut *tx)
         .await
         {
@@ -235,30 +240,66 @@ pub async fn sync_show_episodes(app: AppHandle, show_id: i64) -> Result<(), Stri
     Ok(())
 }
 
-/// Helper function to sync a single show (takes reference to avoid cloning)
+async fn snapshot_episode_state(
+    pool: &sqlx::SqlitePool,
+    show_id: i64,
+) -> Result<HashMap<(i32, i32), PreservedEpisodeState>, String> {
+    let rows = sqlx::query(
+        r#"
+        SELECT season_number, episode_number, watched, watched_at,
+               scheduled_date, rating, tags
+        FROM episodes
+        WHERE show_id = ?
+        "#,
+    )
+    .bind(show_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| format!("Failed to snapshot episode state: {}", e))?;
+
+    let mut map = HashMap::new();
+    for row in rows {
+        let key = (
+            row.get::<i32, _>("season_number"),
+            row.get::<i32, _>("episode_number"),
+        );
+        map.insert(
+            key,
+            PreservedEpisodeState {
+                watched: row.get::<i32, _>("watched") == 1,
+                watched_at: row.get("watched_at"),
+                scheduled_date: row.get("scheduled_date"),
+                rating: row.get("rating"),
+                tags: row.get("tags"),
+            },
+        );
+    }
+    Ok(map)
+}
+
 async fn sync_show_episodes_ref(app: &AppHandle, show_id: i64) -> Result<(), String> {
     sync_show_episodes(app.clone(), show_id).await
 }
 
-/// Sync all tracked shows - fetches fresh data from TVDB for all shows
+/// Sync all tracked shows — refetches metadata + episodes from TMDB.
+/// Skips quarantined rows (they'd just error in the per-show call anyway).
 #[tauri::command]
 pub async fn sync_all_shows(app: AppHandle) -> Result<u32, String> {
-    // Clear all caches first
-    crate::tvdb::clear_all_caches().await;
+    tmdb::clear_all_tv_caches().await;
 
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    // Get all tracked show IDs
-    let show_ids: Vec<i64> = sqlx::query_scalar("SELECT id FROM shows")
-        .fetch_all(&pool)
-        .await
-        .map_err(|e| format!("Failed to get shows: {}", e))?;
+    let show_ids: Vec<i64> = sqlx::query_scalar(
+        "SELECT id FROM shows WHERE id > 0 AND unmigrated = 0",
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| format!("Failed to get shows: {}", e))?;
 
     let mut synced = 0u32;
     let mut errors: Vec<String> = Vec::new();
 
-    // Use reference to app to avoid cloning in loop
     for show_id in show_ids {
         match sync_show_episodes_ref(&app, show_id).await {
             Ok(_) => synced += 1,
@@ -268,9 +309,10 @@ pub async fn sync_all_shows(app: AppHandle) -> Result<u32, String> {
                 errors.push(error_msg);
             }
         }
+        // Gentle pace to stay well under TMDB's ~50 req/s ceiling.
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
     }
 
-    // Log errors if any occurred (for debugging - return value remains compatible)
     if !errors.is_empty() {
         eprintln!("[sync_all_shows] {} shows failed to sync: {:?}", errors.len(), errors);
     }

@@ -39,6 +39,7 @@ pub struct SonarrSeries {
     pub year: Option<i32>,
     pub path: Option<String>,
     pub tvdb_id: Option<i64>,
+    pub tmdb_id: Option<i64>,
     pub imdb_id: Option<String>,
     pub monitored: bool,
     pub runtime: Option<i32>,

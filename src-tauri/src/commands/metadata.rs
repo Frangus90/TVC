@@ -3,7 +3,6 @@ use sqlx::Row;
 use tauri::AppHandle;
 use crate::db::connection;
 use crate::tmdb;
-use crate::tvdb;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CastMemberData {
@@ -134,36 +133,41 @@ pub async fn fetch_movie_cast_crew(
     })
 }
 
-/// Fetch and store cast for a show from TVDB
+/// Fetch and store cast + key crew for a show from TMDB.
 #[tauri::command]
 pub async fn fetch_show_cast(
     app: AppHandle,
     show_id: i64,
 ) -> Result<Vec<CastMemberData>, String> {
+    crate::commands::ensure_show_is_mapped(&app, show_id).await?;
+
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    // Fetch characters from TVDB (show_id IS the TVDB ID)
-    let characters = tvdb::get_series_characters(show_id)
+    let credits = tmdb::get_tv_credits(show_id)
         .await
-        .map_err(|e| format!("Failed to fetch characters: {}", e))?;
+        .map_err(|e| format!("Failed to fetch credits: {}", e))?;
 
-    // Clear existing cast for this show
     sqlx::query(r#"DELETE FROM cast_members WHERE show_id = ?"#)
         .bind(show_id)
         .execute(&pool)
         .await
         .map_err(|e| format!("Failed to clear cast: {}", e))?;
 
-    // Insert cast (limit to top 20)
-    let cast_data: Vec<CastMemberData> = characters.iter().take(20).enumerate().map(|(idx, c)| {
+    sqlx::query(r#"DELETE FROM crew_members WHERE show_id = ?"#)
+        .bind(show_id)
+        .execute(&pool)
+        .await
+        .map_err(|e| format!("Failed to clear crew: {}", e))?;
+
+    let cast_data: Vec<CastMemberData> = credits.cast.iter().take(20).enumerate().map(|(idx, c)| {
         CastMemberData {
             id: 0,
-            person_id: c.people_id,
-            name: c.person_name.clone().unwrap_or_else(|| "Unknown".to_string()),
-            character_name: c.name.clone(),
-            image_url: c.image.clone(),
-            order_index: c.sort.unwrap_or(idx as i32),
+            person_id: Some(c.id),
+            name: c.name.clone(),
+            character_name: c.character.clone(),
+            image_url: c.image_url(),
+            order_index: c.order.unwrap_or(idx as i32),
         }
     }).collect();
 
@@ -181,6 +185,36 @@ pub async fn fetch_show_cast(
         .execute(&pool)
         .await
         .map_err(|e| format!("Failed to insert cast: {}", e))?;
+    }
+
+    let important_jobs = ["Creator", "Executive Producer", "Producer", "Writer", "Director", "Composer"];
+    let crew_data: Vec<CrewMemberData> = credits.crew.iter()
+        .filter(|c| c.job.as_ref().map(|j| important_jobs.iter().any(|ij| j.contains(ij))).unwrap_or(false))
+        .take(10)
+        .map(|c| CrewMemberData {
+            id: 0,
+            person_id: Some(c.id),
+            name: c.name.clone(),
+            job: c.job.clone(),
+            department: c.department.clone(),
+            image_url: c.image_url(),
+        })
+        .collect();
+
+    for crew in &crew_data {
+        sqlx::query(
+            r#"INSERT INTO crew_members (show_id, person_id, name, job, department, image_url)
+               VALUES (?, ?, ?, ?, ?, ?)"#
+        )
+        .bind(show_id)
+        .bind(crew.person_id)
+        .bind(&crew.name)
+        .bind(&crew.job)
+        .bind(&crew.department)
+        .bind(&crew.image_url)
+        .execute(&pool)
+        .await
+        .map_err(|e| format!("Failed to insert crew: {}", e))?;
     }
 
     Ok(cast_data)
@@ -293,34 +327,15 @@ pub async fn get_movie_trailer(
     }))
 }
 
-/// Get show trailer from TMDB (searches by show name since we use TVDB IDs)
+/// Get show trailer directly from TMDB — `show_id` is the TMDB id.
 #[tauri::command]
 pub async fn get_show_trailer(
     app: AppHandle,
     show_id: i64,
 ) -> Result<Option<TrailerData>, String> {
-    let pool = connection::get_pool(&app).await
-        .map_err(|e| format!("Database error: {}", e))?;
+    crate::commands::ensure_show_is_mapped(&app, show_id).await?;
 
-    // Get the show name from database
-    let show_name: String = sqlx::query(r#"SELECT name FROM shows WHERE id = ?"#)
-        .bind(show_id)
-        .fetch_one(&pool)
-        .await
-        .map_err(|e| format!("Show not found: {}", e))?
-        .get("name");
-
-    // Search TMDB for the show to get TMDB ID
-    let search_results = tmdb::search_tv_show(&show_name)
-        .await
-        .map_err(|e| format!("Failed to search TMDB: {}", e))?;
-
-    // Get the first result (best match)
-    let tmdb_show = search_results.first()
-        .ok_or_else(|| "Show not found on TMDB".to_string())?;
-
-    // Fetch trailer from TMDB
-    let trailer = tmdb::get_tv_trailer(tmdb_show.id)
+    let trailer = tmdb::get_tv_trailer(show_id)
         .await
         .map_err(|e| format!("Failed to fetch trailer: {}", e))?;
 
