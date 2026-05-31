@@ -2,7 +2,7 @@
 
 All notable changes to TVC will be documented in this file.
 
-## [0.11.0] - Unreleased
+## [0.11.0] - 31.05.2026
 
 ### Metadata Provider
 
