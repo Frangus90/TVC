@@ -2,6 +2,15 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.12.0] - 06.06.2026
+
+### Racing Calendar
+
+- **Session-level times for more series**: F2, F3, F1 Academy, Formula E, and IndyCar now surface individual sessions (practice, qualifying, sprint, race) instead of race-day-only entries, using the sportstimes/f1 motorsport calendar feeds as the new primary source
+- **Fallback ICS URL per series**: Each series can now define a secondary feed. If the primary fetch fails (network error or non-2xx), the app automatically retries against the fallback before giving up — applied across F2, F3, Formula E, IndyCar, WEC, NASCAR Cup, WRC, DTM, and Extreme E
+- **Corrected misrouted feeds**: IMSA, NASCAR Xfinity, NASCAR Truck, DTM, Supercars, Super GT, Extreme E, and WorldSBK were all pointing at the wrong shared Google Calendar IDs in the previous seed — each now resolves to its correct dedicated TooMuchRacing calendar, restoring race-day data that was previously missing or duplicated
+- **motorsportradar SUMMARY parsing**: Added support for the `Series - Event, Session` format used by motorsportradar.com feeds so WEC, NASCAR Cup, WRC, and DTM events split correctly into title + session name for the calendar and notifications
+
 ## [0.11.0] - 31.05.2026
 
 ### Metadata Provider
