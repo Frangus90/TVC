@@ -2,6 +2,14 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.13.0] - 07.06.2026
+
+### Sidebar
+
+- **Quick archive from the sidebar**: Each show and movie row now exposes a hover Archive button next to the existing Remove button — archiving no longer requires opening the detail view. Calendar entries for the archived item are cleared immediately, matching how the detail-page Archive already behaves
+- **Resizable sidebar**: The sidebar can be resized by dragging its right edge (VS Code style). Width is clamped between 200px and 500px (and capped at 50% of the window) and persists across app restarts. Collapsed mode keeps the fixed 64px width and hides the handle
+- **Long-title overflow fix**: Long show and movie titles now truncate cleanly instead of overlapping the row action buttons
+
 ## [0.12.0] - 06.06.2026
 
 ### Racing Calendar
