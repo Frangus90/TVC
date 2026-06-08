@@ -30,6 +30,7 @@ const MIGRATION_012: &str = include_str!("../migrations/012_add_racing.sql");
 const MIGRATION_013: &str = include_str!("../migrations/013_add_notifications.sql");
 const MIGRATION_014: &str = include_str!("../migrations/014_add_tiers.sql");
 const MIGRATION_015: &str = include_str!("../migrations/015_tvdb_to_tmdb.sql");
+const MIGRATION_016: &str = include_str!("../migrations/016_racing_session_feeds.sql");
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -51,6 +52,7 @@ pub fn run() {
         MigrationDef { version: 13, sql: MIGRATION_013 },
         MigrationDef { version: 14, sql: MIGRATION_014 },
         MigrationDef { version: 15, sql: MIGRATION_015 },
+        MigrationDef { version: 16, sql: MIGRATION_016 },
     ]);
 
     let migrations = vec![
@@ -142,6 +144,12 @@ pub fn run() {
             version: 15,
             description: "prep shows/episodes for TVDB->TMDB remap",
             sql: MIGRATION_015,
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 16,
+            description: "add racing fallback url and upgrade session feeds",
+            sql: MIGRATION_016,
             kind: MigrationKind::Up,
         },
     ];

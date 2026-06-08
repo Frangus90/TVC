@@ -108,6 +108,7 @@ pub fn parse_ics(ics_text: &str, series_slug: &str) -> Vec<RacingEvent> {
 /// - "🇦🇺 Australian GP: Race" → ("Australian GP", "Race")
 /// - "F1 Australian GP - Practice 1" → ("Australian GP", "Practice 1")
 /// - "[MotoGP] FP1 - #ThaiGP" → ("#ThaiGP", "FP1")
+/// - "WEC - Qatar 1812km, Free Practice 1*" → ("Qatar 1812km", "Free Practice 1")
 /// - "Coca-Cola 600" → ("Coca-Cola 600", None)
 fn parse_summary(summary: &str) -> (String, Option<String>) {
     // Strip emoji flags (country flags are two regional indicator chars)
@@ -119,6 +120,25 @@ fn parse_summary(summary: &str) -> (String, Option<String>) {
         let session = cleaned[idx + 2..].trim().to_string();
         if !session.is_empty() {
             return (title, Some(session));
+        }
+    }
+
+    // Try motorsportradar.com format: "Series - Event, Session"
+    // The series prefix is dropped; rfind on ", " keeps any embedded
+    // " - " or "(...)" inside the session intact (e.g. "Qualifying - 1").
+    // Trailing "*" marks unconfirmed schedules and is stripped.
+    if let Some(dash_idx) = cleaned.find(" - ") {
+        let after_dash = &cleaned[dash_idx + 3..];
+        if let Some(comma_idx) = after_dash.rfind(", ") {
+            let event = after_dash[..comma_idx].trim().to_string();
+            let session = after_dash[comma_idx + 2..]
+                .trim()
+                .trim_end_matches('*')
+                .trim()
+                .to_string();
+            if !event.is_empty() && !session.is_empty() {
+                return (event, Some(session));
+            }
         }
     }
 
@@ -399,6 +419,29 @@ mod tests {
         let (title, session) = parse_summary("Coca-Cola 600");
         assert_eq!(title, "Coca-Cola 600");
         assert_eq!(session, None);
+    }
+
+    #[test]
+    fn test_parse_summary_motorsportradar_format() {
+        let (title, session) = parse_summary("WEC - Qatar 1812km, Free Practice 1*");
+        assert_eq!(title, "Qatar 1812km");
+        assert_eq!(session, Some("Free Practice 1".to_string()));
+    }
+
+    #[test]
+    fn test_parse_summary_motorsportradar_embedded_dash_in_session() {
+        // Session can contain " - " (e.g. "Qualifying - 1"); rfind on ", "
+        // ensures we split at the right place
+        let (title, session) = parse_summary("Supercars - Sydney 500, Qualifying - 1");
+        assert_eq!(title, "Sydney 500");
+        assert_eq!(session, Some("Qualifying - 1".to_string()));
+    }
+
+    #[test]
+    fn test_parse_summary_motorsportradar_parens_in_session() {
+        let (title, session) = parse_summary("Super Formula - Suzuka 1, Qualifying (Race 1)");
+        assert_eq!(title, "Suzuka 1");
+        assert_eq!(session, Some("Qualifying (Race 1)".to_string()));
     }
 
     #[test]

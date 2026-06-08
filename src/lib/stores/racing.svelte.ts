@@ -7,6 +7,7 @@ export interface RacingSeries {
   name: string;
   category: string;
   ics_url: string;
+  fallback_ics_url: string | null;
   custom_ics_url: string | null;
   enabled: boolean;
   notify_enabled: boolean;

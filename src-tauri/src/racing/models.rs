@@ -7,6 +7,7 @@ pub struct RacingSeries {
     pub name: String,
     pub category: String,
     pub ics_url: String,
+    pub fallback_ics_url: Option<String>,
     pub custom_ics_url: Option<String>,
     pub enabled: bool,
     pub notify_enabled: bool,

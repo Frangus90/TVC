@@ -49,7 +49,7 @@ pub async fn update_config(pool: &Pool<Sqlite>, config: &RacingConfig) -> Result
 /// Get all racing series
 pub async fn get_all_series(pool: &Pool<Sqlite>) -> Result<Vec<RacingSeries>, String> {
     let rows = sqlx::query(
-        "SELECT id, slug, name, category, ics_url, custom_ics_url, enabled, notify_enabled, notify_minutes, color, custom_color FROM racing_series ORDER BY category, name",
+        "SELECT id, slug, name, category, ics_url, fallback_ics_url, custom_ics_url, enabled, notify_enabled, notify_minutes, color, custom_color FROM racing_series ORDER BY category, name",
     )
     .fetch_all(pool)
     .await
@@ -63,6 +63,7 @@ pub async fn get_all_series(pool: &Pool<Sqlite>) -> Result<Vec<RacingSeries>, St
             name: r.get("name"),
             category: r.get("category"),
             ics_url: r.get("ics_url"),
+            fallback_ics_url: r.get("fallback_ics_url"),
             custom_ics_url: r.get("custom_ics_url"),
             enabled: r.get::<i32, _>("enabled") == 1,
             notify_enabled: r.get::<i32, _>("notify_enabled") == 1,
@@ -214,22 +215,42 @@ pub async fn upsert_events(pool: &Pool<Sqlite>, events: &[RacingEvent]) -> Resul
     Ok(())
 }
 
-/// Refresh data for a single series: fetch ICS, parse, store
+/// Refresh data for a single series: fetch ICS, parse, store.
+///
+/// A user-set `custom_ics_url` overrides everything. Otherwise the primary
+/// `ics_url` is tried first and the `fallback_ics_url` is attempted only if
+/// the primary fetch fails (network error or non-2xx).
 pub async fn refresh_series(pool: &Pool<Sqlite>, series: &RacingSeries) -> Result<usize, String> {
-    let url = series
-        .custom_ics_url
-        .as_deref()
-        .unwrap_or(&series.ics_url);
+    let urls: Vec<&str> = if let Some(custom) = series.custom_ics_url.as_deref() {
+        vec![custom]
+    } else {
+        let mut v = vec![series.ics_url.as_str()];
+        if let Some(fb) = series.fallback_ics_url.as_deref() {
+            v.push(fb);
+        }
+        v
+    };
 
-    let ics_text = api::fetch_ics(url).await?;
-    let events = api::parse_ics(&ics_text, &series.slug);
-    let count = events.len();
-
-    // Clear old events and insert fresh
-    delete_events_for_series(pool, &series.slug).await?;
-    upsert_events(pool, &events).await?;
-
-    Ok(count)
+    let mut last_err = String::from("no ICS URL configured");
+    for url in &urls {
+        match api::fetch_ics(url).await {
+            Ok(ics_text) => {
+                let events = api::parse_ics(&ics_text, &series.slug);
+                let count = events.len();
+                delete_events_for_series(pool, &series.slug).await?;
+                upsert_events(pool, &events).await?;
+                return Ok(count);
+            }
+            Err(e) => {
+                eprintln!(
+                    "[Racing] {} fetch failed ({}): {}",
+                    series.name, url, e
+                );
+                last_err = e;
+            }
+        }
+    }
+    Err(last_err)
 }
 
 /// Refresh all enabled series

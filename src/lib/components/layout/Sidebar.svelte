@@ -7,6 +7,7 @@
     loadTrackedShows,
     openSearchModal,
     removeShow,
+    archiveShow,
     getArchivedShows,
     loadArchivedShows,
     unarchiveShow,
@@ -18,6 +19,7 @@
     loadTrackedMovies,
     openMovieSearchModal,
     removeMovie,
+    archiveMovie,
     getArchivedMovies,
     loadArchivedMovies,
     unarchiveMovie,
@@ -35,7 +37,20 @@
   import { openDataManagement } from "../../stores/dataManagement.svelte";
   import { openSettings } from "../../stores/settings.svelte";
   import { openWhatsNew, getAppVersion, hasUnseenChanges } from "../../stores/whatsNew.svelte";
-  import { isSidebarCollapsed, toggleSidebar, getSidebarTab, setSidebarTab, type SidebarTab } from "../../stores/sidebar.svelte";
+  import {
+    isSidebarCollapsed,
+    toggleSidebar,
+    getSidebarTab,
+    setSidebarTab,
+    type SidebarTab,
+    getSidebarWidth,
+    setSidebarWidth,
+    getIsResizing,
+    setIsResizing,
+    loadSidebarWidth,
+    saveSidebarWidth,
+    SIDEBAR_COLLAPSED_WIDTH,
+  } from "../../stores/sidebar.svelte";
   import {
     getEnabledSeries,
     getSeriesColor,
@@ -68,10 +83,34 @@
       loadArchivedMovies(),
       loadRacingSeries(),
       loadRacingConfig(),
+      loadSidebarWidth(),
     ]).catch((error) => {
       logger.error("Failed to load sidebar data", error);
     });
   });
+
+  function startResize(e: PointerEvent) {
+    e.preventDefault();
+    setIsResizing(true);
+    const startX = e.clientX;
+    const startWidth = getSidebarWidth();
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    const onMove = (ev: PointerEvent) => {
+      setSidebarWidth(startWidth + (ev.clientX - startX));
+    };
+    const onUp = () => {
+      setIsResizing(false);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      saveSidebarWidth();
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }
 
   function switchTab(tab: SidebarTab) {
     setSidebarTab(tab);
@@ -87,6 +126,16 @@
   async function handleRemoveMovie(event: MouseEvent, movieId: number) {
     event.stopPropagation();
     await removeMovie(movieId);
+  }
+
+  async function handleArchiveShow(event: MouseEvent, showId: number) {
+    event.stopPropagation();
+    await archiveShow(showId);
+  }
+
+  async function handleArchiveMovie(event: MouseEvent, movieId: number) {
+    event.stopPropagation();
+    await archiveMovie(movieId);
   }
 
   async function handleUnscheduleMovie(event: MouseEvent, movieId: number) {
@@ -173,7 +222,10 @@
   }
 </script>
 
-<aside class="bg-surface border-r border-border flex flex-col transition-all duration-200 {isSidebarCollapsed() ? 'w-16' : 'w-64'}">
+<aside
+  class="bg-surface border-r border-border flex flex-col relative {getIsResizing() ? '' : 'transition-[width] duration-200'}"
+  style="width: {isSidebarCollapsed() ? SIDEBAR_COLLAPSED_WIDTH : getSidebarWidth()}px"
+>
   <!-- Logo -->
   <div class="p-4 border-b border-border">
     <div class="flex items-center justify-between">
@@ -370,7 +422,7 @@
                 >
                   <button
                     type="button"
-                    class="flex-1 flex items-center {isCompactList ? 'gap-2' : 'gap-3'} text-left"
+                    class="flex-1 min-w-0 flex items-center {isCompactList ? 'gap-2' : 'gap-3'} text-left"
                     onclick={() => openShowDetail(show.id)}
                   >
                     {#if !theme.hidePosters}
@@ -393,14 +445,25 @@
                       <span class="text-sm truncate">{show.name}</span>
                     </div>
                   </button>
-                  <button
-                    type="button"
-                    onclick={(e) => { e.stopPropagation(); handleRemoveShow(e, show.id); }}
-                    class="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-red-500/20 text-red-400 transition-all"
-                    aria-label="Remove show"
-                  >
-                    <Trash2 class="w-4 h-4" />
-                  </button>
+                  <div class="flex items-center gap-1 flex-shrink-0">
+                    <button
+                      type="button"
+                      onclick={(e) => handleArchiveShow(e, show.id)}
+                      class="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-accent/20 text-text-muted hover:text-accent transition-all"
+                      aria-label="Archive show"
+                      title="Archive show"
+                    >
+                      <Archive class="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onclick={(e) => { e.stopPropagation(); handleRemoveShow(e, show.id); }}
+                      class="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-red-500/20 text-red-400 transition-all"
+                      aria-label="Remove show"
+                    >
+                      <Trash2 class="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               {/if}
             </li>
@@ -473,7 +536,7 @@
                 >
                   <button
                     type="button"
-                    class="flex-1 flex items-center {isCompactList ? 'gap-2' : 'gap-3'} text-left"
+                    class="flex-1 min-w-0 flex items-center {isCompactList ? 'gap-2' : 'gap-3'} text-left"
                     onclick={() => openMovieDetail(movie.id)}
                   >
                     {#if !theme.hidePosters}
@@ -496,7 +559,7 @@
                       <span class="text-sm truncate">{movie.title}</span>
                     </div>
                   </button>
-                  <div class="flex items-center gap-1">
+                  <div class="flex items-center gap-1 flex-shrink-0">
                     {#if movie.scheduled_date}
                       <button
                         type="button"
@@ -508,6 +571,15 @@
                         <CalendarX class="w-4 h-4" />
                       </button>
                     {/if}
+                    <button
+                      type="button"
+                      onclick={(e) => handleArchiveMovie(e, movie.id)}
+                      class="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-accent/20 text-text-muted hover:text-accent transition-all"
+                      aria-label="Archive movie"
+                      title="Archive movie"
+                    >
+                      <Archive class="w-4 h-4" />
+                    </button>
                     <button
                       type="button"
                       onclick={(e) => { e.stopPropagation(); handleRemoveMovie(e, movie.id); }}
@@ -728,4 +800,13 @@
       </button>
     {/if}
   </div>
+
+  {#if !isSidebarCollapsed()}
+    <button
+      type="button"
+      class="absolute top-0 right-0 h-full w-1 cursor-col-resize bg-transparent hover:bg-accent/40 transition-colors z-10"
+      aria-label="Resize sidebar"
+      onpointerdown={startResize}
+    ></button>
+  {/if}
 </aside>
