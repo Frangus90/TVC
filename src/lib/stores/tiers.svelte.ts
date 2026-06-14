@@ -189,6 +189,11 @@ export async function updateShowTier(
   try {
     await invoke("update_show_tier", { id: showId, tierId });
     await loadTierListShows();
+    // Refresh detail modal so the TierPicker shows the new value immediately.
+    const detail = await import("./showDetail.svelte");
+    if (detail.isShowDetailOpen() && detail.getCurrentShow()?.id === showId) {
+      await detail.openShowDetail(showId);
+    }
   } catch (error) {
     logger.error("Failed to update show tier", error);
   }
@@ -201,12 +206,19 @@ export async function updateMovieTier(
   try {
     await invoke("update_movie_tier", { id: movieId, tierId });
     await loadTierListMovies();
+    const movies = await import("./movies.svelte");
+    if (movies.isMovieDetailOpen() && movies.getCurrentMovie()?.id === movieId) {
+      await movies.openMovieDetail(movieId);
+    }
   } catch (error) {
     logger.error("Failed to update movie tier", error);
   }
 }
 
-// Tier-only item management
+// Tier-only item management.
+// IMPORTANT: these re-throw on failure so callers (TierSearchModal) can show
+// the error to the user. The old swallow-and-log behavior made backend failures
+// (TMDB API errors, DB constraint violations) invisible.
 export async function addShowTierOnly(
   id: number,
   tierId: number | null
@@ -216,6 +228,7 @@ export async function addShowTierOnly(
     await loadTierListShows();
   } catch (error) {
     logger.error("Failed to add show to tier list", error);
+    throw error;
   }
 }
 
@@ -228,6 +241,7 @@ export async function addMovieTierOnly(
     await loadTierListMovies();
   } catch (error) {
     logger.error("Failed to add movie to tier list", error);
+    throw error;
   }
 }
 
@@ -235,7 +249,7 @@ export async function addManualShow(
   title: string,
   posterUrl: string | null,
   tierId: number | null
-): Promise<number | null> {
+): Promise<number> {
   try {
     const id = await invoke<number>("add_manual_show", {
       title,
@@ -246,7 +260,7 @@ export async function addManualShow(
     return id;
   } catch (error) {
     logger.error("Failed to add manual show", error);
-    return null;
+    throw error;
   }
 }
 
@@ -254,7 +268,7 @@ export async function addManualMovie(
   title: string,
   posterUrl: string | null,
   tierId: number | null
-): Promise<number | null> {
+): Promise<number> {
   try {
     const id = await invoke<number>("add_manual_movie", {
       title,
@@ -265,7 +279,7 @@ export async function addManualMovie(
     return id;
   } catch (error) {
     logger.error("Failed to add manual movie", error);
-    return null;
+    throw error;
   }
 }
 

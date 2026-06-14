@@ -37,6 +37,7 @@
   let addingIds = $state(new Set<string>());
   let addedIds = $state(new Set<string>());
   let selectedTierId = $state<number | null>(null);
+  let addError = $state<string | null>(null);
 
   // Manual entry fields
   let manualTitle = $state("");
@@ -44,7 +45,9 @@
 
   const tiers = $derived(getTiers());
 
-  // Check if already in tier list
+  // Only treat the show as "already added" if it currently lives in the tier
+  // list (has tier_id OR tier_only). Tracked-but-untiered shows are intentionally
+  // re-addable: the backend ON CONFLICT path updates tier_id without demoting.
   function isShowInTierList(id: number): boolean {
     return addedIds.has(`show-${id}`) || getTierListShows().some(s => s.id === id);
   }
@@ -71,6 +74,7 @@
       selectedTierId = null;
       manualTitle = "";
       manualPosterUrl = "";
+      addError = null;
     }
   });
 
@@ -118,17 +122,24 @@
     return show.tmdb_id ?? 0;
   }
 
+  function formatErr(prefix: string, err: unknown): string {
+    const msg = err instanceof Error ? err.message : String(err);
+    return `${prefix}: ${msg}`;
+  }
+
   async function handleAddShow(show: SearchResult) {
     const id = getShowId(show);
     const key = `show-${id}`;
     if (!id || addingIds.has(key) || isShowInTierList(id)) return;
 
+    addError = null;
     addingIds = new Set(addingIds).add(key);
     try {
       await addShowTierOnly(id, selectedTierId);
       addedIds = new Set(addedIds).add(key);
     } catch (err) {
       logger.error("Failed to add show to tier list", err);
+      addError = formatErr(`Failed to add "${show.name ?? "show"}"`, err);
     } finally {
       const next = new Set(addingIds);
       next.delete(key);
@@ -140,12 +151,14 @@
     const key = `movie-${movie.id}`;
     if (addingIds.has(key) || isMovieInTierList(movie.id)) return;
 
+    addError = null;
     addingIds = new Set(addingIds).add(key);
     try {
       await addMovieTierOnly(movie.id, selectedTierId);
       addedIds = new Set(addedIds).add(key);
     } catch (err) {
       logger.error("Failed to add movie to tier list", err);
+      addError = formatErr(`Failed to add "${movie.title}"`, err);
     } finally {
       const next = new Set(addingIds);
       next.delete(key);
@@ -159,6 +172,7 @@
     if (!manualTitle.trim()) return;
 
     const key = `manual-${manualTitle}`;
+    addError = null;
     addingIds = new Set(addingIds).add(key);
     try {
       const posterUrl = manualPosterUrl.trim() || null;
@@ -172,6 +186,7 @@
       manualPosterUrl = "";
     } catch (err) {
       logger.error("Failed to add manual entry", err);
+      addError = formatErr(`Failed to add "${manualTitle.trim()}"`, err);
     } finally {
       const next = new Set(addingIds);
       next.delete(key);
@@ -270,6 +285,20 @@
             bind:this={searchInput}
             autocomplete="off"
           />
+        </div>
+      {/if}
+
+      {#if addError}
+        <div class="mt-3 flex items-start gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-sm">
+          <span class="flex-1">{addError}</span>
+          <button
+            type="button"
+            onclick={() => (addError = null)}
+            class="p-0.5 rounded hover:bg-red-500/20"
+            aria-label="Dismiss error"
+          >
+            <X class="w-3.5 h-3.5" />
+          </button>
         </div>
       {/if}
     </div>

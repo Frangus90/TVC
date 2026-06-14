@@ -8,7 +8,6 @@
   import Header from "./lib/components/layout/Header.svelte";
   import ToastContainer from "./lib/components/ToastContainer.svelte";
   import ConfirmDialog from "./lib/components/common/ConfirmDialog.svelte";
-  import DragGhost from "./lib/components/common/DragGhost.svelte";
   import { getViewMode, goToToday } from "./lib/stores/calendar.svelte";
   import { startClock, stopClock, onDayChange } from "./lib/stores/now.svelte";
   import { checkForUpdates } from "./lib/stores/updates.svelte";
@@ -366,6 +365,5 @@
     <MigrationProgress />
     <ToastContainer />
     <ConfirmDialog />
-    <DragGhost />
   {/snippet}
 </ErrorBoundary>

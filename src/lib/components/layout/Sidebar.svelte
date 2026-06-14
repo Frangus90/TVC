@@ -1,7 +1,6 @@
 <script lang="ts">
   import { Plus, Tv, Trash2, RefreshCw, Check, Film, Archive, RotateCcw, CalendarX, BarChart3, Database, PanelLeftClose, PanelLeft, Sparkles, Flag, Settings } from "lucide-svelte";
   import { onMount } from "svelte";
-  import { startDrag } from "../../stores/dragDrop.svelte";
   import {
     getTrackedShows,
     loadTrackedShows,
@@ -60,7 +59,6 @@
     loadRacingConfig,
   } from "../../stores/racing.svelte";
   import { getThemeSettings } from "../../stores/theme.svelte";
-  import { getViewMode } from "../../stores/calendar.svelte";
   import { openConfirmDialog } from "../../stores/confirmDialog.svelte";
   import SkeletonLoader from "../common/SkeletonLoader.svelte";
   import EmptyState from "../common/EmptyState.svelte";
@@ -409,16 +407,9 @@
                   <span class="flex-1 text-sm truncate">{show.name}</span>
                 </button>
               {:else}
-                <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
                 <div
                   role="group"
-                  class="group w-full flex items-center {isCompactList ? 'gap-2 px-2 py-1' : 'gap-3 px-3 py-2'} rounded-lg hover:bg-surface-hover transition-colors {getViewMode() === 'tier' ? 'cursor-grab' : ''}"
-                  onmousedown={(e) => {
-                    if (getViewMode() === "tier") {
-                      e.preventDefault();
-                      startDrag({ type: "show", id: show.id }, e.clientX, e.clientY);
-                    }
-                  }}
+                  class="group w-full flex items-center {isCompactList ? 'gap-2 px-2 py-1' : 'gap-3 px-3 py-2'} rounded-lg hover:bg-surface-hover transition-colors"
                 >
                   <button
                     type="button"
@@ -523,16 +514,9 @@
                   <span class="flex-1 text-sm truncate">{movie.title}</span>
                 </button>
               {:else}
-                <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
                 <div
                   role="group"
-                  class="group w-full flex items-center {isCompactList ? 'gap-2 px-2 py-1' : 'gap-3 px-3 py-2'} rounded-lg hover:bg-surface-hover transition-colors {getViewMode() === 'tier' ? 'cursor-grab' : ''}"
-                  onmousedown={(e) => {
-                    if (getViewMode() === "tier") {
-                      e.preventDefault();
-                      startDrag({ type: "movie", id: movie.id }, e.clientX, e.clientY);
-                    }
-                  }}
+                  class="group w-full flex items-center {isCompactList ? 'gap-2 px-2 py-1' : 'gap-3 px-3 py-2'} rounded-lg hover:bg-surface-hover transition-colors"
                 >
                   <button
                     type="button"

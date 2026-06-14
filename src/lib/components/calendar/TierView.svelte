@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { Tv, Film, Trash2, MoreVertical, Plus, ArrowUpCircle, ArrowDownCircle, ArrowRight, Search, X } from "lucide-svelte";
-  import { invoke } from "@tauri-apps/api/core";
   import {
     getTiers,
     getTierListShows,
@@ -22,7 +21,6 @@
   } from "../../stores/tiers.svelte";
   import { openShowDetail } from "../../stores/showDetail.svelte";
   import { openMovieDetail } from "../../stores/movies.svelte";
-  import { registerDropZone, startDrag, type DragData, getIsDragging, consumeWasDragging } from "../../stores/dragDrop.svelte";
   import { setSidebarTab } from "../../stores/sidebar.svelte";
   import { removeShow } from "../../stores/shows.svelte";
   import { removeMovie } from "../../stores/movies.svelte";
@@ -37,16 +35,6 @@
     setSidebarTab(tab);
   }
 
-  // Drag state for visual feedback
-  let dragOverTier = $state<number | "unrate" | null>(null);
-
-  // Track if currently dragging (for visual hints)
-  const isDragging = $derived(getIsDragging());
-
-  // Element references for drop zones
-  let tierRefs = $state<Record<number, HTMLElement | null>>({});
-  let unrateRef = $state<HTMLElement | null>(null);
-
   // Context menu state
   let contextMenuOpen = $state<{ type: "show" | "movie"; id: number } | null>(null);
 
@@ -60,47 +48,6 @@
     loadTiers();
     loadTierListShows();
     loadTierListMovies();
-  });
-
-  // Register drop zones reactively when tiers change
-  let dropZoneCleanups: (() => void)[] = [];
-
-  $effect(() => {
-    // Clean up old drop zones
-    dropZoneCleanups.forEach(fn => fn());
-    dropZoneCleanups = [];
-
-    // Re-register for current tiers
-    // Use a microtask to ensure DOM refs are bound
-    const tiersCopy = [...tiers];
-    queueMicrotask(() => {
-      for (const tier of tiersCopy) {
-        const element = tierRefs[tier.id];
-        if (element) {
-          const cleanup = registerDropZone(`tier-${tier.id}`, element, {
-            onDrop: (data, dropX, dropY) => handleTierDrop(data, tier.id, dropX, dropY),
-            onDragEnter: () => { dragOverTier = tier.id; },
-            onDragLeave: () => { dragOverTier = null; }
-          });
-          dropZoneCleanups.push(cleanup);
-        }
-      }
-
-      // Register unrate zone
-      if (unrateRef) {
-        const cleanup = registerDropZone("unrate", unrateRef, {
-          onDrop: (data) => handleTierDrop(data, null),
-          onDragEnter: () => { dragOverTier = "unrate"; },
-          onDragLeave: () => { dragOverTier = null; }
-        });
-        dropZoneCleanups.push(cleanup);
-      }
-    });
-
-    return () => {
-      dropZoneCleanups.forEach(fn => fn());
-      dropZoneCleanups = [];
-    };
   });
 
   // Close menu on click outside
@@ -152,7 +99,7 @@
   let hoverTimeout: ReturnType<typeof setTimeout> | null = null;
 
   function showPreview(e: MouseEvent, url: string | null, name: string) {
-    if (!url || isDragging) return;
+    if (!url) return;
     if (hoverTimeout) clearTimeout(hoverTimeout);
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     hoverPreview = {
@@ -166,71 +113,6 @@
   function hidePreview() {
     if (hoverTimeout) clearTimeout(hoverTimeout);
     hoverTimeout = setTimeout(() => { hoverPreview = null; }, 50);
-  }
-
-  // Handle drop for tier assignment or reordering
-  async function handleTierDrop(data: DragData, tierId: number | null, dropX?: number, _dropY?: number) {
-    if (tierId === null) {
-      // Remove from tier (set tier_id to null)
-      if (data.type === "show" && subTab === "shows") {
-        await updateShowTier(data.id, null);
-      } else if (data.type === "movie" && subTab === "movies") {
-        await updateMovieTier(data.id, null);
-      }
-      return;
-    }
-
-    const isShow = data.type === "show" && subTab === "shows";
-    const isMovie = data.type === "movie" && subTab === "movies";
-    if (!isShow && !isMovie) return;
-
-    // Check if within-tier reorder
-    const currentItem = isShow
-      ? tierListShows.find(s => s.id === data.id)
-      : tierListMovies.find(m => m.id === data.id);
-
-    const isWithinTier = currentItem?.tier_id === tierId;
-
-    if (isWithinTier && dropX !== undefined) {
-      // Within-tier reorder
-      const tierItems = isShow ? getShowsForTier(tierId) : getMoviesForTier(tierId);
-      if (tierItems.length <= 1) return;
-
-      const tierElement = tierRefs[tierId];
-      if (!tierElement) return;
-
-      const posterContainers = tierElement.querySelectorAll('.context-menu-container');
-      let insertIndex = tierItems.length;
-
-      for (let i = 0; i < posterContainers.length; i++) {
-        const rect = posterContainers[i].getBoundingClientRect();
-        const midX = rect.left + rect.width / 2;
-        if (dropX < midX) {
-          insertIndex = i;
-          break;
-        }
-      }
-
-      const reordered = tierItems.filter(item => item.id !== data.id);
-      reordered.splice(insertIndex > reordered.length ? reordered.length : insertIndex, 0,
-        tierItems.find(item => item.id === data.id)!
-      );
-
-      const command = isShow ? "reorder_show_in_tier" : "reorder_movie_in_tier";
-      for (let i = 0; i < reordered.length; i++) {
-        await invoke(command, { id: reordered[i].id, newRankOrder: i });
-      }
-
-      if (isShow) await loadTierListShows();
-      else await loadTierListMovies();
-    } else {
-      // Cross-tier move
-      if (isShow) {
-        await updateShowTier(data.id, tierId);
-      } else {
-        await updateMovieTier(data.id, tierId);
-      }
-    }
   }
 
   // Context menu actions
@@ -387,11 +269,7 @@
     </div>
   {:else}
     <p class="text-xs text-text-muted mb-3">
-      {#if isDragging}
-        <span class="text-accent font-medium">Release to drop on a tier</span>
-      {:else}
-        Drag {subTab} between tiers to reorder, or click the menu on a poster for more options.
-      {/if}
+      Click the menu on a poster to move it between tiers or remove it.
     </p>
 
     <!-- Tier List -->
@@ -403,12 +281,9 @@
         {@const isEmpty = items.length === 0}
 
         <div
-          bind:this={tierRefs[tier.id]}
-          data-drop-zone="tier-{tier.id}"
           role="listbox"
           aria-label="{tier.name} tier"
-          class="flex items-stretch rounded-lg transition-all
-            {dragOverTier === tier.id ? 'ring-2 ring-accent bg-accent/10' : 'bg-surface'}
+          class="flex items-stretch rounded-lg transition-all bg-surface
             {isEmpty ? 'border-2 border-dashed border-border' : ''}"
           style={tier.color ? `border-left: 4px solid ${tier.color};` : ''}
         >
@@ -421,22 +296,21 @@
           <!-- Posters row -->
           <div class="flex-1 flex flex-wrap items-start gap-3 p-3 min-h-[100px]">
             {#if isEmpty}
-              <span class="text-text-muted text-sm self-center">Drop here</span>
+              <span class="text-text-muted text-sm self-center">Empty</span>
             {:else if subTab === "shows"}
               {#each showItems as show (show.id)}
                 {@const isMatch = matchesSearch(show.name)}
                 <div class="group flex flex-col items-center w-16 relative context-menu-container transition-opacity {isSearching && !isMatch ? 'opacity-20' : ''}">
                   <!-- svelte-ignore a11y_no_static_element_interactions -->
                   <div
-                    onmousedown={(e) => { if (!(e.target as HTMLElement).closest('.context-menu-btn')) startDrag({ type: "show", id: show.id }, e.clientX, e.clientY); }}
-                    onclick={() => { if (!consumeWasDragging()) openShowDetail(show.id); }}
+                    onclick={() => openShowDetail(show.id)}
                     onkeydown={(e) => { if (e.key === 'Enter') openShowDetail(show.id); }}
                     onmouseenter={(e) => showPreview(e, show.poster_url, show.name)}
                     onmouseleave={hidePreview}
                     title={show.name}
                     role="button"
                     tabindex="0"
-                    class="flex flex-col items-center w-full transition-transform hover:scale-105 hover:z-10 cursor-grab active:cursor-grabbing"
+                    class="flex flex-col items-center w-full transition-transform hover:scale-105 hover:z-10 cursor-pointer"
                   >
                     {#if show.poster_url}
                       <img
@@ -460,7 +334,6 @@
                   <button
                     type="button"
                     onclick={(e) => toggleContextMenu(e, "show", show.id)}
-                    onmousedown={(e) => e.stopPropagation()}
                     class="context-menu-btn absolute top-0 right-0 z-20 w-6 h-6 rounded-bl-lg bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/90"
                     title="Options"
                   >
@@ -538,15 +411,14 @@
                 <div class="group flex flex-col items-center w-16 relative context-menu-container transition-opacity {isSearching && !isMatch ? 'opacity-20' : ''}">
                   <!-- svelte-ignore a11y_no_static_element_interactions -->
                   <div
-                    onmousedown={(e) => { if (!(e.target as HTMLElement).closest('.context-menu-btn')) startDrag({ type: "movie", id: movie.id }, e.clientX, e.clientY); }}
-                    onclick={() => { if (!consumeWasDragging()) openMovieDetail(movie.id); }}
+                    onclick={() => openMovieDetail(movie.id)}
                     onkeydown={(e) => { if (e.key === 'Enter') openMovieDetail(movie.id); }}
                     onmouseenter={(e) => showPreview(e, movie.poster_url, movie.title)}
                     onmouseleave={hidePreview}
                     title={movie.title}
                     role="button"
                     tabindex="0"
-                    class="flex flex-col items-center w-full transition-transform hover:scale-105 hover:z-10 cursor-grab active:cursor-grabbing"
+                    class="flex flex-col items-center w-full transition-transform hover:scale-105 hover:z-10 cursor-pointer"
                   >
                     {#if movie.poster_url}
                       <img
@@ -570,7 +442,6 @@
                   <button
                     type="button"
                     onclick={(e) => toggleContextMenu(e, "movie", movie.id)}
-                    onmousedown={(e) => e.stopPropagation()}
                     class="context-menu-btn absolute top-0 right-0 z-20 w-6 h-6 rounded-bl-lg bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/90"
                     title="Options"
                   >
@@ -654,15 +525,14 @@
                 <div class="group flex flex-col items-center w-16 relative context-menu-container transition-opacity {isSearching && !isMatch ? 'opacity-20' : ''}">
                   <!-- svelte-ignore a11y_no_static_element_interactions -->
                   <div
-                    onmousedown={(e) => { if (!(e.target as HTMLElement).closest('.context-menu-btn')) startDrag({ type: "show", id: show.id }, e.clientX, e.clientY); }}
-                    onclick={() => { if (!consumeWasDragging()) openShowDetail(show.id); }}
+                    onclick={() => openShowDetail(show.id)}
                     onkeydown={(e) => { if (e.key === 'Enter') openShowDetail(show.id); }}
                     onmouseenter={(e) => showPreview(e, show.poster_url, show.name)}
                     onmouseleave={hidePreview}
                     title={show.name}
                     role="button"
                     tabindex="0"
-                    class="flex flex-col items-center w-full transition-transform hover:scale-105 hover:z-10 cursor-grab active:cursor-grabbing"
+                    class="flex flex-col items-center w-full transition-transform hover:scale-105 hover:z-10 cursor-pointer"
                   >
                     {#if show.poster_url}
                       <img src={show.poster_url} alt={show.name} class="w-16 h-24 rounded object-cover shadow-lg pointer-events-none {isSearching && isMatch ? 'ring-2 ring-accent shadow-accent/30' : 'group-hover:ring-2 group-hover:ring-accent'}" loading="lazy" decoding="async" />
@@ -676,7 +546,6 @@
                   <button
                     type="button"
                     onclick={(e) => toggleContextMenu(e, "show", show.id)}
-                    onmousedown={(e) => e.stopPropagation()}
                     class="context-menu-btn absolute top-0 right-0 z-20 w-6 h-6 rounded-bl-lg bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/90"
                     title="Options"
                   >
@@ -715,15 +584,14 @@
                 <div class="group flex flex-col items-center w-16 relative context-menu-container transition-opacity {isSearching && !isMatch ? 'opacity-20' : ''}">
                   <!-- svelte-ignore a11y_no_static_element_interactions -->
                   <div
-                    onmousedown={(e) => { if (!(e.target as HTMLElement).closest('.context-menu-btn')) startDrag({ type: "movie", id: movie.id }, e.clientX, e.clientY); }}
-                    onclick={() => { if (!consumeWasDragging()) openMovieDetail(movie.id); }}
+                    onclick={() => openMovieDetail(movie.id)}
                     onkeydown={(e) => { if (e.key === 'Enter') openMovieDetail(movie.id); }}
                     onmouseenter={(e) => showPreview(e, movie.poster_url, movie.title)}
                     onmouseleave={hidePreview}
                     title={movie.title}
                     role="button"
                     tabindex="0"
-                    class="flex flex-col items-center w-full transition-transform hover:scale-105 hover:z-10 cursor-grab active:cursor-grabbing"
+                    class="flex flex-col items-center w-full transition-transform hover:scale-105 hover:z-10 cursor-pointer"
                   >
                     {#if movie.poster_url}
                       <img src={movie.poster_url} alt={movie.title} class="w-16 h-24 rounded object-cover shadow-lg pointer-events-none {isSearching && isMatch ? 'ring-2 ring-accent shadow-accent/30' : 'group-hover:ring-2 group-hover:ring-accent'}" loading="lazy" decoding="async" />
@@ -737,7 +605,6 @@
                   <button
                     type="button"
                     onclick={(e) => toggleContextMenu(e, "movie", movie.id)}
-                    onmousedown={(e) => e.stopPropagation()}
                     class="context-menu-btn absolute top-0 right-0 z-20 w-6 h-6 rounded-bl-lg bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/90"
                     title="Options"
                   >
@@ -775,25 +642,11 @@
         </div>
       {/if}
 
-      <!-- Unrate/Remove Zone (visible when dragging) -->
-      <div
-        bind:this={unrateRef}
-        data-drop-zone="unrate"
-        role="listbox"
-        aria-label="Remove from tier"
-        class="flex items-center gap-3 p-4 rounded-lg border-2 border-dashed transition-all mt-2
-          {dragOverTier === 'unrate' ? 'border-red-500 bg-red-500/10 ring-2 ring-red-500' : 'border-border'}"
-      >
-        <Trash2 class="w-5 h-5 {dragOverTier === 'unrate' ? 'text-red-500' : 'text-text-muted'}" />
-        <span class="{dragOverTier === 'unrate' ? 'text-red-500' : 'text-text-muted'} text-sm">
-          Drop here to remove from tier
-        </span>
-      </div>
     </div>
   {/if}
 
   <!-- Hover poster preview -->
-  {#if hoverPreview && !isDragging}
+  {#if hoverPreview}
     {@const previewW = 128}
     {@const previewH = 192}
     {@const left = Math.max(8, Math.min(hoverPreview.x - previewW / 2, window.innerWidth - previewW - 8))}

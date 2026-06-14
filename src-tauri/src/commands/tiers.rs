@@ -285,8 +285,7 @@ pub async fn get_tier_list_shows(app: AppHandle) -> Result<Vec<TierListShow>, St
         r#"
         SELECT id, name, poster_url, tier_id, rank_order, tier_only
         FROM shows
-        WHERE tier_id IS NOT NULL
-          AND (archived = 0 OR archived IS NULL)
+        WHERE tier_only = 1 OR tier_id IS NOT NULL
         ORDER BY name
         LIMIT 10000
         "#,
@@ -307,6 +306,8 @@ pub async fn get_tier_list_shows(app: AppHandle) -> Result<Vec<TierListShow>, St
         })
         .collect();
 
+    eprintln!("[tier-add] get_tier_list_shows returned {} rows", shows.len());
+
     Ok(shows)
 }
 
@@ -319,7 +320,7 @@ pub async fn get_tier_list_movies(app: AppHandle) -> Result<Vec<TierListMovie>, 
         r#"
         SELECT id, title, poster_url, tier_id, rank_order, tier_only
         FROM movies
-        WHERE tier_id IS NOT NULL AND (archived = 0 OR archived IS NULL)
+        WHERE tier_only = 1 OR tier_id IS NOT NULL
         ORDER BY title
         LIMIT 10000
         "#,
@@ -340,6 +341,8 @@ pub async fn get_tier_list_movies(app: AppHandle) -> Result<Vec<TierListMovie>, 
         })
         .collect();
 
+    eprintln!("[tier-add] get_tier_list_movies returned {} rows", movies.len());
+
     Ok(movies)
 }
 
@@ -353,16 +356,21 @@ pub async fn add_show_tier_only(
     id: i64,
     tier_id: Option<i64>,
 ) -> Result<(), String> {
+    eprintln!("[tier-add] add_show_tier_only id={} tier_id={:?}", id, tier_id);
     crate::commands::validation::validate_id(id)?;
 
     let show_details = crate::tmdb::get_tv_details(id)
         .await
-        .map_err(|e| format!("Failed to fetch show details: {}", e))?;
+        .map_err(|e| {
+            eprintln!("[tier-add] TMDB fetch failed for show id={}: {}", id, e);
+            format!("Failed to fetch show details: {}", e)
+        })?;
+    eprintln!("[tier-add] TMDB ok: id={} name={:?}", show_details.id, show_details.name);
 
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    sqlx::query(
+    let result = sqlx::query(
         r#"
         INSERT INTO shows
         (id, name, status, poster_url, first_aired, overview, network, runtime, added_at, tier_only, tier_id)
@@ -375,7 +383,6 @@ pub async fn add_show_tier_only(
             overview = excluded.overview,
             network = excluded.network,
             runtime = excluded.runtime,
-            tier_only = 1,
             tier_id = excluded.tier_id
         "#,
     )
@@ -390,7 +397,32 @@ pub async fn add_show_tier_only(
     .bind(tier_id)
     .execute(&pool)
     .await
-    .map_err(|e| format!("Failed to add show to tier list: {}", e))?;
+    .map_err(|e| {
+        eprintln!("[tier-add] INSERT failed for show id={}: {}", id, e);
+        format!("Failed to add show to tier list: {}", e)
+    })?;
+    eprintln!(
+        "[tier-add] INSERT ok: id={} rows_affected={}",
+        id,
+        result.rows_affected()
+    );
+
+    // Echo the row back so we can confirm what landed in the DB.
+    if let Ok(row) = sqlx::query(
+        "SELECT tier_only, tier_id, archived FROM shows WHERE id = ?",
+    )
+    .bind(id)
+    .fetch_one(&pool)
+    .await
+    {
+        let tier_only: i32 = row.get("tier_only");
+        let resolved_tier_id: Option<i64> = row.get("tier_id");
+        let archived: Option<i32> = row.try_get("archived").ok();
+        eprintln!(
+            "[tier-add] row state: id={} tier_only={} tier_id={:?} archived={:?}",
+            id, tier_only, resolved_tier_id, archived
+        );
+    }
 
     Ok(())
 }
@@ -401,11 +433,16 @@ pub async fn add_movie_tier_only(
     id: i64,
     tier_id: Option<i64>,
 ) -> Result<(), String> {
+    eprintln!("[tier-add] add_movie_tier_only id={} tier_id={:?}", id, tier_id);
     crate::commands::validation::validate_id(id)?;
 
     let (movie_details, release_dates) = crate::tmdb::get_movie_with_release_dates(id, "US")
         .await
-        .map_err(|e| format!("Failed to fetch movie details: {}", e))?;
+        .map_err(|e| {
+            eprintln!("[tier-add] TMDB fetch failed for movie id={}: {}", id, e);
+            format!("Failed to fetch movie details: {}", e)
+        })?;
+    eprintln!("[tier-add] TMDB ok: id={} title={:?}", movie_details.id, movie_details.title);
 
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
@@ -433,7 +470,6 @@ pub async fn add_movie_tier_only(
             genres = excluded.genres,
             vote_average = excluded.vote_average,
             last_synced = datetime('now'),
-            tier_only = 1,
             tier_id = excluded.tier_id
         "#,
     )
@@ -453,9 +489,80 @@ pub async fn add_movie_tier_only(
     .bind(tier_id)
     .execute(&pool)
     .await
-    .map_err(|e| format!("Failed to add movie to tier list: {}", e))?;
+    .map_err(|e| {
+        eprintln!("[tier-add] INSERT failed for movie id={}: {}", id, e);
+        format!("Failed to add movie to tier list: {}", e)
+    })?;
+    eprintln!("[tier-add] INSERT ok for movie id={}", id);
 
     Ok(())
+}
+
+// Manual entries use negative IDs (positive IDs collide with TMDB).
+// Microsecond timestamp gives ~10^6 IDs/sec headroom; on collision we walk
+// down by 1 until INSERT succeeds. Caps retries to avoid pathological loops.
+async fn insert_manual_show(
+    pool: &sqlx::SqlitePool,
+    title: &str,
+    poster_url: Option<&str>,
+    tier_id: Option<i64>,
+) -> Result<i64, String> {
+    let mut candidate = -(chrono::Utc::now().timestamp_micros());
+    for _ in 0..1000 {
+        let result = sqlx::query(
+            r#"
+            INSERT INTO shows (id, name, poster_url, added_at, tier_only, tier_id)
+            VALUES (?, ?, ?, datetime('now'), 1, ?)
+            "#,
+        )
+        .bind(candidate)
+        .bind(title)
+        .bind(poster_url)
+        .bind(tier_id)
+        .execute(pool)
+        .await;
+
+        match result {
+            Ok(_) => return Ok(candidate),
+            Err(sqlx::Error::Database(db_err)) if db_err.message().contains("UNIQUE") => {
+                candidate -= 1;
+            }
+            Err(e) => return Err(format!("Failed to add manual show: {}", e)),
+        }
+    }
+    Err("Failed to generate unique manual show ID after 1000 attempts".to_string())
+}
+
+async fn insert_manual_movie(
+    pool: &sqlx::SqlitePool,
+    title: &str,
+    poster_url: Option<&str>,
+    tier_id: Option<i64>,
+) -> Result<i64, String> {
+    let mut candidate = -(chrono::Utc::now().timestamp_micros());
+    for _ in 0..1000 {
+        let result = sqlx::query(
+            r#"
+            INSERT INTO movies (id, title, poster_url, added_at, tier_only, tier_id)
+            VALUES (?, ?, ?, datetime('now'), 1, ?)
+            "#,
+        )
+        .bind(candidate)
+        .bind(title)
+        .bind(poster_url)
+        .bind(tier_id)
+        .execute(pool)
+        .await;
+
+        match result {
+            Ok(_) => return Ok(candidate),
+            Err(sqlx::Error::Database(db_err)) if db_err.message().contains("UNIQUE") => {
+                candidate -= 1;
+            }
+            Err(e) => return Err(format!("Failed to add manual movie: {}", e)),
+        }
+    }
+    Err("Failed to generate unique manual movie ID after 1000 attempts".to_string())
 }
 
 #[tauri::command]
@@ -468,24 +575,7 @@ pub async fn add_manual_show(
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    // Use negative timestamp as ID for manual entries
-    let manual_id = -(chrono::Utc::now().timestamp_millis());
-
-    sqlx::query(
-        r#"
-        INSERT INTO shows (id, name, poster_url, added_at, tier_only, tier_id)
-        VALUES (?, ?, ?, datetime('now'), 1, ?)
-        "#,
-    )
-    .bind(manual_id)
-    .bind(&title)
-    .bind(poster_url.as_deref())
-    .bind(tier_id)
-    .execute(&pool)
-    .await
-    .map_err(|e| format!("Failed to add manual show: {}", e))?;
-
-    Ok(manual_id)
+    insert_manual_show(&pool, &title, poster_url.as_deref(), tier_id).await
 }
 
 #[tauri::command]
@@ -498,23 +588,7 @@ pub async fn add_manual_movie(
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    let manual_id = -(chrono::Utc::now().timestamp_millis());
-
-    sqlx::query(
-        r#"
-        INSERT INTO movies (id, title, poster_url, added_at, tier_only, tier_id)
-        VALUES (?, ?, ?, datetime('now'), 1, ?)
-        "#,
-    )
-    .bind(manual_id)
-    .bind(&title)
-    .bind(poster_url.as_deref())
-    .bind(tier_id)
-    .execute(&pool)
-    .await
-    .map_err(|e| format!("Failed to add manual movie: {}", e))?;
-
-    Ok(manual_id)
+    insert_manual_movie(&pool, &title, poster_url.as_deref(), tier_id).await
 }
 
 #[tauri::command]
@@ -633,3 +707,4 @@ pub async fn update_movie_tier(
 
     Ok(())
 }
+

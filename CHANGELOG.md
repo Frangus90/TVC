@@ -2,6 +2,20 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.13.1] - Unreleased
+
+### Tier List
+
+- **Archived items in tier lists**: Shows and movies you've archived can now be added to and stay in tier lists — archiving and tier placement are independent, so a finished series keeps its rating without reappearing in the active library
+- **Visible errors when adding fails**: The "Add to Tier List" modal now surfaces the underlying TMDB or database error in a dismissable red banner if an add fails, instead of silently doing nothing
+- **Tracked shows no longer falsely "already added"**: Search results in the tier modal no longer mark untiered tracked shows as already-in-list, so they can be placed into a tier directly from the modal
+- **Detail view picker stays in sync**: Changing a tier from a show's or movie's detail view refreshes the picker immediately — no reopen required
+- **Manual entry ID collisions**: Custom (non-TMDB) entries now use a timestamp-based ID with retry on collision, eliminating the rare case where two rapid manual adds could fail
+
+### Removed
+
+- **Tier list drag-and-drop**: The drag-to-rearrange interaction has been removed — it was unreliable on Windows due to a Tauri/Webview2 interaction with HTML5 drag events. Tier assignment, removal, and tracked/tier-only promotion remain available via the three-dot menu on each poster
+
 ## [0.13.0] - 07.06.2026
 
 ### Sidebar
