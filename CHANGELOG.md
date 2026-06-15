@@ -2,6 +2,14 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.13.2] - Unreleased
+
+### Tier List
+
+- **Drag-and-drop is back**: Posters can be dragged within a tier to reorder, between tiers to reassign, or onto the Untiered row to clear their tier. The previous removal was driven by a Tauri/Webview2 interaction with HTML5 drag events; this rebuild uses `svelte-dnd-action` and disables Tauri's native file-drop interception so HTML5 drag events reach the app reliably on Windows
+- **Always-visible Untiered drop target**: The Untiered section now renders even when empty, so dropping a poster there clears its tier without having to open the three-dot menu
+- **Click the checkmark to untick a show**: In the Add to Tier List modal, the green checkmark next to an already-added show is now clickable — clicking it removes the show from the tier list (or just clears the tier on a tracked show), so a wrong tier pick can be corrected without closing the modal
+
 ## [0.13.1] - 14.06.2026
 
 ### Tier List

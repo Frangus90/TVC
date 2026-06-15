@@ -666,6 +666,74 @@ pub async fn demote_movie_to_tier_only(app: AppHandle, id: i64) -> Result<(), St
     Ok(())
 }
 
+// Inverse of add_show_tier_only / add_movie_tier_only: undoes a tier-list add
+// from the search modal. Semantics depend on whether the row was tracked:
+//   tier_only = 1 → delete the row (it only existed for tiering)
+//   tier_only = 0 → keep the row, clear tier_id/rank_order (stays tracked)
+#[tauri::command]
+pub async fn remove_show_from_tier_list(app: AppHandle, id: i64) -> Result<(), String> {
+    let pool = connection::get_pool(&app).await
+        .map_err(|e| format!("Database error: {}", e))?;
+
+    let tier_only: Option<i32> = sqlx::query_scalar("SELECT tier_only FROM shows WHERE id = ?")
+        .bind(id)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|e| format!("Failed to look up show: {}", e))?;
+
+    match tier_only {
+        Some(1) => {
+            sqlx::query("DELETE FROM shows WHERE id = ?")
+                .bind(id)
+                .execute(&pool)
+                .await
+                .map_err(|e| format!("Failed to delete tier-only show: {}", e))?;
+        }
+        Some(0) => {
+            sqlx::query("UPDATE shows SET tier_id = NULL, rank_order = NULL WHERE id = ?")
+                .bind(id)
+                .execute(&pool)
+                .await
+                .map_err(|e| format!("Failed to clear show tier: {}", e))?;
+        }
+        _ => {}
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn remove_movie_from_tier_list(app: AppHandle, id: i64) -> Result<(), String> {
+    let pool = connection::get_pool(&app).await
+        .map_err(|e| format!("Database error: {}", e))?;
+
+    let tier_only: Option<i32> = sqlx::query_scalar("SELECT tier_only FROM movies WHERE id = ?")
+        .bind(id)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|e| format!("Failed to look up movie: {}", e))?;
+
+    match tier_only {
+        Some(1) => {
+            sqlx::query("DELETE FROM movies WHERE id = ?")
+                .bind(id)
+                .execute(&pool)
+                .await
+                .map_err(|e| format!("Failed to delete tier-only movie: {}", e))?;
+        }
+        Some(0) => {
+            sqlx::query("UPDATE movies SET tier_id = NULL, rank_order = NULL WHERE id = ?")
+                .bind(id)
+                .execute(&pool)
+                .await
+                .map_err(|e| format!("Failed to clear movie tier: {}", e))?;
+        }
+        _ => {}
+    }
+
+    Ok(())
+}
+
 // ============================================
 // Update tier assignment (replaces old rating commands)
 // ============================================
@@ -704,6 +772,93 @@ pub async fn update_movie_tier(
         .execute(&pool)
         .await
         .map_err(|e| format!("Failed to update movie tier: {}", e))?;
+
+    Ok(())
+}
+
+// ============================================
+// Bulk reorder / tier reassignment commands for drag-and-drop
+// ============================================
+
+// Called per drop zone after a drag finalizes. Sets tier_id + rank_order for
+// every item in ordered_ids to match its index. tier_id = None means the
+// untiered section (clears both tier_id and rank_order).
+#[tauri::command]
+pub async fn set_tier_show_positions(
+    app: AppHandle,
+    tier_id: Option<i64>,
+    ordered_ids: Vec<i64>,
+) -> Result<(), String> {
+    let pool = connection::get_pool(&app).await
+        .map_err(|e| format!("Database error: {}", e))?;
+
+    let mut tx = pool.begin().await
+        .map_err(|e| format!("Failed to begin transaction: {}", e))?;
+
+    for (idx, show_id) in ordered_ids.iter().enumerate() {
+        let rank = idx as i32;
+        match tier_id {
+            Some(tid) => {
+                sqlx::query("UPDATE shows SET tier_id = ?, rank_order = ? WHERE id = ?")
+                    .bind(tid)
+                    .bind(rank)
+                    .bind(show_id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| format!("Failed to set show position: {}", e))?;
+            }
+            None => {
+                sqlx::query("UPDATE shows SET tier_id = NULL, rank_order = NULL WHERE id = ?")
+                    .bind(show_id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| format!("Failed to clear show position: {}", e))?;
+            }
+        }
+    }
+
+    tx.commit().await
+        .map_err(|e| format!("Failed to commit show positions: {}", e))?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn set_tier_movie_positions(
+    app: AppHandle,
+    tier_id: Option<i64>,
+    ordered_ids: Vec<i64>,
+) -> Result<(), String> {
+    let pool = connection::get_pool(&app).await
+        .map_err(|e| format!("Database error: {}", e))?;
+
+    let mut tx = pool.begin().await
+        .map_err(|e| format!("Failed to begin transaction: {}", e))?;
+
+    for (idx, movie_id) in ordered_ids.iter().enumerate() {
+        let rank = idx as i32;
+        match tier_id {
+            Some(tid) => {
+                sqlx::query("UPDATE movies SET tier_id = ?, rank_order = ? WHERE id = ?")
+                    .bind(tid)
+                    .bind(rank)
+                    .bind(movie_id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| format!("Failed to set movie position: {}", e))?;
+            }
+            None => {
+                sqlx::query("UPDATE movies SET tier_id = NULL, rank_order = NULL WHERE id = ?")
+                    .bind(movie_id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| format!("Failed to clear movie position: {}", e))?;
+            }
+        }
+    }
+
+    tx.commit().await
+        .map_err(|e| format!("Failed to commit movie positions: {}", e))?;
 
     Ok(())
 }

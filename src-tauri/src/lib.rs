@@ -293,6 +293,10 @@ pub fn run() {
             commands::tiers::demote_movie_to_tier_only,
             commands::tiers::update_show_tier,
             commands::tiers::update_movie_tier,
+            commands::tiers::set_tier_show_positions,
+            commands::tiers::set_tier_movie_positions,
+            commands::tiers::remove_show_from_tier_list,
+            commands::tiers::remove_movie_from_tier_list,
             // Notification commands
             commands::notifications::get_notification_settings,
             commands::notifications::update_notification_settings,

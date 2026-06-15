@@ -12,6 +12,8 @@
     addMovieTierOnly,
     addManualShow,
     addManualMovie,
+    removeShowFromTierList,
+    removeMovieFromTierList,
   } from "../stores/tiers.svelte";
   import {
     searchShows,
@@ -140,6 +142,48 @@
     } catch (err) {
       logger.error("Failed to add show to tier list", err);
       addError = formatErr(`Failed to add "${show.name ?? "show"}"`, err);
+    } finally {
+      const next = new Set(addingIds);
+      next.delete(key);
+      addingIds = next;
+    }
+  }
+
+  async function handleRemoveShow(id: number) {
+    const key = `show-${id}`;
+    if (!id || addingIds.has(key)) return;
+
+    addError = null;
+    addingIds = new Set(addingIds).add(key);
+    try {
+      await removeShowFromTierList(id);
+      const next = new Set(addedIds);
+      next.delete(key);
+      addedIds = next;
+    } catch (err) {
+      logger.error("Failed to remove show from tier list", err);
+      addError = formatErr("Failed to remove from tier list", err);
+    } finally {
+      const next = new Set(addingIds);
+      next.delete(key);
+      addingIds = next;
+    }
+  }
+
+  async function handleRemoveMovie(id: number) {
+    const key = `movie-${id}`;
+    if (addingIds.has(key)) return;
+
+    addError = null;
+    addingIds = new Set(addingIds).add(key);
+    try {
+      await removeMovieFromTierList(id);
+      const next = new Set(addedIds);
+      next.delete(key);
+      addedIds = next;
+    } catch (err) {
+      logger.error("Failed to remove movie from tier list", err);
+      addError = formatErr("Failed to remove from tier list", err);
     } finally {
       const next = new Set(addingIds);
       next.delete(key);
@@ -418,7 +462,12 @@
                     <Loader2 class="w-5 h-5 animate-spin" />
                   </button>
                 {:else if isShowInTierList(showId)}
-                  <button disabled class="flex-shrink-0 p-2 bg-green-600 text-white rounded-lg">
+                  <button
+                    onclick={() => handleRemoveShow(showId)}
+                    class="flex-shrink-0 p-2 bg-green-600 hover:bg-red-600 text-white rounded-lg transition-colors"
+                    aria-label="Remove from tier list"
+                    title="Click to remove from tier list"
+                  >
                     <Check class="w-5 h-5" />
                   </button>
                 {:else}
@@ -482,7 +531,12 @@
                     <Loader2 class="w-5 h-5 animate-spin" />
                   </button>
                 {:else if isMovieInTierList(movie.id)}
-                  <button disabled class="flex-shrink-0 p-2 bg-green-600 text-white rounded-lg">
+                  <button
+                    onclick={() => handleRemoveMovie(movie.id)}
+                    class="flex-shrink-0 p-2 bg-green-600 hover:bg-red-600 text-white rounded-lg transition-colors"
+                    aria-label="Remove from tier list"
+                    title="Click to remove from tier list"
+                  >
                     <Check class="w-5 h-5" />
                   </button>
                 {:else}

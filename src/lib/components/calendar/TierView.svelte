@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { flip } from "svelte/animate";
+  import { dndzone, type DndEvent } from "svelte-dnd-action";
   import { Tv, Film, Trash2, MoreVertical, Plus, ArrowUpCircle, ArrowDownCircle, ArrowRight, Search, X } from "lucide-svelte";
   import {
     getTiers,
@@ -10,6 +12,8 @@
     loadTierListMovies,
     updateShowTier,
     updateMovieTier,
+    setTierShowPositions,
+    setTierMoviePositions,
     openTierSearchModal,
     promoteShowToTracked,
     promoteMovieToTracked,
@@ -74,9 +78,86 @@
       .sort((a, b) => (a.rank_order ?? 999999) - (b.rank_order ?? 999999) || a.id - b.id);
   }
 
-  // Untiered items (tier_id is null but in the tier list)
-  const untieredShows = $derived(tierListShows.filter(s => s.tier_id === null));
-  const untieredMovies = $derived(tierListMovies.filter(m => m.tier_id === null));
+  // svelte-dnd-action mutates the items array we pass in, so we mirror the
+  // store data into local $state zones keyed by tierId (null = untiered).
+  // Rebuilt whenever tiers or the store data change; mid-drag mutations are
+  // local to the zones and don't touch the store, so the effect won't fire
+  // until finalize completes and loadTierList*() runs.
+  type ShowZone = { tierId: number | null; items: TierListShow[] };
+  type MovieZone = { tierId: number | null; items: TierListMovie[] };
+  let showZones = $state<ShowZone[]>([]);
+  let movieZones = $state<MovieZone[]>([]);
+
+  $effect(() => {
+    showZones = [
+      ...tiers.map(t => ({
+        tierId: t.id as number | null,
+        items: getShowsForTier(t.id),
+      })),
+      {
+        tierId: null,
+        items: tierListShows.filter(s => s.tier_id === null),
+      },
+    ];
+  });
+
+  $effect(() => {
+    movieZones = [
+      ...tiers.map(t => ({
+        tierId: t.id as number | null,
+        items: getMoviesForTier(t.id),
+      })),
+      {
+        tierId: null,
+        items: tierListMovies.filter(m => m.tier_id === null),
+      },
+    ];
+  });
+
+  function findShowZone(tierId: number | null): ShowZone | undefined {
+    return showZones.find(z => z.tierId === tierId);
+  }
+
+  function findMovieZone(tierId: number | null): MovieZone | undefined {
+    return movieZones.find(z => z.tierId === tierId);
+  }
+
+  // Untiered zone items for the bottom section.
+  const untieredShows = $derived(findShowZone(null)?.items ?? []);
+  const untieredMovies = $derived(findMovieZone(null)?.items ?? []);
+
+  // Drag handlers — consider fires repeatedly during drag (live preview);
+  // finalize fires once on drop. We persist only on finalize.
+  function handleShowConsider(tierId: number | null, e: CustomEvent<DndEvent<TierListShow>>) {
+    const zone = findShowZone(tierId);
+    if (zone) zone.items = e.detail.items;
+  }
+
+  async function handleShowFinalize(tierId: number | null, e: CustomEvent<DndEvent<TierListShow>>) {
+    const zone = findShowZone(tierId);
+    if (zone) zone.items = e.detail.items;
+    try {
+      await setTierShowPositions(tierId, e.detail.items.map(s => s.id));
+    } catch {
+      // setTierShowPositions already refreshes from server; effect rebuilds zones.
+      await loadTierListShows();
+    }
+  }
+
+  function handleMovieConsider(tierId: number | null, e: CustomEvent<DndEvent<TierListMovie>>) {
+    const zone = findMovieZone(tierId);
+    if (zone) zone.items = e.detail.items;
+  }
+
+  async function handleMovieFinalize(tierId: number | null, e: CustomEvent<DndEvent<TierListMovie>>) {
+    const zone = findMovieZone(tierId);
+    if (zone) zone.items = e.detail.items;
+    try {
+      await setTierMoviePositions(tierId, e.detail.items.map(m => m.id));
+    } catch {
+      await loadTierListMovies();
+    }
+  }
 
   // Stats
   const stats = $derived.by(() => {
@@ -275,9 +356,9 @@
     <!-- Tier List -->
     <div class="flex-1 overflow-auto space-y-2">
       {#each tiers as tier (tier.id)}
-        {@const showItems = subTab === "shows" ? getShowsForTier(tier.id) : []}
-        {@const movieItems = subTab === "movies" ? getMoviesForTier(tier.id) : []}
-        {@const items = subTab === "shows" ? showItems : movieItems}
+        {@const showZone = findShowZone(tier.id)}
+        {@const movieZone = findMovieZone(tier.id)}
+        {@const items = subTab === "shows" ? (showZone?.items ?? []) : (movieZone?.items ?? [])}
         {@const isEmpty = items.length === 0}
 
         <div
@@ -294,13 +375,21 @@
           </div>
 
           <!-- Posters row -->
-          <div class="flex-1 flex flex-wrap items-start gap-3 p-3 min-h-[100px]">
-            {#if isEmpty}
-              <span class="text-text-muted text-sm self-center">Empty</span>
-            {:else if subTab === "shows"}
-              {#each showItems as show (show.id)}
+          {#if subTab === "shows"}
+            <div
+              use:dndzone={{
+                items: showZone?.items ?? [],
+                type: "tier-shows",
+                flipDurationMs: 200,
+                dropTargetStyle: { outline: "2px dashed rgb(59 130 246)", outlineOffset: "-2px" },
+              }}
+              onconsider={(e) => handleShowConsider(tier.id, e as CustomEvent<DndEvent<TierListShow>>)}
+              onfinalize={(e) => handleShowFinalize(tier.id, e as CustomEvent<DndEvent<TierListShow>>)}
+              class="flex-1 flex flex-wrap items-start gap-3 p-3 min-h-[100px]"
+            >
+              {#each showZone?.items ?? [] as show (show.id)}
                 {@const isMatch = matchesSearch(show.name)}
-                <div class="group flex flex-col items-center w-16 relative context-menu-container transition-opacity {isSearching && !isMatch ? 'opacity-20' : ''}">
+                <div animate:flip={{ duration: 200 }} class="group flex flex-col items-center w-16 relative context-menu-container transition-opacity select-none {isSearching && !isMatch ? 'opacity-20' : ''}">
                   <!-- svelte-ignore a11y_no_static_element_interactions -->
                   <div
                     onclick={() => openShowDetail(show.id)}
@@ -316,6 +405,7 @@
                       <img
                         src={show.poster_url}
                         alt={show.name}
+                        draggable="false"
                         class="w-16 h-24 rounded object-cover shadow-lg pointer-events-none
                           {isSearching && isMatch ? 'ring-2 ring-accent shadow-accent/30' : 'group-hover:ring-2 group-hover:ring-accent'}"
                         loading="lazy"
@@ -405,10 +495,22 @@
                   {/if}
                 </div>
               {/each}
-            {:else}
-              {#each movieItems as movie (movie.id)}
+            </div>
+          {:else}
+            <div
+              use:dndzone={{
+                items: movieZone?.items ?? [],
+                type: "tier-movies",
+                flipDurationMs: 200,
+                dropTargetStyle: { outline: "2px dashed rgb(59 130 246)", outlineOffset: "-2px" },
+              }}
+              onconsider={(e) => handleMovieConsider(tier.id, e as CustomEvent<DndEvent<TierListMovie>>)}
+              onfinalize={(e) => handleMovieFinalize(tier.id, e as CustomEvent<DndEvent<TierListMovie>>)}
+              class="flex-1 flex flex-wrap items-start gap-3 p-3 min-h-[100px]"
+            >
+              {#each movieZone?.items ?? [] as movie (movie.id)}
                 {@const isMatch = matchesSearch(movie.title)}
-                <div class="group flex flex-col items-center w-16 relative context-menu-container transition-opacity {isSearching && !isMatch ? 'opacity-20' : ''}">
+                <div animate:flip={{ duration: 200 }} class="group flex flex-col items-center w-16 relative context-menu-container transition-opacity select-none {isSearching && !isMatch ? 'opacity-20' : ''}">
                   <!-- svelte-ignore a11y_no_static_element_interactions -->
                   <div
                     onclick={() => openMovieDetail(movie.id)}
@@ -424,6 +526,7 @@
                       <img
                         src={movie.poster_url}
                         alt={movie.title}
+                        draggable="false"
                         class="w-16 h-24 rounded object-cover shadow-lg pointer-events-none
                           {isSearching && isMatch ? 'ring-2 ring-accent shadow-accent/30' : 'group-hover:ring-2 group-hover:ring-accent'}"
                         loading="lazy"
@@ -509,20 +612,29 @@
                   {/if}
                 </div>
               {/each}
-            {/if}
-          </div>
+            </div>
+          {/if}
         </div>
       {/each}
 
       <!-- Untiered items -->
-      {#if (subTab === "shows" ? untieredShows : untieredMovies).length > 0}
-        <div class="mt-4 pt-4 border-t border-border">
-          <h4 class="text-xs text-text-muted uppercase tracking-wider mb-2">Untiered</h4>
-          <div class="flex flex-wrap gap-3">
-            {#if subTab === "shows"}
-              {#each untieredShows as show (show.id)}
+      <div class="mt-4 pt-4 border-t border-border">
+        <h4 class="text-xs text-text-muted uppercase tracking-wider mb-2">Untiered</h4>
+        {#if subTab === "shows"}
+          <div
+            use:dndzone={{
+              items: untieredShows,
+              type: "tier-shows",
+              flipDurationMs: 200,
+              dropTargetStyle: { outline: "2px dashed rgb(59 130 246)", outlineOffset: "-2px" },
+            }}
+            onconsider={(e) => handleShowConsider(null, e as CustomEvent<DndEvent<TierListShow>>)}
+            onfinalize={(e) => handleShowFinalize(null, e as CustomEvent<DndEvent<TierListShow>>)}
+            class="flex flex-wrap gap-3 min-h-[60px] rounded-lg"
+          >
+            {#each untieredShows as show (show.id)}
                 {@const isMatch = matchesSearch(show.name)}
-                <div class="group flex flex-col items-center w-16 relative context-menu-container transition-opacity {isSearching && !isMatch ? 'opacity-20' : ''}">
+                <div animate:flip={{ duration: 200 }} class="group flex flex-col items-center w-16 relative context-menu-container transition-opacity select-none {isSearching && !isMatch ? 'opacity-20' : ''}">
                   <!-- svelte-ignore a11y_no_static_element_interactions -->
                   <div
                     onclick={() => openShowDetail(show.id)}
@@ -535,7 +647,7 @@
                     class="flex flex-col items-center w-full transition-transform hover:scale-105 hover:z-10 cursor-pointer"
                   >
                     {#if show.poster_url}
-                      <img src={show.poster_url} alt={show.name} class="w-16 h-24 rounded object-cover shadow-lg pointer-events-none {isSearching && isMatch ? 'ring-2 ring-accent shadow-accent/30' : 'group-hover:ring-2 group-hover:ring-accent'}" loading="lazy" decoding="async" />
+                      <img src={show.poster_url} alt={show.name} draggable="false" class="w-16 h-24 rounded object-cover shadow-lg pointer-events-none {isSearching && isMatch ? 'ring-2 ring-accent shadow-accent/30' : 'group-hover:ring-2 group-hover:ring-accent'}" loading="lazy" decoding="async" />
                     {:else}
                       <div class="w-16 h-24 rounded bg-border flex items-center justify-center shadow-lg {isSearching && isMatch ? 'ring-2 ring-accent shadow-accent/30' : 'group-hover:ring-2 group-hover:ring-accent'}">
                         <Tv class="w-6 h-6 text-text-muted" />
@@ -577,70 +689,81 @@
                     </div>
                   {/if}
                 </div>
-              {/each}
-            {:else}
-              {#each untieredMovies as movie (movie.id)}
-                {@const isMatch = matchesSearch(movie.title)}
-                <div class="group flex flex-col items-center w-16 relative context-menu-container transition-opacity {isSearching && !isMatch ? 'opacity-20' : ''}">
-                  <!-- svelte-ignore a11y_no_static_element_interactions -->
-                  <div
-                    onclick={() => openMovieDetail(movie.id)}
-                    onkeydown={(e) => { if (e.key === 'Enter') openMovieDetail(movie.id); }}
-                    onmouseenter={(e) => showPreview(e, movie.poster_url, movie.title)}
-                    onmouseleave={hidePreview}
-                    title={movie.title}
-                    role="button"
-                    tabindex="0"
-                    class="flex flex-col items-center w-full transition-transform hover:scale-105 hover:z-10 cursor-pointer"
-                  >
-                    {#if movie.poster_url}
-                      <img src={movie.poster_url} alt={movie.title} class="w-16 h-24 rounded object-cover shadow-lg pointer-events-none {isSearching && isMatch ? 'ring-2 ring-accent shadow-accent/30' : 'group-hover:ring-2 group-hover:ring-accent'}" loading="lazy" decoding="async" />
-                    {:else}
-                      <div class="w-16 h-24 rounded bg-border flex items-center justify-center shadow-lg {isSearching && isMatch ? 'ring-2 ring-accent shadow-accent/30' : 'group-hover:ring-2 group-hover:ring-accent'}">
-                        <Film class="w-6 h-6 text-text-muted" />
-                      </div>
-                    {/if}
-                    <span class="text-xs mt-1 truncate w-full text-center pointer-events-none {isSearching && isMatch ? 'text-accent font-medium' : 'text-text-muted group-hover:text-text'}">{movie.title}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onclick={(e) => toggleContextMenu(e, "movie", movie.id)}
-                    class="context-menu-btn absolute top-0 right-0 z-20 w-6 h-6 rounded-bl-lg bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/90"
-                    title="Options"
-                  >
-                    <MoreVertical class="w-3 h-3 text-white pointer-events-none" />
-                  </button>
-                  {#if contextMenuOpen?.type === "movie" && contextMenuOpen?.id === movie.id}
-                    <div class="absolute top-7 right-0 z-50 bg-surface border border-border rounded-lg shadow-xl py-1 min-w-[160px]">
-                      <div class="px-3 py-1 text-[10px] text-text-muted uppercase tracking-wider">Move to tier</div>
-                      {#each tiers as targetTier (targetTier.id)}
-                        <button
-                          type="button"
-                          onclick={() => handleMoveTier("movie", movie.id, targetTier.id)}
-                          class="w-full px-3 py-1.5 text-left text-xs hover:bg-surface-hover flex items-center gap-2 text-text"
-                        >
-                          <ArrowRight class="w-3 h-3" />
-                          {#if targetTier.color}
-                            <span class="w-2 h-2 rounded-full" style="background-color: {targetTier.color};"></span>
-                          {/if}
-                          {targetTier.name}
-                        </button>
-                      {/each}
-                      <div class="border-t border-border my-1"></div>
-                      {#if movie.tier_only}
-                        <button type="button" onclick={() => handleRemoveFromTierList("movie", movie.id)} class="w-full px-3 py-1.5 text-left text-xs text-red-400 hover:bg-surface-hover flex items-center gap-2">
-                          <Trash2 class="w-3 h-3" />
-                          Remove from tier list
-                        </button>
-                      {/if}
+            {/each}
+          </div>
+        {:else}
+          <div
+            use:dndzone={{
+              items: untieredMovies,
+              type: "tier-movies",
+              flipDurationMs: 200,
+              dropTargetStyle: { outline: "2px dashed rgb(59 130 246)", outlineOffset: "-2px" },
+            }}
+            onconsider={(e) => handleMovieConsider(null, e as CustomEvent<DndEvent<TierListMovie>>)}
+            onfinalize={(e) => handleMovieFinalize(null, e as CustomEvent<DndEvent<TierListMovie>>)}
+            class="flex flex-wrap gap-3 min-h-[60px] rounded-lg"
+          >
+            {#each untieredMovies as movie (movie.id)}
+              {@const isMatch = matchesSearch(movie.title)}
+              <div animate:flip={{ duration: 200 }} class="group flex flex-col items-center w-16 relative context-menu-container transition-opacity select-none {isSearching && !isMatch ? 'opacity-20' : ''}">
+                <!-- svelte-ignore a11y_no_static_element_interactions -->
+                <div
+                  onclick={() => openMovieDetail(movie.id)}
+                  onkeydown={(e) => { if (e.key === 'Enter') openMovieDetail(movie.id); }}
+                  onmouseenter={(e) => showPreview(e, movie.poster_url, movie.title)}
+                  onmouseleave={hidePreview}
+                  title={movie.title}
+                  role="button"
+                  tabindex="0"
+                  class="flex flex-col items-center w-full transition-transform hover:scale-105 hover:z-10 cursor-pointer"
+                >
+                  {#if movie.poster_url}
+                    <img src={movie.poster_url} alt={movie.title} draggable="false" class="w-16 h-24 rounded object-cover shadow-lg pointer-events-none {isSearching && isMatch ? 'ring-2 ring-accent shadow-accent/30' : 'group-hover:ring-2 group-hover:ring-accent'}" loading="lazy" decoding="async" />
+                  {:else}
+                    <div class="w-16 h-24 rounded bg-border flex items-center justify-center shadow-lg {isSearching && isMatch ? 'ring-2 ring-accent shadow-accent/30' : 'group-hover:ring-2 group-hover:ring-accent'}">
+                      <Film class="w-6 h-6 text-text-muted" />
                     </div>
                   {/if}
+                  <span class="text-xs mt-1 truncate w-full text-center pointer-events-none {isSearching && isMatch ? 'text-accent font-medium' : 'text-text-muted group-hover:text-text'}">{movie.title}</span>
                 </div>
-              {/each}
-            {/if}
+                <button
+                  type="button"
+                  onclick={(e) => toggleContextMenu(e, "movie", movie.id)}
+                  class="context-menu-btn absolute top-0 right-0 z-20 w-6 h-6 rounded-bl-lg bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/90"
+                  title="Options"
+                >
+                  <MoreVertical class="w-3 h-3 text-white pointer-events-none" />
+                </button>
+                {#if contextMenuOpen?.type === "movie" && contextMenuOpen?.id === movie.id}
+                  <div class="absolute top-7 right-0 z-50 bg-surface border border-border rounded-lg shadow-xl py-1 min-w-[160px]">
+                    <div class="px-3 py-1 text-[10px] text-text-muted uppercase tracking-wider">Move to tier</div>
+                    {#each tiers as targetTier (targetTier.id)}
+                      <button
+                        type="button"
+                        onclick={() => handleMoveTier("movie", movie.id, targetTier.id)}
+                        class="w-full px-3 py-1.5 text-left text-xs hover:bg-surface-hover flex items-center gap-2 text-text"
+                      >
+                        <ArrowRight class="w-3 h-3" />
+                        {#if targetTier.color}
+                          <span class="w-2 h-2 rounded-full" style="background-color: {targetTier.color};"></span>
+                        {/if}
+                        {targetTier.name}
+                      </button>
+                    {/each}
+                    <div class="border-t border-border my-1"></div>
+                    {#if movie.tier_only}
+                      <button type="button" onclick={() => handleRemoveFromTierList("movie", movie.id)} class="w-full px-3 py-1.5 text-left text-xs text-red-400 hover:bg-surface-hover flex items-center gap-2">
+                        <Trash2 class="w-3 h-3" />
+                        Remove from tier list
+                      </button>
+                    {/if}
+                  </div>
+                {/if}
+              </div>
+            {/each}
           </div>
-        </div>
-      {/if}
+        {/if}
+      </div>
 
     </div>
   {/if}

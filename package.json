@@ -17,8 +17,8 @@
     "@tauri-apps/plugin-process": "^2.3.1",
     "@tauri-apps/plugin-sql": "^2.2.0",
     "@tauri-apps/plugin-updater": "^2.9.0",
-    "@thisux/sveltednd": "^0.0.20",
-    "date-fns": "^4.1.0"
+    "date-fns": "^4.1.0",
+    "svelte-dnd-action": "^0.9.70"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^5.0.3",

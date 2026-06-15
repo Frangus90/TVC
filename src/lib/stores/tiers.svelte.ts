@@ -215,6 +215,35 @@ export async function updateMovieTier(
   }
 }
 
+// Bulk position updates for drag-and-drop. Callers pass the final ordered
+// id list for a single zone; backend sets tier_id + rank_order in one tx.
+// tierId === null means the untiered section (both fields cleared).
+export async function setTierShowPositions(
+  tierId: number | null,
+  orderedIds: number[]
+): Promise<void> {
+  try {
+    await invoke("set_tier_show_positions", { tierId, orderedIds });
+    await loadTierListShows();
+  } catch (error) {
+    logger.error("Failed to set tier show positions", error);
+    throw error;
+  }
+}
+
+export async function setTierMoviePositions(
+  tierId: number | null,
+  orderedIds: number[]
+): Promise<void> {
+  try {
+    await invoke("set_tier_movie_positions", { tierId, orderedIds });
+    await loadTierListMovies();
+  } catch (error) {
+    logger.error("Failed to set tier movie positions", error);
+    throw error;
+  }
+}
+
 // Tier-only item management.
 // IMPORTANT: these re-throw on failure so callers (TierSearchModal) can show
 // the error to the user. The old swallow-and-log behavior made backend failures
@@ -241,6 +270,29 @@ export async function addMovieTierOnly(
     await loadTierListMovies();
   } catch (error) {
     logger.error("Failed to add movie to tier list", error);
+    throw error;
+  }
+}
+
+// Inverse of addShowTierOnly / addMovieTierOnly. Used by the search modal so
+// the user can untick a show they just added. tier_only=1 rows get deleted;
+// tracked rows just have their tier_id cleared (they remain tracked).
+export async function removeShowFromTierList(id: number): Promise<void> {
+  try {
+    await invoke("remove_show_from_tier_list", { id });
+    await loadTierListShows();
+  } catch (error) {
+    logger.error("Failed to remove show from tier list", error);
+    throw error;
+  }
+}
+
+export async function removeMovieFromTierList(id: number): Promise<void> {
+  try {
+    await invoke("remove_movie_from_tier_list", { id });
+    await loadTierListMovies();
+  } catch (error) {
+    logger.error("Failed to remove movie from tier list", error);
     throw error;
   }
 }
