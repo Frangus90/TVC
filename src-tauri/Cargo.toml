@@ -1,6 +1,6 @@
 [package]
 name = "tvc"
-version = "0.13.1"
+version = "0.13.2"
 description = "TV Calendar - Track your TV shows"
 authors = ["Frangus90"]
 edition = "2021"
