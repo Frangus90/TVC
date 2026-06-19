@@ -280,7 +280,28 @@ $sidebar = $sidebar -replace '>v[\d\.]+</p>', ">v$Version</p>"
 Set-Content "$ProjectRoot\src\lib\components\layout\Sidebar.svelte" $sidebar -NoNewline
 Write-Success "  Updated Sidebar.svelte"
 
-# Step 2: Build with signing
+# Step 2: Commit and push pending changes
+Write-Step "Committing pending changes..."
+
+Push-Location $ProjectRoot
+try {
+    $pending = git status --porcelain
+    if ($pending) {
+        git add -A
+        if ($LASTEXITCODE -ne 0) { throw "git add failed" }
+        git commit -m "Check the changelog"
+        if ($LASTEXITCODE -ne 0) { throw "git commit failed" }
+        git push
+        if ($LASTEXITCODE -ne 0) { throw "git push failed" }
+        Write-Success "  Committed and pushed pending changes"
+    } else {
+        Write-Info "  No pending changes to commit"
+    }
+} finally {
+    Pop-Location
+}
+
+# Step 3: Build with signing
 Write-Step "Building with signing..."
 
 $keyPath = "$env:USERPROFILE\.tauri\tvc-pwd.key"
@@ -304,7 +325,7 @@ try {
 
 Write-Success "  Build complete!"
 
-# Step 3: Create latest.json
+# Step 4: Create latest.json
 Write-Step "Creating latest.json..."
 
 $bundlePath = "$ProjectRoot\src-tauri\target\release\bundle\nsis"
@@ -338,7 +359,7 @@ $latestJson = '{
 [System.IO.File]::WriteAllText("$bundlePath\latest.json", $latestJson)
 Write-Success "  Created latest.json"
 
-# Step 4: Create GitHub release
+# Step 5: Create GitHub release
 Write-Step "Creating GitHub release v$Version..."
 
 # Write release notes to a temp file to avoid escaping issues
@@ -371,7 +392,7 @@ try {
     Remove-Item $releaseNotesFile -ErrorAction SilentlyContinue
 }
 
-# Step 5: Mark changelog as released
+# Step 6: Mark changelog as released
 Write-Step "Marking changelog entry as released..."
 $changelogContent = Get-Content $changelogPath -Raw
 $releaseDate = Get-Date -Format 'dd.MM.yyyy'

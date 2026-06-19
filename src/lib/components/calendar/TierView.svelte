@@ -2,7 +2,8 @@
   import { onMount } from "svelte";
   import { flip } from "svelte/animate";
   import { dndzone, type DndEvent } from "svelte-dnd-action";
-  import { Tv, Film, Trash2, MoreVertical, Plus, ArrowUpCircle, ArrowDownCircle, ArrowRight, Search, X } from "lucide-svelte";
+  import { Tv, Film, Trash2, MoreVertical, Plus, ArrowUpCircle, ArrowDownCircle, ArrowRight, Search, X, Download, Loader2 } from "lucide-svelte";
+  import { exportTierListAsImage } from "../../utils/tierExport";
   import {
     getTiers,
     getTierListShows,
@@ -31,6 +32,17 @@
 
   type TierSubTab = "shows" | "movies";
   let subTab = $state<TierSubTab>("shows");
+  let exporting = $state(false);
+
+  async function handleExport() {
+    if (exporting) return;
+    exporting = true;
+    try {
+      await exportTierListAsImage(subTab);
+    } finally {
+      exporting = false;
+    }
+  }
 
   // Sync sidebar when sub-tab changes
   function switchSubTab(tab: TierSubTab) {
@@ -310,6 +322,22 @@
           </span>
         </div>
       {/if}
+
+      <!-- Export Image button -->
+      <button
+        type="button"
+        onclick={handleExport}
+        disabled={exporting}
+        class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg bg-surface-hover text-text hover:bg-border transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {#if exporting}
+          <Loader2 class="w-4 h-4 animate-spin" />
+          Generating…
+        {:else}
+          <Download class="w-4 h-4" />
+          Export {subTab === "shows" ? "Shows" : "Movies"}
+        {/if}
+      </button>
 
       <!-- Add to Tier List button -->
       <button
