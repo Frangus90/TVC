@@ -2,6 +2,12 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.13.3] - 19.06.2026
+
+### Tier List
+
+- **Export tier list as an image**: A new "Export Shows" / "Export Movies" button (label follows the active sub-tab) in the Tier Rankings header saves the full tier list — every tier, plus the Untiered section — as a single PNG file at retina resolution, regardless of how many items the list contains, so a long list can be shared without being cut off by a screenshot
+
 ## [0.13.2] - 15.06.2026
 
 ### Tier List
