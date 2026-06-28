@@ -2,6 +2,12 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.13.4] - Unreleased
+
+### Fixes
+
+- **Adding shows and movies now persists**: The Content Security Policy was missing `http://ipc.localhost`, the URL Tauri's IPC custom protocol uses on Windows. Every `invoke` call was blocked at the fetch layer and forced onto the postMessage fallback, which silently dropped writes like `add_show` and `add_movie` — search would show the green checkmark, but the show was never saved and was gone on restart. Allowing `ipc:` and `http://ipc.localhost` in `connect-src` restores the native IPC channel and clears the wall of "Refused to connect" / "IPC custom protocol failed" errors in the DevTools console
+
 ## [0.13.3] - 19.06.2026
 
 ### Tier List
