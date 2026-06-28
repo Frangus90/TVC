@@ -102,7 +102,9 @@ pub async fn add_movie(app: AppHandle, id: i64) -> Result<(), String> {
             status = excluded.status,
             genres = excluded.genres,
             vote_average = excluded.vote_average,
-            last_synced = datetime('now')
+            last_synced = datetime('now'),
+            tier_only = 0,
+            archived = 0
         "#,
     )
     .bind(movie_details.id)

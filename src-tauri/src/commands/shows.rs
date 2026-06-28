@@ -43,7 +43,9 @@ pub async fn add_show(app: AppHandle, id: i64) -> Result<(), String> {
             first_aired = excluded.first_aired,
             overview = excluded.overview,
             network = excluded.network,
-            runtime = excluded.runtime
+            runtime = excluded.runtime,
+            tier_only = 0,
+            archived = 0
         "#,
     )
     .bind(show_details.id)

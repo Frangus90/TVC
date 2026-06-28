@@ -2,6 +2,12 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.13.5] - Unreleased
+
+### Fixes
+
+- **Adding shows and movies actually persists now**: The real cause of the "green checkmark but the show disappears on restart" bug was in `add_show` / `add_movie`. The `ON CONFLICT(id) DO UPDATE` clause refreshed metadata but never reset the `tier_only` and `archived` flags, so re-adding a show that was already in a tier list (or archived) silently updated the row and left it hidden from the tracked-shows view. Adding from search now always promotes the row to fully tracked. The v0.13.4 CSP change was real but unrelated — it cleared the console noise, not this bug
+
 ## [0.13.4] - 28.06.2026
 
 ### Fixes
