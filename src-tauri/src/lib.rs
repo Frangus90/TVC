@@ -1,4 +1,5 @@
 mod arr;
+mod awards;
 mod commands;
 mod db;
 mod error;
@@ -31,6 +32,7 @@ const MIGRATION_013: &str = include_str!("../migrations/013_add_notifications.sq
 const MIGRATION_014: &str = include_str!("../migrations/014_add_tiers.sql");
 const MIGRATION_015: &str = include_str!("../migrations/015_tvdb_to_tmdb.sql");
 const MIGRATION_016: &str = include_str!("../migrations/016_racing_session_feeds.sql");
+const MIGRATION_017: &str = include_str!("../migrations/017_add_awards.sql");
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -53,6 +55,7 @@ pub fn run() {
         MigrationDef { version: 14, sql: MIGRATION_014 },
         MigrationDef { version: 15, sql: MIGRATION_015 },
         MigrationDef { version: 16, sql: MIGRATION_016 },
+        MigrationDef { version: 17, sql: MIGRATION_017 },
     ]);
 
     let migrations = vec![
@@ -150,6 +153,12 @@ pub fn run() {
             version: 16,
             description: "add racing fallback url and upgrade session feeds",
             sql: MIGRATION_016,
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 17,
+            description: "add awards tables",
+            sql: MIGRATION_017,
             kind: MigrationKind::Up,
         },
     ];

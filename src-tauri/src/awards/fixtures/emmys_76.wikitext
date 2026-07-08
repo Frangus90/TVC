@@ -1,0 +1,872 @@
+{{Short description|2024 American television programming awards}}
+{{Featured list}}
+{{Use American English|date=September 2024}}
+{{Use mdy dates|date=September 2024}}
+{{Infobox award
+| name             = 76th Primetime Emmy Awards
+| image            = 76th Primetime Emmy Awards poster.jpg
+| alt              = Poster depicting an Emmy statuette and basic broadcast details
+| caption          = Promotional poster
+| date             = {{unbulleted list|September 15, 2024 (Ceremony)|[[76th Primetime Creative Arts Emmy Awards|September 7–8, 2024]] (Creative Arts Awards)}}
+| location         = {{unbulleted list|[[Peacock Theater]]|Los Angeles, California}}
+| presenter        = [[Academy of Television Arts & Sciences]]
+| most_awards      = {{unbulleted list
+| Major: ''[[Baby Reindeer]]'' / ''[[The Bear (TV series)|The Bear]]'' / ''[[Shōgun (2024 TV series)|Shōgun]]'' (4)
+| All: ''Shōgun'' (18)
+}}
+| most_nominations = {{unbulleted list
+| {{nowrap|Major: ''[[The Morning Show (American TV series)|The Morning Show]]'' (11)}}
+| All: ''Shōgun'' (25)
+}}
+| award1_type      = [[Primetime Emmy Award for Outstanding Comedy Series|Comedy Series]]
+| award1_winner    = ''[[Hacks]]''
+| award2_type      = [[Primetime Emmy Award for Outstanding Drama Series|Drama Series]]
+| award2_winner    = ''Shōgun''
+| award3_type      = [[Primetime Emmy Award for Outstanding Limited or Anthology Series|Limited or Anthology Series]]
+| award3_winner    = ''Baby Reindeer''
+| host             = {{ubl|[[Eugene Levy]]|[[Dan Levy (Canadian actor)|Dan Levy]]}}
+| network          = [[American Broadcasting Company|ABC]]
+| producer         = Jesse Collins Entertainment
+| director         = Alex Rudzinski
+| viewership       = 6.9&nbsp;million
+| runtime          = 3 hours, 8 minutes<ref>{{cite web |url=https://apnews.com/live/emmy-awards-2024-winners-red-carpet-updates#00000191-f8cd-d902-adf5-fbddb5730000 |title=How Long Did the Emmys Run Over? |last=Sen |first=Mallika |date=September 15, 2024 |publisher=[[Associated Press]] |access-date=September 16, 2024 |archive-date=September 15, 2024 |archive-url=https://web.archive.org/web/20240915235153/https://apnews.com/live/emmy-awards-2024-winners-red-carpet-updates#00000191-f8cd-d902-adf5-fbddb5730000 |url-status=live}}</ref>
+| previous         = [[75th Primetime Emmy Awards|75th]]
+| next             = [[77th Primetime Emmy Awards|77th]]
+| main             = {{nowrap|[[Primetime Emmy Awards]]}}
+| suppressfields   = website
+}}
+
+The '''76th Primetime Emmy Awards''' honored the best in American [[prime time]] television programming from June 1, 2023, until May 31, 2024, as chosen by the [[Academy of Television Arts & Sciences]].<ref>{{cite web |url=https://www.emmys.com/sites/default/files/Downloads/2024-rules-procedures-v4.pdf?bust=240522 |title=76th Primetime Emmy Awards – 2023–2024 Rules and Procedures |date=March 10, 2024 |access-date=September 20, 2024 |publisher=[[Academy of Television Arts & Sciences]] |archive-date=September 17, 2024 |archive-url=https://web.archive.org/web/20240917105826/https://www.emmys.com/sites/default/files/Downloads/2024-rules-procedures-v4.pdf?bust=240522 |url-status=live}}</ref> The awards ceremony was held live on September 15, 2024, at the [[Peacock Theater]] in [[Downtown Los Angeles]], California, and was preceded by the [[76th Primetime Creative Arts Emmy Awards]] on September 7 and 8. During the ceremony, [[Primetime Emmy Awards|Emmy Awards]] were handed out in 25 different categories. The ceremony was produced by Jesse Collins Entertainment, directed by Alex Rudzinski, and broadcast in the United States by [[American Broadcasting Company|ABC]]. [[Eugene Levy]] and [[Dan Levy (Canadian actor)|Dan Levy]] co-hosted the event.
+
+At the main ceremony, ''[[Baby Reindeer]]'', ''[[The Bear (TV series)|The Bear]]'', and ''[[Shōgun (2024 TV series)|Shōgun]]'' tied for the most wins at four apiece, including [[Primetime Emmy Award for Outstanding Limited or Anthology Series|Outstanding Limited or Anthology Series]] for ''Baby Reindeer'' and [[Primetime Emmy Award for Outstanding Drama Series|Outstanding Drama Series]] for ''Shōgun''. Other winning programs were ''[[Hacks]]'' with three wins, including [[Primetime Emmy Award for Outstanding Comedy Series|Outstanding Comedy Series]], and ''Alex Edelman: Just for Us'', ''[[The Crown (TV series)|The Crown]]'', ''[[The Daily Show]]'', ''[[Fargo (TV series)|Fargo]]'', ''[[Last Week Tonight with John Oliver]]'', ''[[The Morning Show (American TV series)|The Morning Show]]'', ''[[Ripley (TV series)|Ripley]]'', ''[[Slow Horses]]'', ''[[The Traitors (American TV series)|The Traitors]]'', and ''[[True Detective season 4|True Detective: Night Country]]'' with one each. Including Creative Arts Emmys, ''Shōgun'' led all programs with 18 wins, a record for a show in one year; [[FX (TV channel)|FX]] led all networks and platforms with 36 total wins.
+
+==Winners and nominees==
+[[File:Jeremy Allen White Springsteen-33 (cropped).jpg|thumb|upright|alt=Jeremy Allen White in 2025.|[[Jeremy Allen White]], Outstanding Lead Actor in a Comedy Series winner]]
+[[File:Jean Smart by Gage Skidmore.jpg|thumb|upright|alt=Jean Smart in 2018.|[[Jean Smart]], Outstanding Lead Actress in a Comedy Series winner]]
+[[File:Hiroyuki Sanada 20240220.jpg|thumb|upright|alt=Hiroyuki Sanada in 2024.|[[Hiroyuki Sanada]], Outstanding Lead Actor in a Drama Series winner]]
+[[File:Anna Sawai from Sidewalks Entertainment 2024.jpg|thumb|upright|alt=Anna Sawai in 2024.|[[Anna Sawai]], Outstanding Lead Actress in a Drama Series winner]]
+[[File:Richard Gadd - Soccer Aid for Unicef 2025.jpg|thumb|upright|alt=Richard Gadd in 2025.|[[Richard Gadd]], Outstanding Lead Actor in a Limited or Anthology Series or Movie winner]]
+[[File:Jodie Foster-8667.jpg|thumb|upright|alt=Jodie Foster in 2025.|[[Jodie Foster]], Outstanding Lead Actress in a Limited or Anthology Series or Movie winner]]
+[[File:Ebon Moss-Bachrach by Gage Skidmore.jpg|thumb|upright|alt=Ebon Moss-Bachrach in 2019.|[[Ebon Moss-Bachrach]], Outstanding Supporting Actor in a Comedy Series winner]]
+[[File:Billy Crudup Jay Kelly-10 (cropped).jpg|thumb|upright|alt=Billy Crudup in 2025.|[[Billy Crudup]], Outstanding Supporting Actor in a Drama Series winner]]
+[[File:Elizabeth Debicki 3, 2013.jpg|thumb|upright|alt=Elizabeth Debicki in 2013.|[[Elizabeth Debicki]], Outstanding Supporting Actress in a Drama Series winner]]
+[[File:Lamorne Morris by Gage Skidmore (cropped).jpg|thumb|upright|alt=Lamorne Morris in 2022.|[[Lamorne Morris]], Outstanding Supporting Actor in a Limited or Anthology Series or Movie winner]]
+[[File:Jessica Gunning at the 2025 Toronto International Film Festival (cropped).jpg|thumb|upright|alt=Jessica Gunning in 2025.|[[Jessica Gunning]], Outstanding Supporting Actress in a Limited or Anthology Series or Movie winner]]
+
+The nominations for the 76th Primetime Emmy Awards were announced on July 17, 2024, in a virtual broadcast originating from the [[El Capitan Theatre]] in [[Hollywood, Los Angeles|Hollywood]], Los Angeles, hosted by actor [[Tony Hale]], actress [[Sheryl Lee Ralph]] and Television Academy chair [[Cris Abrego]].<ref>{{cite web |url=https://deadline.com/2024/06/emmy-awards-tony-hale-sheryl-lee-ralph-to-announce-nominees-1235985546/ |title=Emmy Awards: Tony Hale & Sheryl Lee Ralph to Announce Nominees |last=Petski |first=Denise |work=[[Deadline Hollywood]] |date=June 28, 2024 |access-date=June 28, 2024 |archive-date=June 28, 2024 |archive-url=https://web.archive.org/web/20240628145203/https://deadline.com/2024/06/emmy-awards-tony-hale-sheryl-lee-ralph-to-announce-nominees-1235985546/ |url-status=live}}</ref> Including nominations at the [[76th Primetime Creative Arts Emmy Awards]], ''[[Shōgun (2024 TV series)|Shōgun]]'' led all programs with 25 nominations.<ref>{{cite web |url=https://variety.com/2024/tv/news/2024-emmy-nominations-list-1236074176/ |title=Emmy Nominations 2024: ''Shogun'' Leads All Shows with 25 Nods, ''The Bear'' Close Behind with 23 |last1=Moreau |first1=Jordan |last2=Schneider |first2=Michael |last3=Ramos Bechara |first3=Diego |work=[[Variety (magazine)|Variety]] |date=July 17, 2024 |access-date=July 17, 2024 |archive-date=July 17, 2024 |archive-url=https://web.archive.org/web/20240717181656/https://variety.com/2024/tv/news/2024-emmy-nominations-list-1236074176/ |url-status=live}}</ref> It was also the second non-English language series to be nominated for [[Primetime Emmy Award for Outstanding Drama Series|Outstanding Drama Series]] after ''[[Squid Game]]'', which was nominated [[74th Primetime Emmy Awards|two years earlier]].<ref name="History">{{cite news |last=Brzeski |first=Patrick |title=''Shogun'' Makes History with 25 Emmy Nominations |url=https://www.hollywoodreporter.com/tv/tv-news/shogun-historical-25-emmy-nominations-2024-diversity-1235949510/ |access-date=September 21, 2024 |work=[[The Hollywood Reporter]] |date=July 17, 2024 |archive-date=October 7, 2024 |archive-url=https://web.archive.org/web/20241007182236/https://www.hollywoodreporter.com/tv/tv-news/shogun-historical-25-emmy-nominations-2024-diversity-1235949510/ |url-status=live}}</ref> ''[[The Bear (TV series)|The Bear]]'' became the most-nominated comedy series for a single season in the awards' history with 23 nominations; the program surpassed the record held by the [[NBC]] comedy ''[[30 Rock]]'', which received 22 nominations in [[61st Primetime Emmy Awards|2009]].<ref>{{cite web |url=https://www.thewrap.com/the-bear-breaks-30-rock-record-comedy-emmy-nominations/ |title=''The Bear'' Breaks ''30 Rock'' Emmy Record for Most Nominations in a Comedy Series |last=Ng |first=Philiana |work=[[TheWrap]] |date=July 17, 2024 |access-date=July 17, 2024 |archive-date=July 17, 2024 |archive-url=https://web.archive.org/web/20240717195236/https://www.thewrap.com/the-bear-breaks-30-rock-record-comedy-emmy-nominations/ |url-status=live}}</ref><ref>{{cite web |url=https://variety.com/2024/tv/awards/the-bear-emmys-comedy-nomination-record-1236062449/ |title=''The Bear'' Breaks Emmy Record for Comedy Series with 23 Nominations |last=Davis |first=Clayton |work=[[Variety (magazine)|Variety]] |date=July 17, 2024 |access-date=July 17, 2024 |archive-date=July 18, 2024 |archive-url=https://web.archive.org/web/20240718012221/https://variety.com/2024/tv/awards/the-bear-emmys-comedy-nomination-record-1236062449/ |url-status=live}}</ref> [[Lily Gladstone]] of the series ''[[Under the Bridge (TV series)|Under the Bridge]]'' and [[Kali Reis]] of the series ''[[True Detective season 4|True Detective: Night Country]]'' became the first indigenous American women to receiving acting nominations; along with [[D'Pharaoh Woon-A-Tai]] of the series ''[[Reservation Dogs]]'', they were the first indigenous American actors to earn an acting nomination since [[August Schellenberg]] for his role in the television film ''[[Bury My Heart at Wounded Knee (film)|Bury My Heart at Wounded Knee]]'' in [[59th Primetime Emmy Awards|2007]].<ref>{{cite news |last=Ng |first=Philiana |title=Lily Gladstone, D'Pharaoh Woon-A-Tai, Kali Reis Are First Indigenous Actors in 17 Years to Land Emmy Nominations |url=https://www.thewrap.com/lily-gladstone-emmy-nomination-under-the-bridge/ |access-date=September 24, 2024 |work=[[TheWrap]] |date=July 17, 2024 |archive-date=September 29, 2024 |archive-url=https://web.archive.org/web/20240929075917/https://www.thewrap.com/lily-gladstone-emmy-nomination-under-the-bridge/ |url-status=live}}</ref> [[Netflix]] led all networks and platforms with 107 nominations. [[FX (TV channel)|FX]] came in second place with 93 nominations, surpassing its own record of 56 nominations in [[68th Primetime Emmy Awards|2016]].<ref>{{cite web |url=https://deadline.com/2024/07/emmys-2024-nominations-netflix-fx-hbo-1236012372/ |title=Netflix Leads Total Emmy Nominations But FX Comes in Close Second with Record Haul Ahead of HBO |last=White |first=Peter |work=[[Deadline Hollywood]] |date=July 17, 2024 |access-date=July 17, 2024 |archive-date=July 17, 2024 |archive-url=https://web.archive.org/web/20240717165335/https://deadline.com/2024/07/emmys-2024-nominations-netflix-fx-hbo-1236012372/ |url-status=live}}</ref>
+
+The winners were announced on September 15, following the Creative Arts Emmys on September 7 and 8. With 36 total wins, FX led all networks and platforms for the first time.<ref name="Network Tally">{{cite news |last=Otterson |first=Joe |title=FX Wins Most Emmys of 2024 as ''Shogun'' and ''The Bear'' Top Night |url=https://variety.com/2024/tv/awards/emmys-2024-fx-most-wins-network-shogun-the-bear-1236139779/ |access-date=September 21, 2024 |work=[[Variety (magazine)|Variety]] |date=September 15, 2024 |archive-date=September 21, 2024 |archive-url=https://web.archive.org/web/20240921074042/https://variety.com/2024/tv/awards/emmys-2024-fx-most-wins-network-shogun-the-bear-1236139779/ |url-status=live}}</ref> ''Shōgun'' became the first non-English-language series to win Outstanding Drama Series and won a total of 18 awards, breaking the record of 13 set by ''[[John Adams (miniseries)|John Adams]]'' in [[60th Primetime Emmy Awards|2008]] to become the most awarded program for a single year in Emmy history.<ref>{{cite web |url=https://variety.com/2024/awards/news/shogun-breaks-emmy-record-most-wins-1236138477/ |title=''Shogun'' Shatters Emmy Record with 18 Wins in One Season |last=Tangcay |first=Jazz |date=September 15, 2024 |work=[[Variety (magazine)|Variety]] |access-date=September 18, 2024 |archive-date=September 17, 2024 |archive-url=https://web.archive.org/web/20240917185155/https://variety.com/2024/awards/news/shogun-breaks-emmy-record-most-wins-1236138477/ |url-status=live}}</ref> It also passed ''[[Game of Thrones]]''{{'}}s 12 wins in [[67th Primetime Emmy Awards|2015]], 2016, and [[71st Primetime Emmy Awards|2019]] for most wins by a drama series in a single season.<ref>{{cite news |last=Andreeva |first=Nellie |title=''Shōgun'' Caps Record Emmy Run with Win No. 18 for Outstanding Drama Series as Star Hiroyuki Sanada Pays Homage to Samurai Period Dramas |url=https://www.thewrap.com/shogun-new-record-most-emmy-wins-single-season-2024/ |access-date=September 21, 2024 |work=[[Deadline Hollywood]] |date=September 15, 2024 |archive-date=September 21, 2024 |archive-url=https://web.archive.org/web/20240921075056/https://www.thewrap.com/shogun-new-record-most-emmy-wins-single-season-2024/ |url-status=live}}</ref> With its 11 wins, ''The Bear'' surpassed its own record for most wins for a comedy series in a single year. For their work on ''Shōgun'', [[Hiroyuki Sanada]] and [[Anna Sawai]] were the first Japanese performers to win [[Primetime Emmy Award for Outstanding Lead Actor in a Drama Series|Outstanding Lead Actor in a Drama Series]] and [[Primetime Emmy Award for Outstanding Lead Actress in a Drama Series|Outstanding Lead Actress in a Drama Series]], respectively.<ref name="History"/><ref>{{cite web |url=https://apnews.com/article/emmy-shogun-japan-samurai-series-award-3fbc80c598664d09274cdbe80ed511d5 |title=Japan celebrates record Emmy wins for ''Shogun'' |last=Kageyama |first=Yuri |date=September 16, 2024 |publisher=[[Associated Press]] |access-date=September 18, 2024 |archive-date=September 19, 2024 |archive-url=https://web.archive.org/web/20240919005032/https://apnews.com/article/emmy-shogun-japan-samurai-series-award-3fbc80c598664d09274cdbe80ed511d5 |url-status=live}}</ref> Sawai also became the first Asian to win her category, while Sanada became the second Asian to do so in his category after [[Lee Jung-jae]] for his role in ''Squid Game'' in 2022.<ref>{{cite news |last=Perez |first=Lexy |title=''Shogun'' Star Anna Sawai Becomes First Actor of Asian Descent to Win Drama Actress Emmy |url=https://www.hollywoodreporter.com/tv/tv-news/anna-sawai-first-japanese-actress-2024-emmys-1236002354/ |access-date=September 21, 2024 |work=[[The Hollywood Reporter]] |date=September 15, 2024 |archive-date=September 21, 2024 |archive-url=https://web.archive.org/web/20240921072746/https://www.hollywoodreporter.com/tv/tv-news/anna-sawai-first-japanese-actress-2024-emmys-1236002354/ |url-status=live}}</ref> [[Liza Colón-Zayas]] was the first Latina winner for [[Primetime Emmy Award for Outstanding Supporting Actress in a Comedy Series|Outstanding Supporting Actress in a Comedy Series]] for her performance on ''The Bear''.<ref>{{cite news |last=Victorian |first=Brande |title=''The Bear'' Star Liza Colón-Zayas Becomes First Latina to Win Best Supporting Actress in a Comedy Emmy |url=https://www.hollywoodreporter.com/tv/tv-news/2024-emmys-best-supporting-actress-comedy-liza-colon-zayas-the-bear-1236002710/ |access-date=September 24, 2024 |work=[[The Hollywood Reporter]] |date=September 15, 2024 |archive-date=September 24, 2024 |archive-url=https://web.archive.org/web/20240924080107/https://www.hollywoodreporter.com/tv/tv-news/2024-emmys-best-supporting-actress-comedy-liza-colon-zayas-the-bear-1236002710/ |url-status=live}}</ref>
+
+Winners are listed first, highlighted in '''boldface''', and indicated with a double dagger (‡).<ref>{{cite web |url=https://www.televisionacademy.com/files/assets/Downloads/76thnominations-list-v4.pdf |title=76th Emmy Awards Complete Nominations List |publisher=[[Academy of Television Arts & Sciences]] |access-date=September 19, 2024 |archive-date=September 29, 2024 |archive-url=https://web.archive.org/web/20240929075931/https://www.televisionacademy.com/files/assets/Downloads/76thnominations-list-v4.pdf |url-status=live}}</ref><ref>{{cite press release |url=https://www.emmys.com/76th-emmy-winners |title=76th Emmy Awards Winners Announced |date=September 15, 2024 |publisher=[[Academy of Television Arts & Sciences]] |format=PDF |access-date=September 25, 2024 |archive-date=September 29, 2024 |archive-url=https://web.archive.org/web/20240929075914/https://www.emmys.com/76th-emmy-winners |url-status=live}}</ref>{{efn|The outlets listed for each program are the U.S. broadcasters or streaming services identified in the nominations, which for some international productions are different than the broadcaster(s) that originally [[commission (art)|commissioned]] the program. Programs broadcast by [[HBO]] or [[HBO Max|Max]] were listed under both services in the nominations list; only the original broadcaster is listed below.}} For simplicity, producers who received nominations for program awards have been omitted.
+
+===Programs===
+{| class="wikitable"
+|+ {{sronly|Programs}}
+|-
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Comedy Series|Outstanding Comedy Series]]}}
+* '''''[[Hacks]]'' ([[HBO Max|Max]])'''{{double dagger|alt=Winner}}
+** ''[[Abbott Elementary]]'' ([[American Broadcasting Company|ABC]])
+** ''[[The Bear (TV series)|The Bear]]'' ([[FX Networks|FX]])
+** ''[[Curb Your Enthusiasm]]'' ([[HBO]])
+** ''[[Only Murders in the Building]]'' ([[Hulu]])
+** ''[[Palm Royale]]'' ([[Apple TV (streaming service)|Apple TV+]])
+** ''[[Reservation Dogs]]'' (FX)
+** ''[[What We Do in the Shadows (TV series)|What We Do in the Shadows]]'' (FX)
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Drama Series|Outstanding Drama Series]]}}
+* '''''[[Shōgun (2024 TV series)|Shōgun]]'' (FX)'''{{double dagger|alt=Winner}}
+** ''[[The Crown (TV series)|The Crown]]'' ([[Netflix]])
+** ''[[Fallout (American TV series)|Fallout]]'' ([[Amazon Prime Video|Prime Video]])
+** ''[[The Gilded Age (TV series)|The Gilded Age]]'' (HBO)
+** ''[[The Morning Show (American TV series)|The Morning Show]]'' (Apple TV+)
+** ''[[Mr. & Mrs. Smith (2024 TV series)|Mr. & Mrs. Smith]]'' (Prime Video)
+** ''[[Slow Horses]]'' (Apple TV+)
+** ''[[3 Body Problem (TV series)|3 Body Problem]]'' (Netflix)
+|-
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Limited or Anthology Series|Outstanding Limited or Anthology Series]]}}
+* '''''[[Baby Reindeer]]'' (Netflix)'''{{double dagger|alt=Winner}}
+** ''[[Fargo (TV series)|Fargo]]'' (FX)
+** ''[[Lessons in Chemistry (miniseries)|Lessons in Chemistry]]'' (Apple TV+)
+** ''[[Ripley (TV series)|Ripley]]'' (Netflix)
+** ''[[True Detective season 4|True Detective: Night Country]]'' (HBO)
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Reality Competition Program|Outstanding Reality Competition Program]]}}
+* '''''[[The Traitors (American TV series)|The Traitors]]'' ([[Peacock (streaming service)|Peacock]])'''{{double dagger|alt=Winner}}
+** ''[[The Amazing Race (American TV series)|The Amazing Race]]'' ([[CBS]])
+** ''[[RuPaul's Drag Race]]'' ([[MTV]])
+** ''[[Top Chef]]'' ([[Bravo (American TV network)|Bravo]])
+** ''[[The Voice (American TV series)|The Voice]]'' ([[NBC]])
+|-
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Talk Series|Outstanding Talk Series]]}}
+* '''''[[The Daily Show]]'' ([[Comedy Central]])'''{{double dagger|alt=Winner}}
+** ''[[Jimmy Kimmel Live!]]'' (ABC)
+** ''[[Late Night with Seth Meyers]]'' (NBC)
+** ''[[The Late Show with Stephen Colbert]]'' (CBS)
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Scripted Variety Series|Outstanding Scripted Variety Series]]}}
+* '''''[[Last Week Tonight with John Oliver]]'' (HBO)'''{{double dagger|alt=Winner}}
+** ''[[Saturday Night Live]]'' (NBC)
+|}
+
+===Acting===
+
+====Lead====
+{| class="wikitable"
+|+ {{sronly|Lead performances}}
+|-
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Lead Actor in a Comedy Series|Outstanding Lead Actor in a Comedy Series]]}}
+* '''[[Jeremy Allen White]] – ''[[The Bear (TV series)|The Bear]]'' as [[Carmy Berzatto|Carmen "Carmy" Berzatto]] (FX)'''{{double dagger|alt=Winner}}
+** [[Matt Berry]] – ''[[What We Do in the Shadows (TV series)|What We Do in the Shadows]]'' as Leslie "Laszlo" Cravensworth (FX)
+** [[Larry David]] – ''[[Curb Your Enthusiasm]]'' as Larry David (HBO)
+** [[Steve Martin]] – ''[[Only Murders in the Building]]'' as Charles-Haden Savage (Hulu)
+** [[Martin Short]] – ''Only Murders in the Building'' as Oliver Putnam (Hulu)
+** [[D'Pharaoh Woon-A-Tai]] – ''[[Reservation Dogs]]'' as Bear Smallhill (FX)
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Lead Actress in a Comedy Series|Outstanding Lead Actress in a Comedy Series]]}}
+* '''[[Jean Smart]] – ''[[Hacks]]'' as Deborah Vance (Max)'''{{double dagger|alt=Winner}}
+** [[Quinta Brunson]] – ''[[Abbott Elementary]]'' as Janine Teagues (ABC)
+** [[Ayo Edebiri]] – ''[[The Bear (TV series)|The Bear]]'' as [[Sydney Adamu]] (FX)
+** [[Selena Gomez]] – ''[[Only Murders in the Building]]'' as Mabel Mora (Hulu)
+** [[Maya Rudolph]] – ''[[Loot (TV series)|Loot]]'' as Molly Novak (Apple TV+)
+** [[Kristen Wiig]] – ''[[Palm Royale]]'' as Maxine Simmons (Apple TV+)
+|-
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Lead Actor in a Drama Series|Outstanding Lead Actor in a Drama Series]]}}
+* '''[[Hiroyuki Sanada]] – ''[[Shōgun (2024 TV series)|Shōgun]]'' as Lord Yoshii Toranaga (FX)'''{{double dagger|alt=Winner}}
+** [[Idris Elba]] – ''[[Hijack (TV series)|Hijack]]'' as Sam Nelson (Apple TV+)
+** [[Donald Glover]] – ''[[Mr. & Mrs. Smith (2024 TV series)|Mr. & Mrs. Smith]]'' as John Smith / Michael (Prime Video)
+** [[Walton Goggins]] – ''[[Fallout (American TV series)|Fallout]]'' as the [[Ghoul (TV character)|Ghoul / Cooper Howard]] (Prime Video)
+** [[Gary Oldman]] – ''[[Slow Horses]]'' as Jackson Lamb (Apple TV+)
+** [[Dominic West]] – ''[[The Crown (TV series)|The Crown]]'' as [[Charles III|Charles, Prince of Wales]] (Netflix)
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Lead Actress in a Drama Series|Outstanding Lead Actress in a Drama Series]]}}
+* '''[[Anna Sawai]] – ''[[Shōgun (2024 TV series)|Shōgun]]'' as Toda Mariko (FX)'''{{double dagger|alt=Winner}}
+** [[Jennifer Aniston]] – ''[[The Morning Show (American TV series)|The Morning Show]]'' as Alex Levy (Apple TV+)
+** [[Carrie Coon]] – ''[[The Gilded Age (TV series)|The Gilded Age]]'' as Bertha Russell (HBO)
+** [[Maya Erskine]] – ''[[Mr. & Mrs. Smith (2024 TV series)|Mr. & Mrs. Smith]]'' as Jane Smith / Alana (Prime Video)
+** [[Imelda Staunton]] – ''[[The Crown (TV series)|The Crown]]'' as [[Elizabeth II|Queen Elizabeth II]] (Netflix)
+** [[Reese Witherspoon]] – ''The Morning Show'' as Bradley Jackson (Apple TV+)
+|-
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Lead Actor in a Limited or Anthology Series or Movie|Outstanding Lead Actor in a Limited or Anthology Series or Movie]]}}
+* '''[[Richard Gadd]] – ''[[Baby Reindeer]]'' as Donny Dunn (Netflix)'''{{double dagger|alt=Winner}}
+** [[Matt Bomer]] – ''[[Fellow Travelers (miniseries)|Fellow Travelers]]'' as Hawkins "Hawk" Fuller ([[Showtime (TV network)|Showtime]])
+** [[Jon Hamm]] – ''[[Fargo (TV series)|Fargo]]'' as Sheriff Roy Tillman (FX)
+** [[Tom Hollander]] – ''[[Feud: Capote vs. The Swans]]'' as [[Truman Capote]] (FX)
+** [[Andrew Scott (actor)|Andrew Scott]] – ''[[Ripley (TV series)|Ripley]]'' as [[Tom Ripley]] (Netflix)
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Lead Actress in a Limited or Anthology Series or Movie|Outstanding Lead Actress in a Limited or Anthology Series or Movie]]}}
+* '''[[Jodie Foster]] – ''[[True Detective season 4|True Detective: Night Country]]'' as Detective Elizabeth Danvers (HBO)'''{{double dagger|alt=Winner}}
+** [[Brie Larson]] – ''[[Lessons in Chemistry (miniseries)|Lessons in Chemistry]]'' as Elizabeth Zott (Apple TV+)
+** [[Juno Temple]] – ''[[Fargo (TV series)|Fargo]]'' as Dorothy "Dot" Lyon (FX)
+** [[Sofía Vergara]] – ''[[Griselda (miniseries)|Griselda]]'' as [[Griselda Blanco]] (Netflix)
+** [[Naomi Watts]] – ''[[Feud: Capote vs. The Swans]]'' as [[Babe Paley]] (FX)
+|}
+
+====Supporting====
+{| class="wikitable"
+|+ {{sronly|Supporting performances}}
+|-
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Supporting Actor in a Comedy Series|Outstanding Supporting Actor in a Comedy Series]]}}
+* '''[[Ebon Moss-Bachrach]] – ''[[The Bear (TV series)|The Bear]]'' as [[Richie Jerimovich|Richard "Richie" Jerimovich]] (FX)'''{{double dagger|alt=Winner}}
+** [[Lionel Boyce]] – ''The Bear'' as [[Marcus Brooks]] (FX)
+** [[Paul W. Downs]] – ''[[Hacks]]'' as Jimmy LuSaque Jr. (Max)
+** [[Paul Rudd]] – ''[[Only Murders in the Building]]'' as Ben Glenroy (Hulu)
+** [[Tyler James Williams]] – ''[[Abbott Elementary]]'' as Gregory Eddie (ABC)
+** [[Bowen Yang]] – ''[[Saturday Night Live]]'' as various characters (NBC)
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Supporting Actress in a Comedy Series|Outstanding Supporting Actress in a Comedy Series]]}}
+* '''[[Liza Colón-Zayas]] – ''[[The Bear (TV series)|The Bear]]'' as [[Tina Marrero]] (FX)'''{{double dagger|alt=Winner}}
+** [[Carol Burnett]] – ''[[Palm Royale]]'' as Norma Dellacorte (Apple TV+)
+** [[Hannah Einbinder]] – ''[[Hacks]]'' as Ava Daniels (Max)
+** [[Janelle James]] – ''[[Abbott Elementary]]'' as Ava Coleman (ABC)
+** [[Sheryl Lee Ralph]] – ''Abbott Elementary'' as Barbara Howard (ABC)
+** [[Meryl Streep]] – ''[[Only Murders in the Building]]'' as Loretta Durkin (Hulu)
+|-
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Supporting Actor in a Drama Series|Outstanding Supporting Actor in a Drama Series]]}}
+* '''[[Billy Crudup]] – ''[[The Morning Show (American TV series)|The Morning Show]]'' as Cory Ellison (Apple TV+)'''{{double dagger|alt=Winner}}
+** [[Tadanobu Asano]] – ''[[Shōgun (2024 TV series)|Shōgun]]'' as Kashigi Yabushige (FX)
+** [[Mark Duplass]] – ''The Morning Show'' as Charles "Chip" Black (Apple TV+)
+** [[Jon Hamm]] – ''The Morning Show'' as Paul Marks (Apple TV+)
+** [[Takehiro Hira]] – ''Shōgun'' as Ishido Kazunari (FX)
+** [[Jack Lowden]] – ''[[Slow Horses]]'' as River Cartwright (Apple TV+)
+** [[Jonathan Pryce]] – ''[[The Crown (TV series)|The Crown]]'' as [[Prince Philip, Duke of Edinburgh]] (Netflix)
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Supporting Actress in a Drama Series|Outstanding Supporting Actress in a Drama Series]]}}
+* '''[[Elizabeth Debicki]] – ''[[The Crown (TV series)|The Crown]]'' as [[Diana, Princess of Wales]] (Netflix)'''{{double dagger|alt=Winner}}
+** [[Christine Baranski]] – ''[[The Gilded Age (TV series)|The Gilded Age]]'' as Agnes van Rhijn (HBO)
+** [[Nicole Beharie]] – ''[[The Morning Show (American TV series)|The Morning Show]]'' as Christina Hunter (Apple TV+)
+** [[Greta Lee]] – ''The Morning Show'' as Stella Bak (Apple TV+)
+** [[Lesley Manville]] – ''The Crown'' as [[Princess Margaret, Countess of Snowdon|Princess Margaret]] (Netflix)
+** [[Karen Pittman]] – ''The Morning Show'' as Mia Jordan (Apple TV+)
+** [[Holland Taylor]] – ''The Morning Show'' as Cybil Richards (Apple TV+)
+|-
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Supporting Actor in a Limited or Anthology Series or Movie|Outstanding Supporting Actor in a Limited or Anthology Series or Movie]]}}
+* '''[[Lamorne Morris]] – ''[[Fargo (TV series)|Fargo]]'' as State Trooper Whitley "Witt" Farr (FX)'''{{double dagger|alt=Winner}}
+** [[Jonathan Bailey]] – ''[[Fellow Travelers (miniseries)|Fellow Travelers]]'' as Tim Laughlin (Showtime)
+** [[Robert Downey Jr.]] – ''[[The Sympathizer (miniseries)|The Sympathizer]]'' as Claude / Professor Robert Hammer / Ned Godwin / Niko Damianos / The Priest (HBO)
+** [[Tom Goodman-Hill]] – ''[[Baby Reindeer]]'' as Darrien O'Connor (Netflix)
+** [[John Hawkes (actor)|John Hawkes]] – ''[[True Detective season 4|True Detective: Night Country]]'' as Hank Prior (HBO)
+** [[Lewis Pullman]] – ''[[Lessons in Chemistry (miniseries)|Lessons in Chemistry]]'' as Calvin Evans (Apple TV+)
+** [[Treat Williams]] – ''[[Feud: Capote vs. The Swans]]'' as [[William S. Paley|Bill Paley]] (FX) <small>(posthumous)<ref>{{cite web |url=https://www.hollywoodreporter.com/tv/tv-news/posthumous-2024-emmy-nomination-treat-williams-1235951005/ |title=Treat Williams Receives Posthumous 2024 Emmy Nomination for ''Feud: Capote vs. The Swans'' |last=Vlessing |first=Etan |date=July 17, 2024 |work=[[The Hollywood Reporter]] |access-date=August 23, 2024 |archive-date=August 23, 2024 |archive-url=https://web.archive.org/web/20240823183906/https://www.hollywoodreporter.com/tv/tv-news/posthumous-2024-emmy-nomination-treat-williams-1235951005/ |url-status=live}}</ref></small>
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Supporting Actress in a Limited or Anthology Series or Movie|Outstanding Supporting Actress in a Limited or Anthology Series or Movie]]}}
+* '''[[Jessica Gunning]] – ''[[Baby Reindeer]]'' as Martha Scott (Netflix)'''{{double dagger|alt=Winner}}
+** [[Dakota Fanning]] – ''[[Ripley (TV series)|Ripley]]'' as Marge Sherwood (Netflix)
+** [[Lily Gladstone]] – ''[[Under the Bridge (TV series)|Under the Bridge]]'' as Cam Bentland (Hulu)
+** [[Aja Naomi King]] – ''[[Lessons in Chemistry (miniseries)|Lessons in Chemistry]]'' as Harriet Sloane (Apple TV+)
+** [[Diane Lane]] – ''[[Feud: Capote vs. The Swans]]'' as [[Slim Keith|Nancy "Slim" Keith]] (FX)
+** [[Nava Mau]] – ''Baby Reindeer'' as Teri (Netflix)
+** [[Kali Reis]] – ''[[True Detective season 4|True Detective: Night Country]]'' as Detective Evangeline Navarro (HBO)
+|}
+
+===Directing===
+{| class="wikitable"
+|+ {{sronly|Directing}}
+|-
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Directing for a Comedy Series|Outstanding Directing for a Comedy Series]]}}
+* '''''[[The Bear (TV series)|The Bear]]'': "[[Fishes (The Bear)|Fishes]]" – [[Christopher Storer]] (FX)'''{{double dagger|alt=Winner}}
+** ''[[Abbott Elementary]]'': "Party" – [[Randall Einhorn]] (ABC)
+** ''The Bear'': "[[Honeydew (The Bear)|Honeydew]]" – [[Ramy Youssef]] (FX)
+** ''[[The Gentlemen (2024 TV series)|The Gentlemen]]'': "Refined Aggression" – [[Guy Ritchie]] (Netflix)
+** ''[[Hacks]]'': "[[Bulletproof (Hacks)|Bulletproof]]" – [[Lucia Aniello]] (Max)
+** ''[[The Ms. Pat Show]]'': "I'm the Pappy" – [[Mary Lou Belli]] ([[BET+]])
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Directing for a Drama Series|Outstanding Directing for a Drama Series]]}}
+* '''''[[Shōgun (2024 TV series)|Shōgun]]'': "[[Crimson Sky]]" – [[Frederick E. O. Toye]] (FX)'''{{double dagger|alt=Winner}}
+** ''[[The Crown (TV series)|The Crown]]'': "Sleep, Dearie Sleep" – [[Stephen Daldry]] (Netflix)
+** ''[[The Morning Show (American TV series)|The Morning Show]]'': "[[The Overview Effect]]" – [[Mimi Leder]] (Apple TV+)
+** ''[[Mr. & Mrs. Smith (2024 TV series)|Mr. & Mrs. Smith]]'': "First Date" – [[Hiro Murai]] (Prime Video)
+** ''[[Slow Horses]]'': "Strange Games" – [[Saul Metzstein]] (Apple TV+)
+** ''[[Winning Time: The Rise of the Lakers Dynasty]]'': "Beat L.A." – [[Salli Richardson-Whitfield]] (HBO)
+|-
+| style="vertical-align:top;" width="50%" colspan="2"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Directing for a Limited or Anthology Series or Movie|Outstanding Directing for a Limited or Anthology Series or Movie]]}}
+* '''''[[Ripley (TV series)|Ripley]]'' – [[Steven Zaillian]] (Netflix)'''{{double dagger|alt=Winner}}
+** ''[[Baby Reindeer]]'': "[[Episode 4 (Baby Reindeer)|Episode 4]]" – [[Weronika Tofilska]] (Netflix)
+** ''[[Fargo (TV series)|Fargo]]'': "[[The Tragedy of the Commons (Fargo)|The Tragedy of the Commons]]" – [[Noah Hawley]] (FX)
+** ''[[Feud: Capote vs. The Swans]]'': "Pilot" – [[Gus Van Sant]] (FX)
+** ''[[Lessons in Chemistry (miniseries)|Lessons in Chemistry]]'': "Poirot" – [[Millicent Shelton]] (Apple TV+)
+** ''[[True Detective season 4|True Detective: Night Country]]'' – [[Issa López]] (HBO)
+|}
+
+===Writing===
+{| class="wikitable"
+|+ {{sronly|Writing}}
+|-
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Writing for a Comedy Series|Outstanding Writing for a Comedy Series]]}}
+* '''''[[Hacks]]'': "[[Bulletproof (Hacks)|Bulletproof]]" – [[Lucia Aniello]], [[Paul W. Downs]], and [[Jen Statsky]] (Max)'''{{double dagger|alt=Winner}}
+** ''[[Abbott Elementary]]'': "Career Day" – [[Quinta Brunson]] (ABC)
+** ''[[The Bear (TV series)|The Bear]]'': "[[Fishes (The Bear)|Fishes]]" – [[Christopher Storer]] and [[Joanna Calo]] (FX)
+** ''[[Girls5eva]]'': "Orlando" – [[Meredith Scardino]] and [[Sam Means (writer)|Sam Means]] (Netflix)
+** ''[[The Other Two]]'': "Brooke Hosts a Night of Undeniable Good" – [[Chris Kelly (writer)|Chris Kelly]] and [[Sarah Schneider]] (Max)
+** ''[[What We Do in the Shadows (TV series)|What We Do in the Shadows]]'': "[[Pride Parade (What We Do in the Shadows)|Pride Parade]]" – Jake Bender and Zach Dunn (FX)
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Writing for a Drama Series|Outstanding Writing for a Drama Series]]}}
+* '''''[[Slow Horses]]'': "Negotiating with Tigers" – [[Will Smith (comedian)|Will Smith]] (Apple TV+)'''{{double dagger|alt=Winner}}
+** ''[[The Crown (TV series)|The Crown]]'': "Ritz" – [[Peter Morgan]] and Meriel Sheibani-Clare (Netflix)
+** ''[[Fallout (American TV series)|Fallout]]'': "[[The End (Fallout)|The End]]" – [[Geneva Robertson-Dworet]] and Graham Wagner (Prime Video)
+** ''[[Mr. & Mrs. Smith (2024 TV series)|Mr. & Mrs. Smith]]'': "First Date" – [[Francesca Sloane]] and [[Donald Glover]] (Prime Video)
+** ''[[Shōgun (2024 TV series)|Shōgun]]'': "[[Anjin (Shōgun)|Anjin]]" – [[Rachel Kondo]] and [[Justin Marks (writer)|Justin Marks]] (FX)
+** ''Shōgun'': "[[Crimson Sky]]" – Rachel Kondo and Caillin Puente (FX)
+|-
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Writing for a Limited or Anthology Series or Movie|Outstanding Writing for a Limited or Anthology Series or Movie]]}}
+* '''''[[Baby Reindeer]]'' – [[Richard Gadd]] (Netflix)'''{{double dagger|alt=Winner}}
+** ''[[Black Mirror]]'': "[[Joan Is Awful]]" – [[Charlie Brooker]] (Netflix)
+** ''[[Fargo (TV series)|Fargo]]'': "[[The Tragedy of the Commons (Fargo)|The Tragedy of the Commons]]" – [[Noah Hawley]] (FX)
+** ''[[Fellow Travelers (miniseries)|Fellow Travelers]]'': "You're Wonderful" – [[Ron Nyswaner]] (Showtime)
+** ''[[Ripley (TV series)|Ripley]]'' – [[Steven Zaillian]] (Netflix)
+** ''[[True Detective season 4|True Detective: Night Country]]'': "[[Part 6 (True Detective)|Part 6]]" – [[Issa López]] (HBO)
+| style="vertical-align:top;" width="50%"| {{Award category|#F9EFAA|[[Primetime Emmy Award for Outstanding Writing for a Variety Special|Outstanding Writing for a Variety Special]]}}
+* '''''Alex Edelman: Just for Us'' – [[Alex Edelman]] (HBO)'''{{double dagger|alt=Winner}}
+** ''Jacqueline Novak: Get on Your Knees'' – [[Jacqueline Novak]] (Netflix)
+** ''John Early: Now More Than Ever'' – [[John Early (comedian)|John Early]] (HBO)
+** ''Mike Birbiglia: The Old Man and the Pool'' – [[Mike Birbiglia]] (Netflix)
+** ''[[96th Academy Awards|The Oscars]]'' – Jamie Abrahams, [[Rory Albanese]], Amberia Allen, [[Tony Barbieri]], Jonathan Bines, Joelle Boucai, Bryan Cook, [[Blaire Erskine]], Devin Field, [[Gary Greenberg]], Josh Halloway, Eric Immerman, [[Jesse Joyce]], [[Jimmy Kimmel]], [[Carol Leifer]], Jon Macks, Mitch Marchand, Gregory Martin, Jesse McLaren, [[Molly McNearney]], Keaton Patti, Danny Ricker, [[Louis Virtel]], and Troy Walker (ABC)
+|}
+
+===Governors Award===
+The Governors Award was presented to screenwriter, producer and director of film and television [[Greg Berlanti]] in recognition of his significant impact on television and culture by depicting the underrepresented in film.<ref>{{cite web |url=https://www.emmys.com/news/awards-news/76th-governors-announced-240822 |title=Greg Berlanti to Receive the 2024 Governors Award |publisher=[[Academy of Television Arts & Sciences]] |date=August 22, 2024 |access-date=August 22, 2024 |archive-date=September 29, 2024 |archive-url=https://web.archive.org/web/20240929075933/https://www.emmys.com/news/awards-news/76th-governors-announced-240822 |url-status=live}}</ref>
+
+===Nominations and wins by program===
+For the purposes of the lists below, "major" constitutes the categories listed above (program, acting, directing, and writing), while "total" includes the categories presented at the [[Creative Arts Emmy Awards]]. Programs and networks must have multiple wins or major nominations or at least five total nominations to be included.
+
+{{col-float|width=30em}}
+
+{| class="wikitable sortable" style="text-align: center; max-width:29em"
+|+ Programs with multiple nominations<ref>{{cite web |title=76th Emmy Nominations Totals Per Program |url=https://www.emmys.com/76thnoms-program?q1 |publisher=[[Academy of Television Arts & Sciences]] |access-date=September 24, 2024 |format=PDF |archive-date=September 29, 2024 |archive-url=https://web.archive.org/web/20240929075931/https://www.emmys.com/76thnoms-program?q1 |url-status=live}}</ref>
+|-
+! scope="colgroup" colspan="2"| Nominations
+! scope="col" rowspan="2"| Program
+! scope="col" rowspan="2"| Network
+|-
+! scope="col"| Total
+! scope="col"| Major
+|-
+| scope="row"| 25
+| 8
+| ''[[Shōgun (2024 TV series)|Shōgun]]''
+| rowspan="2"| [[FX Networks|FX]]
+|-
+| scope="row"| 23
+| 9
+| data-sort-value="Bear"| ''[[The Bear (TV series)|The Bear]]''
+|-
+| scope="row"| 21
+| rowspan="2"|6
+| ''[[Only Murders in the Building]]''
+| [[Hulu]]
+|-
+| scope="row"| 19
+| ''[[True Detective season 4|True Detective: Night Country]]''
+| [[HBO]]
+|-
+| scope="row"| 18
+| 8
+| data-sort-value="Crown"| ''[[The Crown (TV series)|The Crown]]''
+| [[Netflix]]
+|-
+| scope="row"| 17
+| 2
+| ''[[Saturday Night Live]]''
+| [[NBC]]
+|-
+| scope="row" rowspan="4"| 16
+| 11
+| data-sort-value="Morning Show"| ''[[The Morning Show (American TV series)|The Morning Show]]''
+| [[Apple TV (streaming service)|Apple TV+]]
+|-
+| 6
+| ''[[Hacks]]''
+| [[HBO Max|Max]]
+|-
+| 5
+| ''[[Mr. & Mrs. Smith (2024 TV series)|Mr. & Mrs. Smith]]''
+| rowspan="2"| [[Amazon Prime Video|Prime Video]]
+|-
+| 3
+| ''[[Fallout (American TV series)|Fallout]]''
+|-
+| scope="row"| 15
+| 6
+| ''[[Fargo (TV series)|Fargo]]''
+| FX
+|-
+| scope="row"| 13
+| 5
+| ''[[Ripley (TV series)|Ripley]]''
+| rowspan="2"| Netflix
+|-
+| scope="row" rowspan="2"| 11
+| 7
+| ''[[Baby Reindeer]]''
+|-
+| 3
+| ''[[Palm Royale]]''
+| Apple TV+
+|-
+| scope="row" rowspan="2"| 10
+| rowspan="2"| 5
+| ''[[Feud: Capote vs. The Swans]]''
+| FX
+|-
+| ''[[Lessons in Chemistry (miniseries)|Lessons in Chemistry]]''
+| Apple TV+
+|-
+| scope="row" rowspan="2"| 9
+| 7
+| ''[[Abbott Elementary]]''
+| [[American Broadcasting Company|ABC]]
+|-
+| 5
+| ''[[Slow Horses]]''
+| Apple TV+
+|-
+| scope="row" rowspan="3"| 8
+| 3
+| ''[[What We Do in the Shadows (TV series)|What We Do in the Shadows]]''
+| FX
+|-
+| 1
+| ''[[RuPaul's Drag Race]]''
+| [[MTV]]
+|-
+| 0
+| ''[[Jim Henson Idea Man]]''
+| [[Disney+]]
+|-
+| scope="row"| 7
+| 1
+| data-sort-value="Oscars"| ''[[96th Academy Awards|The Oscars]]''
+| ABC
+|-
+| scope="row" rowspan="4"| 6
+| 3
+| data-sort-value="Gilded Age"| ''[[The Gilded Age (TV series)|The Gilded Age]]''
+| rowspan="2"| HBO
+|-
+| rowspan="2"| 1
+| ''[[Last Week Tonight with John Oliver]]''
+|-
+| data-sort-value="Three Body Problem"| ''[[3 Body Problem (TV series)|3 Body Problem]]''
+| Netflix
+|-
+| 0
+| ''[[Welcome to Wrexham]]''
+| FX
+|-
+| scope="row" rowspan="11"| 5
+| rowspan="4"| 1
+| data-sort-value="Amazing Race"| ''[[The Amazing Race (American TV series)|The Amazing Race]]''
+| rowspan="2"| [[CBS]]
+|-
+| data-sort-value="Late Show with Stephen Colbert"| ''[[The Late Show with Stephen Colbert]]''
+|-
+| data-sort-value="Voice"| ''[[The Voice (American TV series)|The Voice]]''
+| NBC
+|-
+| ''[[Winning Time: The Rise of the Lakers Dynasty]]''
+| HBO
+|-
+| rowspan="7"| 0
+| ''[[Star Wars: Ahsoka|Ahsoka]]''
+| Disney+
+|-
+| ''[[Beckham (TV series)|Beckham]]''
+| Netflix
+|-
+| ''[[Dancing with the Stars (American TV series)|Dancing with the Stars]]''
+| ABC
+|-
+| data-sort-value="Grammy Awards"| ''[[66th Annual Grammy Awards|66th Grammy Awards]]''
+| CBS
+|-
+| ''[[Planet Earth III]]''
+| [[BBC America]]
+|-
+| ''Steve! (Martin) A Documentary in 2 Pieces''
+| Apple TV+
+|-
+| data-sort-value="Tony Awards"| ''[[76th Tony Awards|76th Annual Tony Awards]]''
+| CBS
+|-
+| scope="row" rowspan="3"| &lt;5
+| 3
+| ''[[Fellow Travelers (miniseries)|Fellow Travelers]]''
+| [[Showtime (TV network)|Showtime]]
+|-
+| rowspan="2"| 2
+| ''[[Curb Your Enthusiasm]]''
+| HBO
+|-
+| ''[[Reservation Dogs]]''
+| FX
+|}
+
+{{col-float-break}}
+
+{| class="wikitable sortable" style="text-align: center; max-width:29em"
+|+ Programs with multiple wins<ref name="Network Tally"/>
+|-
+! scope="colgroup" colspan="2"| Wins
+! scope="col" rowspan="2"| Program
+! scope="col" rowspan="2"| Network
+|-
+! scope="col"| Total
+! scope="col"| Major
+|-
+| scope="row"| 18
+| rowspan="3"|4
+| ''[[Shōgun (2024 TV series)|Shōgun]]''
+| rowspan="2"| [[FX Networks|FX]]
+|-
+| scope="row"| 11
+| data-sort-value="Bear"| ''[[The Bear (TV series)|The Bear]]''
+|-
+| scope="row" rowspan="2"| 6
+| ''[[Baby Reindeer]]''
+| [[Netflix]]
+|-
+| rowspan="2"|0
+| ''[[Saturday Night Live]]''
+| [[NBC]]
+|-
+| scope="row"| 5
+| ''[[Jim Henson Idea Man]]''
+| [[Disney+]]
+|-
+| scope="row" rowspan="3"| 4
+| 1
+| ''[[Ripley (TV series)|Ripley]]''
+| rowspan="2"| Netflix
+|-
+| rowspan="2"| 0
+| ''[[Blue Eye Samurai]]''
+|-
+| data-sort-value="Oscars"| ''[[96th Academy Awards|The Oscars]]''
+| [[American Broadcasting Company|ABC]]
+|-
+| scope="row" rowspan="6"| 3
+| 3
+| ''[[Hacks]]''
+| [[HBO Max|Max]]
+|-
+| rowspan="2"| 1
+| data-sort-value="Crown"| ''[[The Crown (TV series)|The Crown]]''
+| Netflix
+|-
+| data-sort-value="Morning Show"| ''[[The Morning Show (American TV series)|The Morning Show]]''
+| [[Apple TV (streaming service)|Apple TV+]]
+|-
+| rowspan="3"| 0
+| ''Billy Joel: The 100th – Live at Madison Square Garden''
+| [[CBS]]
+|-
+| ''[[Only Murders in the Building]]''
+| rowspan="2"| [[Hulu]]
+|-
+| ''[[Welcome to Wrexham]]''
+|-
+| scope="row" rowspan="7"| 2
+| rowspan="3"| 1
+| data-sort-value="Daily Show"| ''[[The Daily Show]]''
+| [[Comedy Central]]
+|-
+| ''[[Last Week Tonight with John Oliver]]''
+| [[HBO]]
+|-
+| data-sort-value="Traitors"| ''[[The Traitors (American TV series)|The Traitors]]''
+| [[Peacock (streaming service)|Peacock]]
+|-
+| rowspan="4"| 0
+| ''[[Girls State (film)|Girls State]]''
+| Apple TV+
+|-
+| ''[[How I Met Your Father]]''
+| Hulu
+|-
+| ''[[Love on the Spectrum (American TV series)|Love on the Spectrum]]''
+| Netflix
+|-
+| ''[[Mr. & Mrs. Smith (2024 TV series)|Mr. & Mrs. Smith]]''
+| [[Amazon Prime Video|Prime Video]]
+|}
+
+{{col-float-end}}
+
+===Nominations and wins by network===
+{{col-float|width=30em}}
+
+{| class="wikitable sortable" style="text-align: center; max-width:29em"
+|+ {{nowrap|Networks with multiple nominations<ref>{{cite news |last=Manfredi |first=Lucas |title=Emmy Nominations by Network: Netflix Leads with 107 Total Nods |url=https://www.thewrap.com/most-emmy-nominations-networks-netflix-fx-hbo-max-2024/ |access-date=September 19, 2024 |work=[[TheWrap]] |date=July 17, 2024 |archive-date=September 25, 2024 |archive-url=https://web.archive.org/web/20240925173136/https://www.thewrap.com/most-emmy-nominations-networks-netflix-fx-hbo-max-2024/ |url-status=live}}</ref>}}
+|-
+! scope="colgroup" colspan="2"| Nominations
+! scope="col" rowspan="2"| Network
+|-
+! scope="col"| Total
+! scope="col"| Major
+|-
+| scope="row"| 107
+| 27
+| [[Netflix]]
+|-
+| scope="row"| 93
+| 33
+| [[FX Networks|FX]]
+|-
+| scope="row"| 91
+| 23
+| [[HBO]] / [[HBO Max|Max]]
+|-
+| scope="row"| 70
+| 26
+| [[Apple TV (streaming service)|Apple TV+]]
+|-
+| scope="row" rowspan="2"| 38
+| 9
+| [[American Broadcasting Company|ABC]]
+|-
+| 2
+| [[CBS]]
+|-
+| scope="row"| 37
+| 8
+| [[Amazon Prime Video|Prime Video]]
+|-
+| scope="row"| 33
+| 4
+| [[NBC]]
+|-
+| scope="row"| 26
+| 7
+| [[Hulu]]
+|-
+| scope="row"| 19
+| 0
+| [[Disney+]]
+|-
+| scope="row"| 10
+| rowspan="3"|1
+| [[MTV]]
+|-
+| scope="row"| 9
+| [[Peacock (streaming service)|Peacock]]
+|-
+| scope="row" rowspan="3"| 6
+| [[Bravo (American TV network)|Bravo]]
+|-
+| rowspan="2"| 0
+| [[Fox Broadcasting Company|Fox]]
+|-
+| [[Paramount+]]
+|-
+| scope="row" rowspan="2"| 5
+| 1
+| [[Comedy Central]]
+|-
+| 0
+| [[BBC America]]
+|-
+| scope="row"| &lt;5
+| 3
+| [[Showtime (TV network)|Showtime]]
+|}
+
+{{col-float-break|width=30em}}
+
+{| class="wikitable sortable" style="text-align: center; max-width=29em"
+|+ {{nowrap|Networks with multiple wins}}<ref name="Network Tally"/>
+|-
+! scope="colgroup" colspan="2"| Wins
+! scope="col" rowspan="2"| Network
+|-
+! scope="col"| Total
+! scope="col"| Major
+|-
+| scope="row"| 36
+| 9
+| [[FX Networks|FX]]
+|-
+| scope="row"| 24
+| rowspan="2"|6
+| [[Netflix]]
+|-
+| scope="row"| 14
+| [[HBO]] / [[HBO Max|Max]]
+|-
+| scope="row"| 9
+| 2
+| [[Apple TV (streaming service)|Apple TV+]]
+|-
+| scope="row" rowspan="4"| 7
+| rowspan="6"| 0
+| [[American Broadcasting Company|ABC]]
+|-
+| [[Disney+]]
+|-
+| [[Hulu]]
+|-
+| [[NBC]]
+|-
+| scope="row"| 5
+| [[CBS]]
+|-
+| scope="row"| 4
+| [[Amazon Prime Video|Prime Video]]
+|-
+| scope="row"| 3
+| rowspan="2"|1
+| [[Peacock (streaming service)|Peacock]]
+|-
+| scope="row" rowspan="2"| 2
+| [[Comedy Central]]
+|-
+| 0
+| [[National Geographic (American TV channel)|National Geographic]]
+|}
+
+{{col-float-end}}
+
+==Presenters==
+The following people presented awards or other segments:<ref>Multiple sources:
+* {{cite news |last=Feinberg |first=Scott |title=2024 Emmys Live Blog: Instant Analysis, Stats, Fun Facts, and Reporting from Inside the Ceremony |url=https://www.hollywoodreporter.com/tv/tv-news/2024-emmys-liveblog-updates-1236000031/ |access-date=September 19, 2024 |work=[[The Hollywood Reporter]] |date=September 15, 2024 |archive-date=September 16, 2024 |archive-url=https://web.archive.org/web/20240916113656/https://www.hollywoodreporter.com/tv/tv-news/2024-emmys-liveblog-updates-1236000031/ |url-status=live}}
+* {{cite news |last1=Powell |first1=Tori B. |last2=Chowdhury |first2=Maureen |last3=Rosenblum |first3=Alli |last4=Heching |first4=Dan |last5=Meyer |first5=Matt |title=The 76th Primetime Emmy Awards |url=https://www.cnn.com/entertainment/live-news/emmy-awards-levy-09-15-24/index.html |access-date=September 19, 2024 |publisher=[[CNN]] |date=September 15, 2024 |archive-date=September 18, 2024 |archive-url=https://web.archive.org/web/20240918155423/https://www.cnn.com/entertainment/live-news/emmy-awards-levy-09-15-24/index.html |url-status=live}}
+* {{cite news |last1=Dalton |first1=Andrew |last2=Dupuy |first2=Beatrice |last3=Harris |first3=Beth |last4=Huamani |first4=Kaitlyn |last5=Italie |first5=LeAnne |last6=Kennedy |first6=Mark |last7=Sen |first7=Malika |title=2024 Emmy Awards: Winners, Key Moments, and Analysis |url=https://apnews.com/live/emmy-awards-2024-winners-red-carpet-updates |access-date=September 19, 2024 |publisher=[[Associated Press]] |date=September 15, 2024 |archive-date=September 19, 2024 |archive-url=https://web.archive.org/web/20240919062627/https://apnews.com/live/emmy-awards-2024-winners-red-carpet-updates |url-status=live}}
+* {{cite news |last1=Juliana |first1=Alexa |last2=Willis |first2=Kim |title=Inside the 76th Primetime Emmy Awards: The Night's Best Photos |url=https://www.usatoday.com/picture-gallery/entertainment/tv/2024/09/15/emmy-awards-2024-photos/75157734007/ |access-date=September 19, 2024 |work=[[USA Today]] |date=September 15, 2024 |archive-date=September 19, 2024 |archive-url=https://web.archive.org/web/20240919015518/https://www.usatoday.com/picture-gallery/entertainment/tv/2024/09/15/emmy-awards-2024-photos/75157734007/ |url-status=live}}</ref>
+
+{| class="wikitable sortable"
+|+ {{sronly|Presenters at the ceremony}}
+|-
+! scope="col"| Name(s)
+! scope="col"| Role
+|-
+| scope="row"| {{unbulleted list|{{sortname|Steve|Martin}}|[[Martin Short]]|[[Selena Gomez]]}}
+| Presented the award for [[Primetime Emmy Award for Outstanding Supporting Actor in a Comedy Series|Outstanding Supporting Actor in a Comedy Series]]
+|-
+| scope="row"| {{sortname|Colin|Farrell}}
+| Presented the award for [[Primetime Emmy Award for Outstanding Supporting Actor in a Drama Series|Outstanding Supporting Actor in a Drama Series]]
+|-
+| scope="row"| {{unbulleted list|{{sortname|George|Lopez}}|[[Damon Wayans]]|[[Jesse Tyler Ferguson]]}}
+| Tribute to TV dads; presented the award for [[Primetime Emmy Award for Outstanding Lead Actor in a Comedy Series|Outstanding Lead Actor in a Comedy Series]]
+|-
+| scope="row"| {{unbulleted list|{{sortname|Kaitlin|Olson}}|[[Rob McElhenney]]}}
+| Presented the award for [[Primetime Emmy Award for Outstanding Supporting Actress in a Comedy Series|Outstanding Supporting Actress in a Comedy Series]]
+|-
+| scope="row"| {{sortname|Da'Vine Joy|Randolph}}
+| Presented the award for [[Primetime Emmy Award for Outstanding Supporting Actress in a Drama Series|Outstanding Supporting Actress in a Drama Series]]
+|-
+| scope="row"| {{sortname|Candice|Bergen}}
+| Presented the award for [[Primetime Emmy Award for Outstanding Lead Actress in a Comedy Series|Outstanding Lead Actress in a Comedy Series]]
+|-
+| scope="row"| {{unbulleted list|{{sortname|Padma|Lakshmi}}|[[Sam Richardson (actor)|Sam Richardson]]}}
+| Presented the award for [[Primetime Emmy Award for Outstanding Reality Competition Program|Outstanding Reality Competition Program]]
+|-
+| scope="row"| {{unbulleted list|{{sortname|Kathy|Bates}}|[[Antony Starr]]|[[Giancarlo Esposito]]}}
+| Tribute to TV villains; presented the award for [[Primetime Emmy Award for Outstanding Supporting Actress in a Limited or Anthology Series or Movie|Outstanding Supporting Actress in a Limited or Anthology Series or Movie]]
+|-
+| scope="row"| {{unbulleted list|{{sortname|Reba|McEntire}}|[[Melissa Peterman]]}}
+| Presented the award for [[Primetime Emmy Award for Outstanding Scripted Variety Series|Outstanding Scripted Variety Series]]
+|-
+| scope="row"| {{unbulleted list|{{sortname|Seth|Meyers}}|[[Maya Rudolph]]|[[Kristen Wiig]]|[[Bowen Yang]]}}
+| Tribute to the 50th anniversary of ''[[Saturday Night Live]]''; presented the award for [[Primetime Emmy Award for Outstanding Writing for a Variety Special|Outstanding Writing for a Variety Special]]
+|-
+| scope="row"| {{unbulleted list|{{sortname|Gael Garcia|Bernal}}|[[Diego Luna]]}}
+| Presented the award for [[Primetime Emmy Award for Outstanding Directing for a Limited or Anthology Series or Movie|Outstanding Directing for a Limited or Anthology Series or Movie]]
+|-
+| scope="row"| {{unbulleted list|{{sortname|Meredith|Baxter}}|[[Connie Britton]]|[[Susan Kelechi Watson]]}}
+| Tribute to TV moms; presented the award for [[Primetime Emmy Award for Outstanding Writing for a Comedy Series|Outstanding Writing for a Comedy Series]]
+|-
+| scope="row"| {{sortname|Billy|Crystal}}
+| Presented the award for [[Primetime Emmy Award for Outstanding Talk Series|Outstanding Talk Series]]
+|-
+| scope="row"| {{unbulleted list|{{sortname|Nicola|Coughlan}}|[[Nava Mau]]}}
+| Presented the award for [[Primetime Emmy Award for Outstanding Supporting Actor in a Limited or Anthology Series or Movie|Outstanding Supporting Actor in a Limited or Anthology Series or Movie]]
+|-
+| scope="row"| {{unbulleted list|{{sortname|Zach|Braff}}|[[Mindy Kaling]]|[[Mekhi Phifer]]}}
+| Tribute to TV doctors; presented the award for [[Primetime Emmy Award for Outstanding Writing for a Drama Series|Outstanding Writing for a Drama Series]]
+|-
+| scope="row"| {{unbulleted list|{{sortname|Ebon|Moss-Bachrach}}|[[Taylor Zakhar Perez]]}}
+| Presented the award for [[Primetime Emmy Award for Outstanding Writing for a Limited or Anthology Series or Movie|Outstanding Writing for a Limited or Anthology Series or Movie]]
+|-
+| scope="row"| {{unbulleted list|{{sortname|Ron|Howard}}|[[Henry Winkler]]}}
+| Tribute to the 50th anniversary of ''[[Happy Days]]''; presented the award for [[Primetime Emmy Award for Outstanding Directing for a Comedy Series|Outstanding Directing for a Comedy Series]]
+|-
+| scope="row"| {{sortname|John|Leguizamo}}
+| Introduced the chairman of the Television Academy, [[Cris Abrego]]
+|-
+| scope="row"| {{unbulleted list|{{sortname|Matt|Bomer}}|[[Joshua Jackson]]}}
+| Presented the Governors' Award to [[Greg Berlanti]]
+|-
+| scope="row"| {{unbulleted list|{{sortname|Jane|Lynch}}|[[Brendan Hunt]]|[[Ilona Maher]]|[[Stephen Nedoroscik]]|[[Caeleb Dressel]]|[[Ezra Frech]]}}
+| Tribute to TV coaches and American [[2024 Summer Olympics|Olympic]] athletes; presented the award for [[Primetime Emmy Award for Outstanding Directing for a Drama Series|Outstanding Directing for a Drama Series]]
+|-
+| scope="row"| {{sortname|Jimmy|Kimmel}}
+| Presented a special tribute to [[Bob Newhart]]
+|-
+| scope="row"| {{unbulleted list|{{sortname|Don|Johnson}}|[[Niecy Nash|Niecy Nash-Betts]]|[[Jimmy Smits]]}}
+| Tribute to TV cops; presented the award for [[Primetime Emmy Award for Outstanding Lead Actor in a Limited or Anthology Series or Movie|Outstanding Lead Actor in a Limited or Anthology Series or Movie]]
+|-
+| scope="row"| {{unbulleted list|{{sortname|Lily|Gladstone}}|[[Greta Lee]]}}
+| Presented the award for [[Primetime Emmy Award for Outstanding Lead Actress in a Limited or Anthology Series or Movie|Outstanding Lead Actress in a Limited or Anthology Series or Movie]]
+|-
+| scope="row"| {{sortname|Jean|Smart}}
+| Presented the award for [[Primetime Emmy Award for Outstanding Limited or Anthology Series|Outstanding Limited or Anthology Series]]
+|-
+| scope="row"| {{sortname|Steven|Yeun}}
+| Presented the award for [[Primetime Emmy Award for Outstanding Lead Actor in a Drama Series|Outstanding Lead Actor in a Drama Series]]
+|-
+| scope="row"| {{unbulleted list|{{sortname|Christine|Baranski}}|[[Viola Davis]]|[[Gina Torres]]}}
+| Tribute to TV lawyers; presented the award for [[Primetime Emmy Award for Outstanding Lead Actress in a Drama Series|Outstanding Lead Actress in a Drama Series]]
+|-
+| scope="row"| {{unbulleted list|{{sortname|Dule|Hill}}|[[Allison Janney]]|[[Janel Moloney]]|[[Richard Schiff]]|[[Martin Sheen]]}}
+| Tribute to the 25th anniversary of ''[[The West Wing]]''; presented the award for [[Primetime Emmy Award for Outstanding Drama Series|Outstanding Drama Series]]
+|-
+| scope="row"| {{sortname|Catherine|O'Hara}}
+| Presented the award for [[Primetime Emmy Award for Outstanding Comedy Series|Outstanding Comedy Series]]
+|}
+
+==Ceremony information==
+{{Multiple image
+| total_width = 300
+| image1      = Eugene Levy at the 2025 Toronto International Film Festival (cropped).jpg
+| image2      = Dan Levy at the 2025 Toronto International Film Festival 02 (cropped 2).jpg
+| footer      = [[Eugene Levy]] (left) and [[Dan Levy (Canadian actor)|Dan Levy]] (right) co-hosted the 76th Primetime Emmy Awards.
+}}
+
+On February 10, 2024, the [[Academy of Television Arts & Sciences]] (ATAS, also known as the Television Academy) announced that the 76th Primetime Emmy Awards would be held on September 15; the corresponding Creative Arts ceremonies were announced for September 7 and 8.<ref>{{cite news |last=Porter |first=Rick |title=Emmy Awards Return to September Berth on ABC |url=https://www.hollywoodreporter.com/tv/tv-news/2024-emmy-awards-date-abc-1235821555/ |access-date=September 14, 2024 |work=[[The Hollywood Reporter]] |date=February 10, 2024 |archive-date=September 29, 2024 |archive-url=https://web.archive.org/web/20240929075918/https://www.hollywoodreporter.com/tv/tv-news/2024-emmy-awards-date-abc-1235821555/ |url-status=live}}</ref><ref>{{cite news |last=Schneider |first=Michael |title=Emmys Move Back to Sunday, as ABC Reveals 2024 Ceremony Date |url=https://variety.com/2024/tv/news/emmys-2024-ceremony-date-sunday-abc-1235906681/ |access-date=September 14, 2024 |work=[[Variety (magazine)|Variety]] |date=February 10, 2024 |archive-date=September 28, 2024 |archive-url=https://web.archive.org/web/20240928092607/https://variety.com/2024/tv/news/emmys-2024-ceremony-date-sunday-abc-1235906681/ |url-status=live}}</ref> It was the second Primetime Emmy Awards ceremony held in 2024 due to the [[75th Primetime Emmy Awards|75th ceremony]], originally slated to broadcast on September 18, 2023, taking place four months later on January 15, 2024, as a result of the [[2023 Hollywood labor disputes]].<ref>{{cite news |last=Seitz |first=Loree |title=2024 Emmys Set September Date for 76th Awards Ceremony |url=https://www.thewrap.com/emmy-awards-2024-date-announcement/ |access-date=September 15, 2024 |work=[[TheWrap]] |date=February 10, 2024 |archive-date=September 15, 2024 |archive-url=https://web.archive.org/web/20240915072908/https://www.thewrap.com/emmy-awards-2024-date-announcement/ |url-status=live}}</ref> [[American Broadcasting Company|ABC]] broadcast the gala as part of a four-year rotation deal among the "[[Big Three (American television)|Big Four]]" broadcast networks signed in 2018.<ref>{{cite web |url=https://www.hollywoodreporter.com/tv/tv-news/emmys-renews-big-four-deal-8-years-1132446/ |title=Emmys Renew Big Four Deal for 8 Years |last=O'Connell |first=Mikey |date=August 6, 2018 |work=[[The Hollywood Reporter]] |access-date=December 7, 2021 |archive-date=December 7, 2021 |archive-url=https://web.archive.org/web/20211207184542/https://www.hollywoodreporter.com/tv/tv-news/emmys-renews-big-four-deal-8-years-1132446/ |url-status=live}}</ref> The broadcast was made available for streaming on [[Hulu]] for the week following the ceremony.<ref>{{cite magazine |url=https://www.billboard.com/culture/product-recommendations/how-to-watch-the-emmys-1235137539/ |title=76th Annual Emmys: How to Watch Live on TV & Stream Online |last=Muhammad |first=Latifah |date=September 15, 2024 |magazine=[[Billboard (magazine)|Billboard]] |access-date=September 24, 2024 |archive-date=September 25, 2024 |archive-url=https://web.archive.org/web/20240925121434/https://www.billboard.com/culture/product-recommendations/how-to-watch-the-emmys-1235137539/ |url-status=live}}</ref>
+
+The ceremony was produced by Jesse Collins Entertainment (Jesse Collins, Dionne Harmon, and Jeannae Rouzan-Clay) for the second consecutive year.<ref>{{cite news |last=White |first=Peter |title=Jesse Collins Entertainment to Produce Emmys, Again |url=https://deadline.com/2024/07/jesse-collins-entertainment-emmys-1236010506/ |access-date=September 14, 2024 |work=[[Deadline Hollywood]] |date=July 15, 2024 |archive-date=September 15, 2024 |archive-url=https://web.archive.org/web/20240915064857/https://deadline.com/2024/07/jesse-collins-entertainment-emmys-1236010506/ |url-status=live}}</ref> Actor [[Eugene Levy]] and his son [[Dan Levy (Canadian actor)|Dan]] were announced as co-hosts on August 16.<ref>{{cite news |last=Schneider |first=Michael |title=Eugene and Dan Levy Officially Set as Emmys Hosts |url=https://variety.com/2024/tv/news/eugene-dan-levy-emmys-host-sept-15-1236108670/ |access-date=September 15, 2024 |work=[[Variety (magazine)|Variety]] |date=August 16, 2024 |archive-date=September 10, 2024 |archive-url=https://web.archive.org/web/20240910053153/https://variety.com/2024/tv/news/eugene-dan-levy-emmys-host-sept-15-1236108670/ |url-status=live}}</ref> It was the first time a father-and-son duo co-hosted an Emmy ceremony.<ref>{{cite news |last=Kennedy |first=Mark |title=Eugene Levy and Dan Levy will make history as the first father-and-son co-hosts of the Emmys |url=https://apnews.com/article/dany-eugene-levy-emmys-hosts-2024-e449e02df26b9df39f5b4d23680c5b36 |access-date=September 15, 2024 |publisher=[[Associated Press]] |date=August 16, 2024 |archive-date=September 15, 2024 |archive-url=https://web.archive.org/web/20240915043616/https://apnews.com/article/dany-eugene-levy-emmys-hosts-2024-e449e02df26b9df39f5b4d23680c5b36 |url-status=live}}</ref> According to [[Disney Entertainment]] chairperson [[Dana Walden]], producers and network executives had asked comedian [[Jimmy Kimmel]] – who emceed the previous three ABC telecasts – to host the ceremony. However, Kimmel declined the offer saying he wanted to take a break after hosting the [[96th Academy Awards|previous Academy Awards]].<ref>{{cite news |last=O'Connell |first=Mikey |title=Dana Walden on Disney's Emmy Noms, ''Shogun'' Futurem and Giving Kimmel a Hosting Break |url=https://www.hollywoodreporter.com/tv/tv-features/emmy-nominations-2024-dana-walden-shogun-the-bear-1235951434/ |access-date=September 19, 2024 |work=[[The Hollywood Reporter]] |date=July 17, 2024 |archive-date=September 25, 2024 |archive-url=https://web.archive.org/web/20240925152509/https://www.hollywoodreporter.com/tv/tv-features/emmy-nominations-2024-dana-walden-shogun-the-bear-1235951434/ |url-status=live}}</ref> Alex Rudzinski and [[Rickey Minor]] served as director and musical director for the ceremony, respectively.<ref>{{cite news |last=Petski |first=Denise |title=Emmy Awards Sets Full Production Team |url=https://deadline.com/2024/08/emmy-awards-full-production-team-1236041864/ |access-date=September 10, 2024 |work=[[Deadline Hollywood]] |date=August 15, 2024 |archive-date=September 20, 2024 |archive-url=https://web.archive.org/web/20240920184041/https://deadline.com/2024/08/emmy-awards-full-production-team-1236041864/ |url-status=live}}</ref> Two days before the ceremony, ABC aired a special episode of ''[[20/20 (American TV program)|20/20]]'' entitled ''The 76th Emmys: A Night of Firsts''. Hosted by ''[[Good Morning America]]'' co-anchor [[Robin Roberts (newscaster)|Robin Roberts]], the special featured interviews with Eugene and Dan Levy and several of the ceremony's nominees.<ref>{{cite news |last=Petsky |first=Denise |title=Robin Roberts to Host Emmy Primetime Special & Red Carpet Live Pre-Show with Will Reeve |url=https://deadline.com/2024/09/robin-roberts-host-emmy-primetime-red-carpet-special-abc-1236082665/ |access-date=September 22, 2024 |work=[[Deadline Hollywood]] |date=September 9, 2024 |archive-date=September 22, 2024 |archive-url=https://web.archive.org/web/20240922074340/https://deadline.com/2024/09/robin-roberts-host-emmy-primetime-red-carpet-special-abc-1236082665/ |url-status=live}}</ref> Roberts also co-hosted the network's red carpet arrivals special preceding the main telecast with [[ABC News (United States)|ABC News]] journalist Will Reeve.<ref>{{cite news |last=Dunaj |first=Mikhayla |title=How to Watch the 2024 Emmy Awards for Free on ABC |url=https://www.mlive.com/tv/2024/09/how-to-watch-the-2024-emmy-awards-for-free-on-abc.html |access-date=September 22, 2024 |publisher=[[MLive Media Group]] |date=September 15, 2024 |archive-date=September 22, 2024 |archive-url=https://web.archive.org/web/20240922074827/https://www.mlive.com/tv/2024/09/how-to-watch-the-2024-emmy-awards-for-free-on-abc.html |url-status=live}}</ref>
+
+Building from the previous year, producers Collins, Harmon, and Rouzan-Clay announced during a press conference that several of the awards would be presented by actors grouped by "character archetypes", such as TV moms, dads, and villains.<ref name="The Wrap Emmy Preview">{{cite news |last=Seitz |first=Loree |title=Emmys EPs Tease Tributes for ''SNL 50th'', ''Happy Days'', and 'Characters You've Loved Over the Years' |url=https://www.thewrap.com/emmys-2024-snl-happy-days-tribute-preview-jesse-collins/ |access-date=September 19, 2024 |work=[[TheWrap]] |date=September 12, 2024 |archive-date=September 16, 2024 |archive-url=https://web.archive.org/web/20240916012405/https://www.thewrap.com/emmys-2024-snl-happy-days-tribute-preview-jesse-collins/ |url-status=live}}</ref> Collins also revealed that the telecast would feature reunions in tribute to the 50th anniversaries of [[NBC]] variety/sketch program ''[[Saturday Night Live]]'' and ABC comedy series ''[[Happy Days]]'', and the 25th anniversary of NBC drama series ''[[The West Wing]]''.<ref>{{cite news |last=O'Connell |first=Mikey |title=Emmys Preview: Producers Talk ''SNL'' Reunion, Levy Chemistry, and Leaning Deeper into Nostalgia |url=https://www.hollywoodreporter.com/tv/tv-news/emmys-preview-cast-reunions-saturday-night-live-happy-days-surprise-1235999780/ |access-date=September 19, 2024 |work=[[The Hollywood Reporter]] |date=September 12, 2024 |archive-date=September 21, 2024 |archive-url=https://web.archive.org/web/20240921152134/https://www.hollywoodreporter.com/tv/tv-news/emmys-preview-cast-reunions-saturday-night-live-happy-days-surprise-1235999780/ |url-status=live}}</ref> In an interview with the ''[[Los Angeles Times]]'', Eugene Levy echoed the producers' decision to focus on history and nostalgia, saying, "And [it's] also just paying tribute to television, certainly the nominees, but to the medium that gave us both our starts."<ref>{{cite news |last=Lloyd |first=Robert |title=As Emmy Hosts, Eugene and Dan Levy want to Make the Show a 'Light and Bright' Night |url=https://www.latimes.com/entertainment-arts/tv/story/2024-09-15/emmys-review-2024-dan-eugene-levy |access-date=September 19, 2024 |newspaper=[[Los Angeles Times]] |date=September 11, 2024 |archive-date=September 29, 2024 |archive-url=https://web.archive.org/web/20240929080030/https://www.latimes.com/entertainment-arts/tv/story/2024-09-15/emmys-review-2024-dan-eugene-levy |url-status=live}}</ref>
+
+Categories to be shown during the main broadcast were set in July 2024, with [[Primetime Emmy Award for Outstanding Variety Special (Live)|Outstanding Variety Special (Live)]] returning to the Creative Arts ceremony; as part of a rotation agreement with the [[Writers Guild of America]], [[Primetime Emmy Award for Outstanding Writing for a Variety Special|Outstanding Writing for a Variety Special]] also replaced [[Primetime Emmy Award for Outstanding Writing for a Variety Series|Outstanding Writing for a Variety Series]] at the main ceremony.<ref>{{cite news |last=Andreeva |first=Nellie |title=Emmys 2024: Category Breakdown by Night Revealed |url=https://deadline.com/2024/07/emmys-2024-category-breakdown-1236021736/ |access-date=September 19, 2024 |work=[[Deadline Hollywood]] |date=July 25, 2024 |archive-date=July 26, 2024 |archive-url=https://web.archive.org/web/20240726225425/https://deadline.com/2024/07/emmys-2024-category-breakdown-1236021736/ |url-status=live}}</ref>
+
+===Critical reviews and viewership===
+The broadcast generally received mixed to negative reviews from critics.<ref>{{cite web |title=Emmys: 76th Emmys |url=https://www.rottentomatoes.com/tv/emmys/s76/reviews |publisher=[[Rotten Tomatoes]] |access-date=September 24, 2024 |archive-date=September 24, 2024 |archive-url=https://web.archive.org/web/20240924080459/https://www.rottentomatoes.com/tv/emmys/s76/reviews |url-status=live}}</ref> Allison Herman of ''[[Variety (magazine)|Variety]]'' compared the ceremony to the previous one noting, "the 76th Emmys were a far less dynamic and more stilted watch than the January show." She also criticized production elements such as the music director's choices for presenters' walk on music, recurring sound technical issues, and the grouping of presenters based on character archetypes.<ref>{{cite news |last=Herman |first=Allison |title=A Humdrum Emmys Are Weighed Down by Sparse Crowds and Sponsored Content: TV Review |url=https://variety.com/2024/tv/tv-reviews/emmys-2024-review-eugene-dan-levy-1236145523/ |access-date=September 24, 2024 |work=[[Variety (magazine)|Variety]] |date=September 15, 2024 |archive-date=September 24, 2024 |archive-url=https://web.archive.org/web/20240924123117/https://variety.com/2024/tv/tv-reviews/emmys-2024-review-eugene-dan-levy-1236145523/ |url-status=live}}</ref> Ben Travers of ''[[IndieWire]]'' found Eugene and Dan Levy's performances as hosts underwhelming, which was not helped by their reminder to the audience that "they weren't stand up comedians, but actors acting like hosts." He reserved praise for several presenters such as [[Candice Bergen]], [[Billy Crystal]], and the cast of ''[[Only Murders in the Building]]'', but he ultimately found the ceremony to be "another awards show resigned to its diminishing fate."<ref>{{cite news |last=Travers |first=Ben |title=The Emmys Could've Been an Email |url=https://www.indiewire.com/criticism/shows/emmys-review-2024-1235047972/ |access-date=September 27, 2024 |work=[[IndieWire]] |date=September 15, 2024}}</ref> Lili Loofbourow, writing for ''[[The Washington Post]]'', found the hosts to be "pleasant but forgettable" and that the onslaught of repeat winners bogged down the ceremony.<ref>{{cite news |last=Loofbourow |first=Lila |title=Last Night's Emmy Awards Felt Like a Rerun |url=https://www.washingtonpost.com/entertainment/tv/2024/09/16/emmy-awards-2024-review/ |access-date=September 27, 2024 |newspaper=[[The Washington Post]] |date=September 16, 2024 |archive-date=September 16, 2024 |archive-url=https://web.archive.org/web/20240916221057/https://www.washingtonpost.com/entertainment/tv/2024/09/16/emmy-awards-2024-review/ |url-status=live}}</ref>
+
+In a more positive review, Judy Berman of ''[[Time (magazine)|Time]]'' complimented the Levys and said, "The emcees imbued what is always a long night—and was, this time around, full of predictable wins—with many moments of lighthearted fun, without trying too hard to roast their fellow actors or land headline-making zingers."<ref>{{cite magazine |last=Berman |first=Judy |title=Eugene and Dan Levy Made Hosting the Emmys Look Easy |url=https://time.com/7021458/emmys-2024-review-eugene-dan-levy/ |access-date=September 19, 2024 |magazine=[[Time (magazine)|Time]] |date=September 16, 2024 |archive-date=September 19, 2024 |archive-url=https://web.archive.org/web/20240919034713/https://time.com/7021458/emmys-2024-review-eugene-dan-levy/ |url-status=live}}</ref> Daniel Fienberg of ''[[The Hollywood Reporter]]'' called the ceremony "an above-average show", noting that surprise winners kept "audiences on their toes" and that they often gave the best speeches. However, he criticized the reunion tributes noting that the presenters' dialogue felt bland and poor written in comparison to the prior ceremony's tributes. He also called the choice of [[Jelly Roll (singer)|Jelly Roll]]'s performance of "[[I Am Not Okay]]" "tonally questionable" and wrote that [[Jimmy Kimmel]]'s tribute to comedian [[Bob Newhart]] "absolutely warped the mood in a room that wasn't sure if this was the time to laugh about how often [[Jon Stewart]] wins Emmys."<ref>{{cite news |last=Fienberg |first=Daniel |title=Critic's Notebook: 76th Primetime Emmy Awards Oscillate Between Freshness and Fatigue |url=https://www.hollywoodreporter.com/tv/tv-reviews/2024-emmys-critics-analysis-review-1236003442/ |access-date=September 19, 2024 |work=[[The Hollywood Reporter]] |date=September 15, 2024 |archive-date=September 24, 2024 |archive-url=https://web.archive.org/web/20240924123117/https://www.hollywoodreporter.com/tv/tv-reviews/2024-emmys-critics-analysis-review-1236003442/ |url-status=live}}</ref> Robert Lloyd wrote in the ''Los Angeles Times'' that the telecast was a "sweet, positive show that at the same time avoided the air of self-congratulation". He noted the Levys' "father-and-son dynamic", with Dan's role as "the hipper son" and Eugene as the "befuddled dad", was at the heart of their shared time together.<ref>{{cite news |last=Lloyd |first=Robert |title=Review: Eugene and Dan Levy Hosted Positive Emmys Show Themed Around Age |url=https://www.latimes.com/entertainment-arts/tv/story/2024-09-15/emmys-review-2024-dan-eugene-levy |access-date=September 19, 2024 |newspaper=[[Los Angeles Times]] |date=September 15, 2024 |archive-date=September 18, 2024 |archive-url=https://web.archive.org/web/20240918183214/https://www.latimes.com/entertainment-arts/tv/story/2024-09-15/emmys-review-2024-dan-eugene-levy |url-status=live}}</ref>
+
+Competing with a ''[[NBC Sunday Night Football|Sunday Night Football]]'' game on NBC, the ceremony was viewed by 6.9&nbsp;million people in the United States, making it the most-viewed Emmys in [[73rd Primetime Emmy Awards|three years]], representing a 54% increase over the previous year's ceremony.<ref name="Ratings">{{cite web |url=https://www.hollywoodreporter.com/tv/tv-news/emmys-2024-tv-ratings-1236004078/ |title=TV Ratings: Emmys Jump by 55 Percent, Stop Streak of All-Time Lows |work=[[The Hollywood Reporter]] |first=Rick |last=Porter |date=September 16, 2024 |access-date=September 24, 2024 |archive-date=September 25, 2024 |archive-url=https://web.archive.org/web/20240925120413/https://www.hollywoodreporter.com/tv/tv-news/emmys-2024-tv-ratings-1236004078/ |url-status=live}}</ref><ref>{{cite news |title=Emmys Audience on ABC Nears 6.9 Million, Highest in Three Years |url=https://www.reuters.com/business/media-telecom/emmys-audience-abc-nears-69-million-highest-three-years-2024-09-16/ |access-date=September 19, 2024 |publisher=[[Reuters]] |date=September 17, 2024 |archive-date=September 24, 2024 |archive-url=https://web.archive.org/web/20240924203941/https://www.reuters.com/business/media-telecom/emmys-audience-abc-nears-69-million-highest-three-years-2024-09-16/ |url-status=live}}</ref> It also achieved a 1.03 rating among adults ages 18–49.<ref name="Ratings"/>
+
+==In Memoriam==
+The In Memoriam tribute, which featured singer [[Jelly Roll (singer)|Jelly Roll]] performing his song "[[I Am Not Okay]]", paid tribute to the following individuals:<ref>{{cite magazine |last=Atkinson |first=Katie |title=Jelly Roll Performs 'I Am Not Okay' to Remember Late TV Luminaries for Emmys 'In Memoriam' Segment |url=https://www.billboard.com/music/awards/jelly-roll-emmys-in-memoriam-segment-i-am-not-okay-1235775737/ |access-date=September 22, 2024 |magazine=[[Billboard (magazine)|Billboard]] |date=September 15, 2024 |archive-date=September 17, 2024 |archive-url=https://web.archive.org/web/20240917013210/https://www.billboard.com/music/awards/jelly-roll-emmys-in-memoriam-segment-i-am-not-okay-1235775737/ |url-status=live}}</ref><ref>{{cite web |url=https://www.youtube.com/watch?v=ZcPIsUJ3tFk |title=In Memoriam: 76th Emmy Awards |date=September 16, 2024 |publisher=[[Academy of Television Arts & Sciences]] |access-date=September 19, 2024 |via=[[YouTube]] |archive-date=September 17, 2024 |archive-url=https://web.archive.org/web/20240917181944/https://www.youtube.com/watch?v=ZcPIsUJ3tFk |url-status=live}}</ref>
+
+{{div col}}
+
+* [[Martin Mull]] – performer
+* [[Joyce Randolph]] – performer
+* [[Dan Wilcox]] – writer
+* [[Robert Butler (director)|Robert Butler]] – director
+* [[Jerry Foley]] – director
+* [[Jamie Kellner]] – executive
+* Stephanie Leifer – executive
+* [[Eric Gilliland]] – writer
+* [[Bob Ellison]] – writer
+* [[Piper Laurie]] – performer
+* [[E. Duke Vincent]] – producer
+* [[Jeannie Epper]] – stunt performer
+* [[Bill Klages]] – lighting designer
+* [[Terry Carter]] – performer
+* [[Dr. Ruth Westheimer]] – host
+* [[Dabney Coleman]] – performer
+* [[Richard Moll]] – performer
+* Lee Gabler – agent
+* [[Paula Weinstein]] – producer
+* [[George A. Sunga]] – producer
+* [[Jac Venza]] – producer
+* Kenneth Patterson – camera operator
+* [[Susan Wojcicki]] – executive
+* [[Leo Chaloukian]] – sound designer, Academy president 1989–1993
+* [[Don Buchwald]] – agent
+* [[George Schenck]] – writer
+* [[Samm-Art Williams]] – writer
+* [[Peter Marshall (entertainer)|Peter Marshall]] – host
+* [[Rod Holcomb]] – director
+* [[Frances Sternhagen]] – performer
+* [[Phil Donahue]] – host
+* [[Louis Gossett Jr.]] – performer
+* [[Martin Starger]] – producer
+* [[Ryan O'Neal]] – performer
+* [[Andrea Fay Friedman]] – performer
+* [[Gena Rowlands]] – performer
+* [[Richard Simmons]] – TV personality
+* [[Shannen Doherty]] – performer
+* [[Robert MacNeil]] – journalist
+* [[Chance Perdomo]] – performer
+* [[Carl Weathers]] – performer
+* [[Richard Lewis (comedian)|Richard Lewis]] – performer
+* [[Donald Sutherland]] – performer
+* [[James Earl Jones]] – performer
+* [[Bob Newhart]] – performer
+
+{{div col end}}
+
+At the end of the tribute, comedian and talk show host [[Jimmy Kimmel]] briefly eulogized Newhart.<ref>{{cite magazine |title=Jimmy Kimmel Honors Bob Newhart at Emmys: 'One of Our Most Loved and Funniest People' |url=https://ew.com/jimmy-kimmel-bob-newhart-tribute-emmys-2024-8712995 |access-date=September 17, 2024 |magazine=[[Entertainment Weekly]] |archive-date=September 17, 2024 |archive-url=https://web.archive.org/web/20240917004943/https://ew.com/jimmy-kimmel-bob-newhart-tribute-emmys-2024-8712995 |url-status=live}}</ref>
+
+==Notes==
+{{notelist}}
+
+==References==
+{{reflist}}
+
+==External links==
+* {{IMDb title|id=tt31241641}}
+* [https://www.emmys.com Academy of Television Arts and Sciences website]
+* 2024 Emmy Nominating ballots: [https://www.televisionacademy.com/files/assets/ballots/program-2024-v1.pdf Programs], [https://www.televisionacademy.com/files/assets/ballots/performer-2024-v1.pdf Performers], [https://www.televisionacademy.com/files/assets/ballots/directing-2024-v1.pdf Directing], [https://www.televisionacademy.com/files/assets/ballots/writing-2024-v1.pdf Writing]
+
+{{EmmyAwardsbyYear}}
+
+{{DEFAULTSORT:Primetime Emmy Awards, 076}}
+[[Category:September 2024 in the United States]]
+[[Category:2024 awards in the United States]]
+[[Category:2024 in American television]]
+[[Category:2024 in Los Angeles]]
+[[Category:2024 television awards]]
+[[Category:2024 television specials]]
+[[Category:Primetime Emmy Award ceremonies|076]]

@@ -1,0 +1,873 @@
+{{Short description|2025 American television programming awards}}
+{{Use American English|date=September 2025}}
+{{Use mdy dates|date=September 2025}}
+{{Featured list}}
+{{Infobox award
+| name             = 77th Primetime Emmy Awards
+| image            = 77th Primetime Emmy Awards.jpg
+| alt              = Poster depicting an Emmy statuette and basic broadcast details
+| caption          = Promotional poster
+| date             = {{unbulleted list|September 14, 2025 (Ceremony)|[[77th Primetime Creative Arts Emmy Awards|September 6–7, 2025]] (Creative Arts Awards)}}
+| location         = {{unbulleted list|[[Peacock Theater]]|Los Angeles, California}}
+| presenter        = [[Academy of Television Arts & Sciences]]
+| most_awards      = {{unbulleted list
+| Major: ''[[Adolescence (TV series)|Adolescence]]'' (6)
+| All: ''[[The Studio (TV series)|The Studio]]'' (13)
+}}
+| most_nominations = {{unbulleted list
+| Major: ''[[Severance (TV series)|Severance]]'' / ''[[The White Lotus]]'' (10)
+| All: ''Severance'' (27)
+}}
+| award1_type      = [[Primetime Emmy Award for Outstanding Comedy Series|Comedy Series]]
+| award1_winner    = ''The Studio''
+| award2_type      = [[Primetime Emmy Award for Outstanding Drama Series|Drama Series]]
+| award2_winner    = ''[[The Pitt]]''
+| award3_type      = [[Primetime Emmy Award for Outstanding Limited or Anthology Series|Limited or Anthology Series]]
+| award3_winner    = ''Adolescence''
+| host             = [[Nate Bargatze]]
+| network          = {{ubl|[[CBS]]|[[Paramount+]]}}
+| producer         = Jesse Collins Entertainment
+| director         = Alex Rudzinski
+| viewership       = 7.59&nbsp;million
+| runtime          = 3 hours, 4 minutes<ref>{{cite web |last1=Arkin |first1=Daniel |last2=Cohen |first2=Rebecca |last3=Fox |first3=Esme |last4=Hamedy |first4=Saba |last5=Yang |first5=Angela |title=Emmys 2025 Highlights: ''Adolescence'' and ''The Studio'' Dominate, Noah Wyle Wins First Award, Red Carpet Moments, Speeches, and More |url=https://www.nbcnews.com/pop-culture/pop-culture-news/live-blog/emmys-2025-red-carpet-winners-live-updates-rcna230493 |access-date=September 18, 2025 |agency=[[NBC News]] |date=September 14, 2025 |archive-url=https://web.archive.org/web/20250918232913/https://www.nbcnews.com/pop-culture/pop-culture-news/live-blog/emmys-2025-red-carpet-winners-live-updates-rcna230493 |archive-date=September 18, 2025 |language=en-US |url-status=live}}</ref>
+| previous         = [[76th Primetime Emmy Awards|76th]]
+| next             = [[78th Primetime Emmy Awards|78th]]
+| main             = {{nowrap|[[Primetime Emmy Awards]]}}
+| suppressfields   = website
+}}
+
+The '''77th Primetime Emmy Awards''' honored the best in American [[prime time]] television programming from June 1, 2024, until May 31, 2025, as chosen by the [[Academy of Television Arts & Sciences]].<ref>{{cite press release |url=https://www.televisionacademy.com/files/assets/Downloads/2025-rules-procedures-v2.pdf |title=77th Emmy Awards – 2024–2025 Rules and Procedures |date=February 19, 2025 |publisher=[[Academy of Television Arts & Sciences]] |access-date=March 19, 2025}}</ref> The awards ceremony was held live on September 14, 2025, at the [[Peacock Theater]] in [[Downtown Los Angeles]], California, and was preceded by the [[77th Primetime Creative Arts Emmy Awards]] on September 6 and 7. During the ceremony, [[Primetime Emmy Awards|Emmy Awards]] were presented in 26 categories. The ceremony was produced by Jesse Collins Entertainment, directed by Alex Rudzinski, and broadcast in the United States by [[CBS]] and [[Paramount+]]. [[Nate Bargatze]] hosted the event.
+
+At the main ceremony, ''[[The Studio (TV series)|The Studio]]'' won four awards, including [[Primetime Emmy Award for Outstanding Comedy Series|Outstanding Comedy Series]], and ''[[The Pitt]]'' won three awards, including [[Primetime Emmy Award for Outstanding Drama Series|Outstanding Drama Series]]. ''[[Adolescence (TV series)|Adolescence]]'' led all shows with six wins, including [[Primetime Emmy Award for Outstanding Limited or Anthology Series|Outstanding Limited or Anthology Series]]. Other winning programs included ''[[Hacks]]'', ''[[Last Week Tonight with John Oliver]]'', and ''[[Severance (TV series)|Severance]]'' with two wins each, and ''[[Andor]]'', ''[[The Late Show with Stephen Colbert]]'', ''[[The Penguin (TV series)|The Penguin]]'', ''[[Slow Horses]]'', ''[[Saturday Night Live 50th Anniversary Special|SNL50: The Anniversary Special]]'', ''[[Somebody Somewhere (TV series)|Somebody Somewhere]]'', and ''[[The Traitors (American TV series)|The Traitors]]'' with one each. Including Creative Arts Emmys, ''The Studio'' led all shows with 13 wins, while [[HBO]], alongside its partner [[HBO Max]], and [[Netflix]] led all networks with 30 wins each.
+
+==Winners and nominees==
+[[File:Seth Rogen - Good Fortune LA Premiere.jpg|thumb|upright|alt=Seth Rogen in 2025.|[[Seth Rogen]], Outstanding Lead Actor in a Comedy Series winner]]
+[[File:Jean Smart by Gage Skidmore.jpg|thumb|upright|alt=Jean Smart in 2018.|[[Jean Smart]], Outstanding Lead Actress in a Comedy Series winner]]
+[[File:Noah Wyle - Walk of Fame-01.jpg|thumb|upright|alt=Noah Wyle in 2025.|[[Noah Wyle]], Outstanding Lead Actor in a Drama Series winner]]
+[[File:Britt Lower Headshot.jpg|thumb|upright|alt=Britt Lower in 2025.|[[Britt Lower]], Outstanding Lead Actress in a Drama Series winner]]
+[[File:Stephen Graham Springsteen-23 (cropped).jpg|thumb|upright|alt=Stephen Graham in 2025.|[[Stephen Graham]], Outstanding Lead Actor in a Limited or Anthology Series or Movie winner]]
+[[File:Cristin Milioti July 13, 2014 (cropped).jpg|thumb|upright|alt=Cristin Milioti in 2014.|[[Cristin Milioti]], Outstanding Lead Actress in a Limited or Anthology Series or Movie winner]]
+[[File:JeffHiller2023.jpg|thumb|upright|alt=Jeff Hiller in 2023.|[[Jeff Hiller]], Outstanding Supporting Actor in a Comedy Series winner]]
+[[File:Hannah Einbinder at the 2026 Cannes Film Festival-64547 (cropped).jpg|thumb|upright|alt=Hannah Einbinder in 2026.|[[Hannah Einbinder]], Outstanding Supporting Actress in a Comedy Series winner]]
+[[File:TramellTillman.jpg|thumb|upright|alt=Tramell Tillman in 2023.|[[Tramell Tillman]], Outstanding Supporting Actor in a Drama Series winner]]
+[[File:Katherine LaNasa 2016 (cropped).jpg|thumb|upright|alt=Katherine LaNasa in 2016.|[[Katherine LaNasa]], Outstanding Supporting Actress in a Drama Series winner]]
+[[File:Owen Cooper at BAFTA 2026 02 (cropped).jpg|thumb|upright|alt=Owen Cooper in 2026.|[[Owen Cooper]], Outstanding Supporting Actor in a Limited or Anthology Series or Movie winner]]
+[[File:Erin Doherty at BAFTAs 2026 03.jpg|thumb|upright|alt=Erin Doherty in 2026.|[[Erin Doherty]], Outstanding Supporting Actress in a Limited or Anthology Series or Movie winner]]
+
+The nominations for the 77th Primetime Emmy Awards were announced on July 15, 2025, at the Television Academy's Wolf Theatre in [[North Hollywood, Los Angeles]], hosted by actor [[Harvey Guillén]] and actress [[Brenda Song]], along with Television Academy chair [[Cris Abrego]].<ref>{{cite magazine |last=Travis |first=Emlyn |title=How to Watch 2025 Emmys Nominations Live |url=https://ew.com/how-to-watch-2025-emmys-nominations-live-11768562 |access-date=September 18, 2025 |magazine=[[Entertainment Weekly]] |date=July 15, 2025 |archive-url=https://web.archive.org/web/20250717191258/https://ew.com/how-to-watch-2025-emmys-nominations-live-11768562 |archive-date=July 17, 2025 |language=en-US |url-status=live}}</ref> The nominees for [[Primetime Emmy Award for Outstanding Reality Competition Program|Outstanding Reality Competition Program]] and [[Primetime Emmy Award for Outstanding Talk Series|Outstanding Talk Series]] were revealed on ''[[CBS Mornings]]'' a few hours prior.<ref>{{cite web |url=https://variety.com/2025/tv/awards/emmys-reality-talk-nominations-early-cbs-1236460209/ |title=Emmys to Reveal Reality and Talk Series Nominations Early on ''CBS Mornings'' |last=Davis |first=Clayton |access-date=July 15, 2025 |work=[[Variety (magazine)|Variety]] |date=July 14, 2025 |archive-url=https://web.archive.org/web/20250918065950/https://variety.com/2025/tv/awards/emmys-reality-talk-nominations-early-cbs-1236460209/ |archive-date=September 18, 2025 |language=en-US \url=status=live}}</ref> Including nominations at the [[77th Primetime Creative Arts Emmy Awards]], ''[[Severance (TV series)|Severance]]'' led all programs with 27 nominations, followed by ''[[The Penguin (TV series)|The Penguin]]'' with 24 nominations.<ref>{{cite web |last=Richwine |first=Lisa |title=''Severance'', ''The Penguin'' Lead Nominations for TV's Emmy Awards |url=https://www.reuters.com/lifestyle/severance-the-white-lotus-nominated-best-drama-tvs-emmys-2025-07-15/ |access-date=July 23, 2025 |publisher=[[Reuters]] |date=July 15, 2025 |archive-url=https://web.archive.org/web/20250716200328/https://www.reuters.com/lifestyle/severance-the-white-lotus-nominated-best-drama-tvs-emmys-2025-07-15/ |archive-date=July 16, 2025 |language=en-US |url-status=live}}</ref> ''[[The Studio (TV series)|The Studio]]'' became the most-nominated first-year comedy series in the awards' history with 23 nominations; the [[Apple TV (streaming service)|Apple TV+]] comedy surpassed the record held by the sports comedy ''[[Ted Lasso]]'', which received 20 nominations in [[73rd Primetime Emmy Awards|2021]]. The series also tied ''[[The Bear (TV series)|The Bear]]''{{'}}s 23 nominations in the [[76th Primetime Emmy Awards|previous year]] for most nominations for a comedy series in a single season.<ref name="Studio Record">{{cite web |last=Davis |first=Clayton |title='''The Studio'' Breaks ''Ted Lasso'' Emmy Record for Most Nominations for a Freshman Comedy Series, Ties ''The Bear'' for Most in History |url=https://variety.com/2025/tv/news/the-studio-emmys-record-most-nominations-season-1-1236448864/ |access-date=August 1, 2025 |work=[[Variety (magazine)|Variety]] |date=July 15, 2025 |archive-url=https://web.archive.org/web/20250716171450/https://variety.com/2025/tv/news/the-studio-emmys-record-most-nominations-season-1-1236448864/ |archive-date=July 16, 2025 |language=en-US |url-status=live}}</ref>
+
+[[Sterling K. Brown]], nominated for [[Primetime Emmy Award for Outstanding Lead Actor in a Drama Series|Outstanding Lead Actor in a Drama Series]] for his role in ''[[Paradise (2025 TV series)|Paradise]]'', tied with [[Andre Braugher]] and [[Don Cheadle]] for most nominations by a Black male performer with 11 nominations each.<ref>{{cite web |last=D'Alessandro |first=Anthony |title=Emmy On-Screen Diversity Takes a Hit with Acting & Hosting Nominations Down 18% from 2024 |url=https://deadline.com/2025/07/emmy-nominations-2025-diversity-1236458471/ |work=[[Deadline Hollywood]] |date=July 15, 2025 |access-date=August 28, 2025 |archive-url=https://web.archive.org/web/20250716125717/https://deadline.com/2025/07/emmy-nominations-2025-diversity-1236458471/ |archive-date=July 16, 2025 |language=en-US |url-status=live}}</ref> At age 77, [[Kathy Bates]] became the oldest nominee for [[Primetime Emmy Award for Outstanding Lead Actress in a Drama Series|Outstanding Lead Actress in a Drama Series]] for her performance in ''[[Matlock (2024 TV series)|Matlock]]''; she surpassed the record previously held by [[Angela Lansbury]] who was nominated at age 70 in [[48th Primetime Emmy Awards|1996]] for her role in ''[[Murder, She Wrote]]''.<ref>{{cite web |last=Davis |first=Clayton |title=Kathy Bates Becomes the Oldest Emmy Nominee for Lead Drama Actress |url=https://variety.com/2025/tv/awards/kathy-bates-emmys-record-oldest-nominee-1236448948/ |access-date=August 19, 2025 |work=[[Variety (magazine)|Variety]] |date=July 15, 2025 |archive-url=https://web.archive.org/web/20250728061544/https://variety.com/2025/tv/awards/kathy-bates-emmys-record-oldest-nominee-1236448948/ |archive-date=July 28, 2025 |language=en-US |url-status=live}}</ref> At age 21, [[Bella Ramsey]] was the youngest two-time nominee for Outstanding Lead Actress in a Drama Series for their performance in ''[[The Last of Us (TV series)|The Last of Us]]''.<ref name="Variety Emmys Diversity Report">{{cite web |last=Davis |first=Clayton |title=Emmys 2025 Diversity Report: Worst Showing for Actors of Color in 5 Years Despite Historic Nominations |url=https://variety.com/2025/tv/awards/emmys-2025-diversity-worst-showing-actors-color-1236448971/ |access-date=August 19, 2025 |work=[[Variety (magazine)|Variety]] |date=July 15, 2025 |archive-url=https://web.archive.org/web/20250824110924/https://variety.com/2025/tv/awards/emmys-2025-diversity-worst-showing-actors-color-1236448971/ |archive-date=August 24, 2025 |language=en-US |url-status=live}}</ref> Ramsey was also the first openly [[non-binary]] person to be nominated more than once for an acting Emmy.<ref>{{cite magazine |last=Mier |first=Tomás |date=July 15, 2025 |title=Bella Ramsey Becomes First Non-Binary Person to Earn Two Emmy Nominations |url=https://www.rollingstone.com/tv-movies/tv-movie-news/bella-ramsey-first-non-binary-earn-two-emmy-nominations-1235386031/ |access-date=September 8, 2025 |magazine=[[Rolling Stone]] |archive-url=https://web.archive.org/web/20250919102248/https://www.rollingstone.com/tv-movies/tv-movie-news/bella-ramsey-first-non-binary-earn-two-emmy-nominations-1235386031/ |archive-date=September 19, 2025 |language=en-US |url-status=live}}</ref> At age 83, for his role on ''[[Shrinking (TV series)|Shrinking]]'', [[Harrison Ford]] became the second oldest nominee for Outstanding Supporting Actor in a Comedy Series behind [[Alan Arkin]], who was nominated in that category at age 86 in [[72nd Primetime Emmy Awards|2020]] for his work on ''[[The Kominsky Method]]''.<ref>{{cite web |last=Davis |first=Clayton |title=Harrison Ford Lands First Career Emmy Nomination for ''Shrinking'' and Becomes Second Oldest Nominee in Category History |url=https://variety.com/2025/tv/awards/harrison-ford-first-emmys-nom-second-oldest-shrinking-1236448941/ |access-date=September 18, 2025 |work=[[Variety (magazine)|Variety]] |date=July 15, 2025 |archive-url=https://web.archive.org/web/20250728061434/https://variety.com/2025/tv/awards/harrison-ford-first-emmys-nom-second-oldest-shrinking-1236448941/ |archive-date=July 28, 2025 |language=en-US}}</ref> [[Ayo Edebiri]], nominated for both [[Primetime Emmy Award for Outstanding Lead Actress in a Comedy Series|Outstanding Lead Actress in a Comedy Series]] and [[Primetime Emmy Award for Outstanding Directing for a Comedy Series|Outstanding Directing for a Comedy Series]] for her work on ''The Bear'', was the first Black woman nominated for both acting and directing in the same year. At age 29, Edebiri also became the youngest Black woman to receive three acting nominations in her career.<ref name="Variety Emmys Diversity Report"/> For the first time in Emmys history, the nominees for [[Primetime Emmy Award for Outstanding Writing for a Comedy Series|Outstanding Writing for a Comedy Series]] had at least one woman included in each of the writing teams.<ref name="Variety Emmys Diversity Report"/> [[HBO]] and its streaming service [[HBO Max]] led all networks and platforms with 142 nominations; [[Netflix]] came in second place with 120 nominations.<ref>{{cite web |last=Littleton |first=Cynthia |title=HBO Max Scores Record Emmy Nominations Haul Fueled by ''The Penguin'', ''The White Lotus'', ''The Last of Us'', and ''Hacks'' |url=https://variety.com/2025/tv/news/emmy-nominations-scorecard-hbo-max-netflix-apple-tv-fx-1236460862/ |access-date=September 18, 2025 |work=[[Variety (magazine)|Variety]] |date=July 16, 2025 |archive-url=https://web.archive.org/web/20250716191106/https://variety.com/2025/tv/news/emmy-nominations-scorecard-hbo-max-netflix-apple-tv-fx-1236460862/ |archive-date=July 16, 2025 |language=en-US |url-status=live}}</ref>
+
+The winners were announced on September 14, following the Creative Arts Emmys on September 6 and 7. With 30 total wins each, HBO and its streaming service HBO Max tied with Netflix to lead all networks and platforms.<ref>{{cite web |last=Haiku |first=Selome |title=''The Studio'' Leads 2025 Emmy Wins While HBO Max and Netflix Tie as Ceremony's Top Platforms |url=https://variety.com/2025/tv/news/emmy-2025-hbo-max-netflix-studio-wins-by-show-platform-1236515805/ |access-date=September 18, 2025 |work=[[Variety (magazine)|Variety]] |date=September 14, 2025 |archive-url=https://web.archive.org/web/20250915163742/https://variety.com/2025/tv/news/emmy-2025-hbo-max-netflix-studio-wins-by-show-platform-1236515805/ |archive-date=September 15, 2025 |language=en-US |url-status=live}}</ref> Combined with its nine Creative Arts Emmys, ''The Studio'' was the most awarded comedy in a single year with thirteen wins, breaking ''The Bear''{{'}}s record of eleven from the previous year.<ref>{{cite web |last=Loving |first=Casey |title=''The Studio'' Breaks Comedy Emmys Records Once Held by ''The Bear'' |url=https://www.thewrap.com/the-studio-breaks-the-bear-emmy-records-2025/ |access-date=September 16, 2025 |work=[[TheWrap]] |date=September 14, 2025 |archive-url=https://web.archive.org/web/20250916233857/https://www.thewrap.com/the-studio-breaks-the-bear-emmy-records-2025/ |archive-date=September 16, 2025 |language=en-US |url-status=live}}</ref> It also surpassed the record for most wins by a freshman comedy series which was previously set by ''The Bear'' with ten awards in [[75th Primetime Emmy Awards|2023]].<ref name="The Studio">{{cite web |last=Davis |first=Clayton |title=''The Studio'' Makes Emmys History as the Most Awarded Comedy Ever, Seth Rogen Ties for Most Individual Wins in One Night |url=https://variety.com/2025/tv/awards/the-studio-emmy-record-1236510814/ |date=September 14, 2025 |access-date=September 15, 2025 |work=[[Variety (magazine)|Variety]] |archive-url=https://web.archive.org/web/20250918204846/https://variety.com/2025/tv/awards/the-studio-emmy-record-1236510814/ |archive-date=September 18, 2025 |language=en-US |url-status=live}}</ref> Seth Rogen won four awards for the aforementioned program to tie [[Moira Demos]], [[Dan Levy (Canadian actor)|Dan Levy]], and [[Amy Sherman-Palladino]] for the most wins for an individual in one year.<ref>{{cite web |last=Moreau |first=Jordan |last2=Otterson |first2=Joe |title=Emmys 2025 Winners: ''The Studio'' Dominates with 13 Wins, ''Adolescence'' and ''The Pitt'' Win Top Honors |url=https://variety.com/lists/emmys-2025-winners-studio-penguin-severance/ |access-date=September 18, 2025 |work=[[Variety (magazine)|Variety]] |date=September 14, 2025 |archive-url=https://web.archive.org/web/20250915040949/https://variety.com/lists/emmys-2025-winners-studio-penguin-severance/ |archive-date=September 15, 2025 |language=en-US |url-status=live}}</ref> ''[[The Pitt]]'' became the first [[medical drama|medical procedural]] to win Outstanding Drama Series since ''[[ER (TV series)|ER]]'' in 1996.<ref>{{cite web |last=Jacobs |first=Meredith |title=6 ''ER'' Stars Who Should Appear on ''The Pitt'' Next — And Our Pitched Storylines (Poll) |url=https://www.tvinsider.com/1215632/the-pitt-season-2-er-stars-storylines/ |access-date=September 17, 2025 |work=[[TV Guide (magazine)#TV Insider|TV Insider]] |date=September 16, 2025 |archive-url=https://web.archive.org/web/20250918015831/https://www.tvinsider.com/1215632/the-pitt-season-2-er-stars-storylines/ |archive-date=September 18, 2025 |language=en-US |url-status=live}}</ref> [[Tramell Tillman]] was the first Black performer to win Outstanding Supporting Actor in a Drama Series for his work on ''Severance''.<ref>{{cite web |last=Davis |first=Clayton |title=Tramell Tillman Becomes First Black Man to Win Supporting Drama Actor for ''Severance'' |url=https://variety.com/2025/tv/awards/tramell-tillman-first-black-supporting-winner-history-1236509585/ |access-date=September 15, 2025 |work=[[Variety (magazine)|Variety]] |date=September 14, 2025 |archive-url=https://web.archive.org/web/20250915155029/https://variety.com/2025/tv/awards/tramell-tillman-first-black-supporting-winner-history-1236509585/ |archive-date=September 15, 2025 |language=en-US |url-status=live}}</ref> At age 15, for his role in ''[[Adolescence (TV series)|Adolescence]]'', [[Owen Cooper]] became the youngest male acting winner in Emmy history, breaking a record previously held by [[Scott Jacoby (actor)|Scott Jacoby]] who won Outstanding Performance by an Actor in a Supporting Role in a Drama in [[25th Primetime Emmy Awards|1973]] at age 16 for ''[[That Certain Summer]]''.<ref>{{cite web |last=Ford |first=Lily |title=''Adolescence'' Star Owen Cooper Makes Emmys History as Youngest-Ever Male Winner in Any Acting Category |url=https://www.hollywoodreporter.com/tv/tv-news/adolescence-star-owen-cooper-emmys-win-record-breaker-1236369134/ |access-date=September 15, 2025 |work=[[The Hollywood Reporter]] |date=September 14, 2025 |archive-url=https://web.archive.org/web/20250927180527/https://www.hollywoodreporter.com/tv/tv-news/adolescence-star-owen-cooper-emmys-win-record-breaker-1236369134/ |archive-date=September 27, 2025 |language=en-US |url-status=live}}</ref>
+
+Winners are listed first, highlighted in '''boldface''', and indicated with a double dagger (‡).<ref>{{cite press release |url=https://www.televisionacademy.com/files/assets/Downloads/77thnominations-list-v4.pdf |title=77th Emmy Awards Complete Nominations List |access-date=September 16, 2025 |publisher=[[Academy of Television Arts & Sciences]] |archive-url=https://web.archive.org/web/20250918191722/https://www.televisionacademy.com/files/assets/Downloads/77thnominations-list-v4.pdf |archive-date=September 18, 2025 |language=en-US |url-status=live}}</ref><ref>{{cite press release |url=https://www.televisionacademy.com/files/assets/press/emmys-240914-v1a.pdf |access-date=September 16, 2025 |title=77th Emmy Awards Winners Announced |date=September 14, 2025 |publisher=[[Academy of Television Arts & Sciences]] |archive-url=https://web.archive.org/web/20250925123643/https://www.televisionacademy.com/files/assets/press/emmys-240914-v1a.pdf |archive-date=September 25, 2025 |language=en-US |url-status=live}}</ref>{{efn|The outlets listed for each program are the U.S. broadcasters or streaming services identified in the nominations, which for some international productions are different than the broadcaster(s) that originally commissioned the program. Programs broadcast by [[HBO]] or [[HBO Max]] were listed under both services in the nominations list; only the original broadcaster is listed below.}} For simplicity, producers who received nominations for program awards, as well as nominated writers for [[Primetime Emmy Award for Outstanding Writing for a Variety Series|Outstanding Writing for a Variety Series]], have been omitted.
+
+===Programs===
+{| class="wikitable" role="presentation"
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Comedy Series|Outstanding Comedy Series]]}}
+* '''''[[The Studio (TV series)|The Studio]]'' ([[Apple TV (streaming service)|Apple TV+]])'''{{double dagger|alt=Winner}}
+** ''[[Abbott Elementary]]'' ([[American Broadcasting Company|ABC]])
+** ''[[The Bear (TV series)|The Bear]]'' ([[FX Networks|FX]])
+** ''[[Hacks]]'' ([[HBO Max]])
+** ''[[Nobody Wants This]]'' ([[Netflix]])
+** ''[[Only Murders in the Building]]'' ([[Hulu]])
+** ''[[Shrinking (TV series)|Shrinking]]'' (Apple TV+)
+** ''[[What We Do in the Shadows (TV series)|What We Do in the Shadows]]'' (FX)
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Drama Series|Outstanding Drama Series]]}}
+* '''''[[The Pitt]]'' (HBO Max)'''{{double dagger|alt=Winner}}
+** ''[[Andor]]'' ([[Disney+]])
+** ''[[The Diplomat (American TV series)|The Diplomat]]'' (Netflix)
+** ''[[The Last of Us (TV series)|The Last of Us]]'' ([[HBO]])
+** ''[[Paradise (2025 TV series)|Paradise]]'' (Hulu)
+** ''[[Severance (TV series)|Severance]]'' (Apple TV+)
+** ''[[Slow Horses]]'' (Apple TV+)
+** ''[[The White Lotus]]'' (HBO)
+|-
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Limited or Anthology Series|Outstanding Limited or Anthology Series]]}}
+* '''''[[Adolescence (TV series)|Adolescence]]'' (Netflix)'''{{double dagger|alt=Winner}}
+** ''[[Black Mirror]]'' (Netflix)
+** ''[[Dying for Sex]]'' (FX)
+** ''[[Monsters: The Lyle and Erik Menendez Story]]'' (Netflix)
+** ''[[The Penguin (TV series)|The Penguin]]'' (HBO)
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Reality Competition Program|Outstanding Reality Competition Program]]}}
+* '''''[[The Traitors (American TV series)|The Traitors]]'' ([[Peacock (streaming service)|Peacock]])'''{{double dagger|alt=Winner}}
+** ''[[The Amazing Race (American TV series)|The Amazing Race]]'' ([[CBS]])
+** ''[[RuPaul's Drag Race]]'' ([[MTV]])
+** ''[[Survivor (American TV series)|Survivor]]'' (CBS)
+** ''[[Top Chef]]'' ([[Bravo (American TV network)|Bravo]])
+|-
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Talk Series|Outstanding Talk Series]]}}
+* '''''[[The Late Show with Stephen Colbert]]'' (CBS)'''{{double dagger|alt=Winner}}
+** ''[[The Daily Show]]'' ([[Comedy Central]])
+** ''[[Jimmy Kimmel Live!]]'' (ABC)
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Scripted Variety Series|Outstanding Scripted Variety Series]]}}
+* '''''[[Last Week Tonight with John Oliver]]'' (HBO)'''{{double dagger|alt=Winner}}
+** ''[[Saturday Night Live]]'' ([[NBC]])
+|-
+| colspan="2" style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Variety Special (Live)|Outstanding Variety Special (Live)]]}}
+* '''''[[Saturday Night Live 50th Anniversary Special|SNL50: The Anniversary Special]]'' (NBC)'''{{double dagger|alt=Winner}}
+** ''[[Super Bowl LIX halftime show|The Apple Music Super Bowl LIX Halftime Show Starring Kendrick Lamar]]'' ([[Fox Broadcasting Company|Fox]])
+** ''[[Beyoncé 2024 NFL Halftime Show|Beyoncé Bowl]]'' (Netflix)
+** ''[[97th Academy Awards|The Oscars]]'' (ABC)
+** ''[[SNL50: The Homecoming Concert]]'' (Peacock)
+|}
+
+===Acting===
+
+====Lead====
+{| class="wikitable" role="presentation"
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Lead Actor in a Comedy Series|Outstanding Lead Actor in a Comedy Series]]}}
+* '''[[Seth Rogen]] – ''[[The Studio (TV series)|The Studio]]'' as Matt Remick (Apple TV+)'''{{double dagger|alt=Winner}}
+** [[Adam Brody]] – ''[[Nobody Wants This]]'' as Noah Roklov (Netflix)
+** [[Jason Segel]] – ''[[Shrinking (TV series)|Shrinking]]'' as Jimmy Laird (Apple TV+)
+** [[Martin Short]] – ''[[Only Murders in the Building]]'' as Oliver Putnam (Hulu)
+** [[Jeremy Allen White]] – ''[[The Bear (TV series)|The Bear]]'' as [[Carmy Berzatto|Carmen "Carmy" Berzatto]] (FX)
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Lead Actress in a Comedy Series|Outstanding Lead Actress in a Comedy Series]]}}
+* '''[[Jean Smart]] – ''[[Hacks]]'' as Deborah Vance (HBO Max)'''{{double dagger|alt=Winner}}
+** [[Uzo Aduba]] – ''[[The Residence (TV series)|The Residence]]'' as Cordelia Cupp (Netflix)
+** [[Kristen Bell]] – ''[[Nobody Wants This]]'' as Joanne (Netflix)
+** [[Quinta Brunson]] – ''[[Abbott Elementary]]'' as Janine Teagues (ABC)
+** [[Ayo Edebiri]] – ''[[The Bear (TV series)|The Bear]]'' as [[Sydney Adamu|Sydney "Syd" Adamu]] (FX)
+|-
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Lead Actor in a Drama Series|Outstanding Lead Actor in a Drama Series]]}}
+* '''[[Noah Wyle]] – ''[[The Pitt]]'' as [[Michael Robinavitch|Dr. Michael "Robby" Robinavitch]] (HBO Max)'''{{double dagger|alt=Winner}}
+** [[Sterling K. Brown]] – ''[[Paradise (2025 TV series)|Paradise]]'' as Xavier Collins (Hulu)
+** [[Gary Oldman]] – ''[[Slow Horses]]'' as Jackson Lamb (Apple TV+)
+** [[Pedro Pascal]] – ''[[The Last of Us (TV series)|The Last of Us]]'' as [[Joel (The Last of Us)|Joel Miller]] (HBO)
+** [[Adam Scott]] – ''[[Severance (TV series)|Severance]]'' as [[Mark Scout]] (Apple TV+)
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Lead Actress in a Drama Series|Outstanding Lead Actress in a Drama Series]]}}
+* '''[[Britt Lower]] – ''[[Severance (TV series)|Severance]]'' as [[Helly R.]] (Apple TV+)'''{{double dagger|alt=Winner}}
+** [[Kathy Bates]] – ''[[Matlock (2024 TV series)|Matlock]]'' as Madeline "Matty" Matlock / Madeline Kingston (CBS)
+** [[Sharon Horgan]] – ''[[Bad Sisters]]'' as Eva Garvey (Apple TV+)
+** [[Bella Ramsey]] – ''[[The Last of Us (TV series)|The Last of Us]]'' as [[Ellie (The Last of Us)|Ellie]] (HBO)
+** [[Keri Russell]] – ''[[The Diplomat (American TV series)|The Diplomat]]'' as Katherine "Kate" Wyler (Netflix)
+|-
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Lead Actor in a Limited or Anthology Series or Movie|Outstanding Lead Actor in a Limited or Anthology Series or Movie]]}}
+* '''[[Stephen Graham]] – ''[[Adolescence (TV series)|Adolescence]]'' as Eddie Miller (Netflix)'''{{double dagger|alt=Winner}}
+** [[Colin Farrell]] – ''[[The Penguin (TV series)|The Penguin]]'' as [[Penguin (character)|Oswald "Oz" Cobb / The Penguin]] (HBO)
+** [[Jake Gyllenhaal]] – ''[[Presumed Innocent (TV series)|Presumed Innocent]]'' as Rozat "Rusty" Sabich (Apple TV+)
+** [[Brian Tyree Henry]] – ''[[Dope Thief]]'' as Ray Driscoll (Apple TV+)
+** [[Cooper Koch]] – ''[[Monsters: The Lyle and Erik Menendez Story]]'' as [[Lyle and Erik Menendez|Erik Menendez]] (Netflix)
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Lead Actress in a Limited or Anthology Series or Movie|Outstanding Lead Actress in a Limited or Anthology Series or Movie]]}}
+* '''[[Cristin Milioti]] – ''[[The Penguin (TV series)|The Penguin]]'' as [[Sofia Falcone|Sofia Falcone / Sofia Gigante]] (HBO)'''{{double dagger|alt=Winner}}
+** [[Cate Blanchett]] – ''[[Disclaimer (TV series)|Disclaimer]]'' as Catherine Ravenscroft (Apple TV+)
+** [[Meghann Fahy]] – ''[[Sirens (2025 TV series)|Sirens]]'' as Devon DeWitt (Netflix)
+** [[Rashida Jones]] – ''[[Black Mirror]]'': "[[Common People (Black Mirror)|Common People]]" as Amanda Waters (Netflix)
+** [[Michelle Williams (actress)|Michelle Williams]] – ''[[Dying for Sex]]'' as [[Molly Kochan]] (FX)
+|}
+
+====Supporting====
+{| class="wikitable" role="presentation"
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Supporting Actor in a Comedy Series|Outstanding Supporting Actor in a Comedy Series]]}}
+* '''[[Jeff Hiller]] – ''[[Somebody Somewhere (TV series)|Somebody Somewhere]]'' as Joel (HBO)'''{{double dagger|alt=Winner}}
+** [[Ike Barinholtz]] – ''[[The Studio (TV series)|The Studio]]'' as Sal Saperstein (Apple TV+)
+** [[Colman Domingo]] – ''[[The Four Seasons (TV series)|The Four Seasons]]'' as Danny (Netflix)
+** [[Harrison Ford]] – ''[[Shrinking (TV series)|Shrinking]]'' as Dr. Paul Rhoades (Apple TV+)
+** [[Ebon Moss-Bachrach]] – ''[[The Bear (TV series)|The Bear]]'' as [[Richie Jerimovich|Richard "Richie" Jerimovich]] (FX)
+** [[Michael Urie]] – ''Shrinking'' as Brian (Apple TV+)
+** [[Bowen Yang]] – ''[[Saturday Night Live]]'' as Various Characters (NBC)
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Supporting Actress in a Comedy Series|Outstanding Supporting Actress in a Comedy Series]]}}
+* '''[[Hannah Einbinder]] – ''[[Hacks]]'' as Ava Daniels (HBO Max)'''{{double dagger|alt=Winner}}
+** [[Liza Colón-Zayas]] – ''[[The Bear (TV series)|The Bear]]'' as [[Tina Marrero]] (FX)
+** [[Kathryn Hahn]] – ''[[The Studio (TV series)|The Studio]]'' as Maya Mason (Apple TV+)
+** [[Janelle James]] – ''[[Abbott Elementary]]'' as Ava Coleman (ABC)
+** [[Catherine O'Hara]] – ''The Studio'' as Patty Leigh (Apple TV+)
+** [[Sheryl Lee Ralph]] – ''Abbott Elementary'' as Barbara Howard (ABC)
+** [[Jessica Williams (actress)|Jessica Williams]] – ''[[Shrinking (TV series)|Shrinking]]'' as Gaby Evans (Apple TV+)
+|-
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Supporting Actor in a Drama Series|Outstanding Supporting Actor in a Drama Series]]}}
+* '''[[Tramell Tillman]] – ''[[Severance (TV series)|Severance]]'' as [[Seth Milchick]] (Apple TV+)'''{{double dagger|alt=Winner}}
+** [[Zach Cherry]] – ''Severance'' as Dylan George (Apple TV+)
+** [[Walton Goggins]] – ''[[The White Lotus]]'' as Rick Hatchett (HBO)
+** [[Jason Isaacs]] – ''The White Lotus'' as Timothy Ratliff (HBO)
+** [[James Marsden]] – ''[[Paradise (2025 TV series)|Paradise]]'' as President Cal Bradford (Hulu)
+** [[Sam Rockwell]] – ''The White Lotus'' as Frank (HBO)
+** [[John Turturro]] – ''Severance'' as Irving Bailiff (Apple TV+)
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Supporting Actress in a Drama Series|Outstanding Supporting Actress in a Drama Series]]}}
+* '''[[Katherine LaNasa]] – ''[[The Pitt]]'' as [[Dana Evans (The Pitt)|Dana Evans]] (HBO Max)'''{{double dagger|alt=Winner}}
+** [[Patricia Arquette]] – ''[[Severance (TV series)|Severance]]'' as [[Harmony Cobel]] (Apple TV+)
+** [[Carrie Coon]] – ''[[The White Lotus]]'' as Laurie Duffy (HBO)
+** [[Julianne Nicholson]] – ''[[Paradise (2025 TV series)|Paradise]]'' as Samantha "Sinatra" Redmond (Hulu)
+** [[Parker Posey]] – ''The White Lotus'' as Victoria Ratliff (HBO)
+** [[Natasha Rothwell]] – ''The White Lotus'' as Belinda Lindsey (HBO)
+** [[Aimee Lou Wood]] – ''The White Lotus'' as Chelsea (HBO)
+|-
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Supporting Actor in a Limited or Anthology Series or Movie|Outstanding Supporting Actor in a Limited or Anthology Series or Movie]]}}
+* '''[[Owen Cooper]] – ''[[Adolescence (TV series)|Adolescence]]'' as Jamie Miller (Netflix)'''{{double dagger|alt=Winner}}
+** [[Javier Bardem]] – ''[[Monsters: The Lyle and Erik Menendez Story]]'' as José Menendez (Netflix)
+** [[Bill Camp]] – ''[[Presumed Innocent (TV series)|Presumed Innocent]]'' as Raymond Horgan (Apple TV+)
+** [[Rob Delaney]] – ''[[Dying for Sex]]'' as Neighbor Guy (FX)
+** [[Peter Sarsgaard]] – ''Presumed Innocent'' as Tommy Molto (Apple TV+)
+** [[Ashley Walters]] – ''Adolescence'' as [[Inspector#United Kingdom|DI]] Luke Bascombe (Netflix)
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Supporting Actress in a Limited or Anthology Series or Movie|Outstanding Supporting Actress in a Limited or Anthology Series or Movie]]}}
+* '''[[Erin Doherty]] – ''[[Adolescence (TV series)|Adolescence]]'' as Briony Ariston (Netflix)'''{{double dagger|alt=Winner}}
+** [[Ruth Negga]] – ''[[Presumed Innocent (TV series)|Presumed Innocent]]'' as Barbara Sabich (Apple TV+)
+** [[Deirdre O'Connell (actress)|Deirdre O'Connell]] – ''[[The Penguin (TV series)|The Penguin]]'' as Francis Cobb (HBO)
+** [[Chloë Sevigny]] – ''[[Monsters: The Lyle and Erik Menendez Story]]'' as Kitty Menendez (Netflix)
+** [[Jenny Slate]] – ''[[Dying for Sex]]'' as [[Nikki Boyer]] (FX)
+** [[Christine Tremarco]] – ''Adolescence'' as Manda Miller (Netflix)
+|}
+
+===Directing===
+{| class="wikitable" role="presentation"
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Directing for a Comedy Series|Outstanding Directing for a Comedy Series]]}}
+* '''''[[The Studio (TV series)|The Studio]]'': "[[The Oner]]" – [[Seth Rogen]] and [[Evan Goldberg]] (Apple TV+)'''{{double dagger|alt=Winner}}
+** ''[[The Bear (TV series)|The Bear]]'': "[[Napkins (The Bear)|Napkins]]" – [[Ayo Edebiri]] (FX)
+** ''[[Hacks]]'': "A Slippery Slope" – [[Lucia Aniello]] (HBO Max)
+** ''[[Mid-Century Modern (TV series)|Mid-Century Modern]]'': "Here's to You, Mrs. Schneiderman" – [[James Burrows]] (Hulu)
+** ''[[The Rehearsal (TV series)|The Rehearsal]]'': "Pilot's Code" – [[Nathan Fielder]] (HBO)
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Directing for a Drama Series|Outstanding Directing for a Drama Series]]}}
+* '''''[[Slow Horses]]'': "Hello Goodbye" – [[Adam Randall (director)|Adam Randall]] (Apple TV+)'''{{double dagger|alt=Winner}}
+** ''[[Andor]]'': "[[Who Are You? (Andor)|Who Are You?]]" – [[Janus Metz Pedersen|Janus Metz]] (Disney+)
+** ''[[The Pitt]]'': "[[6:00 P.M. (The Pitt season 1)|6:00 P.M.]]" – [[Amanda Marsalis]] (HBO Max)
+** ''The Pitt'': "[[7:00 A.M. (The Pitt season 1)|7:00 A.M.]]" – [[John Wells (filmmaker)|John Wells]] (HBO Max)
+** ''[[Severance (TV series)|Severance]]'': "[[Chikhai Bardo]]" – [[Jessica Lee Gagné]] (Apple TV+)
+** ''Severance'': "[[Cold Harbor (Severance)|Cold Harbor]]" – [[Ben Stiller]] (Apple TV+)
+** ''[[The White Lotus]]'': "[[Amor Fati (The White Lotus)|Amor Fati]]" – [[Mike White (filmmaker)|Mike White]] (HBO)
+|-
+| style="vertical-align:top;" width="50%" colspan="2"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Directing for a Limited or Anthology Series or Movie|Outstanding Directing for a Limited or Anthology Series or Movie]]}}
+* '''''[[Adolescence (TV series)|Adolescence]]'' – [[Philip Barantini]] (Netflix)'''{{double dagger|alt=Winner}}
+** ''[[Dying for Sex]]'': "It's Not That Serious" – [[Shannon Murphy]] (FX)
+** ''[[The Penguin (TV series)|The Penguin]]'': "[[Cent'Anni]]" – [[Helen Shaver]] (HBO)
+** ''The Penguin'': "[[A Great or Little Thing]]" – [[Jennifer Getzinger]] (HBO)
+** ''[[Sirens (2025 TV series)|Sirens]]'': "Exile" – [[Nicole Kassell]] (Netflix)
+** ''[[Zero Day (American TV series)|Zero Day]]'' – [[Lesli Linka Glatter]] (Netflix)
+|}
+
+===Writing===
+{| class="wikitable" role="presentation"
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Writing for a Comedy Series|Outstanding Writing for a Comedy Series]]}}
+* '''''[[The Studio (TV series)|The Studio]]'': "[[The Promotion (The Studio)|The Promotion]]" – [[Seth Rogen]], [[Evan Goldberg]], [[Peter Huyck]], Alex Gregory, and Frida Perez (Apple TV+)'''{{double dagger|alt=Winner}}
+** ''[[Abbott Elementary]]'': "Back to School" – [[Quinta Brunson]] (ABC)
+** ''[[Hacks]]'': "A Slippery Slope" – [[Lucia Aniello]], [[Paul W. Downs]], and [[Jen Statsky]] (HBO Max)
+** ''[[The Rehearsal (TV series)|The Rehearsal]]'': "Pilot's Code" – [[Nathan Fielder]], [[Carrie Kemper]], Adam Locke-Norton, and [[Eric Notarnicola]] (HBO)
+** ''[[Somebody Somewhere (TV series)|Somebody Somewhere]]'': "AGG" – Hannah Bos, Paul Thureen, and [[Bridget Everett]] (HBO)
+** ''[[What We Do in the Shadows (TV series)|What We Do in the Shadows]]'': "[[The Finale (What We Do in the Shadows)|The Finale]]" – [[Sam Johnson and Chris Marcil|Sam Johnson]], Sarah Naftalis, and [[Paul Simms]] (FX)
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Writing for a Drama Series|Outstanding Writing for a Drama Series]]}}
+* '''''[[Andor]]'': "[[Welcome to the Rebellion]]" – [[Dan Gilroy]] (Disney+)'''{{double dagger|alt=Winner}}
+** ''[[The Pitt]]'': "[[2:00 P.M. (The Pitt season 1)|2:00 P.M.]]" – [[Joe Sachs]] (HBO Max)
+** ''The Pitt'': "[[7:00 A.M. (The Pitt season 1)|7:00 A.M.]]" – [[R. Scott Gemmill]] (HBO Max)
+** ''[[Severance (TV series)|Severance]]'': "[[Cold Harbor (Severance)|Cold Harbor]]" – [[Dan Erickson]] (Apple TV+)
+** ''[[Slow Horses]]'': "Hello Goodbye" – [[Will Smith (comedian)|Will Smith]] (Apple TV+)
+** ''[[The White Lotus]]'': "[[Full-Moon Party]]" – [[Mike White (filmmaker)|Mike White]] (HBO)
+|-
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Writing for a Limited or Anthology Series or Movie|Outstanding Writing for a Limited or Anthology Series or Movie]]}}
+* '''''[[Adolescence (TV series)|Adolescence]]'' – [[Jack Thorne]] and [[Stephen Graham]] (Netflix)'''{{double dagger|alt=Winner}}
+** ''[[Black Mirror]]'': "[[Common People (Black Mirror)|Common People]]" – {{StoryTeleplay|s=[[Charlie Brooker]] and [[Bisha K. Ali]]|t=Charlie Brooker}} (Netflix)
+** ''[[Dying for Sex]]'': "Good Value Diet Soda" – {{StoryTeleplay|s=Kim Rosenstock and [[Elizabeth Meriwether]]|t=Kim Rosenstock}} (FX)
+** ''[[The Penguin (TV series)|The Penguin]]'': "[[A Great or Little Thing]]" – [[Lauren LeFranc]] (HBO)
+** ''[[Say Nothing (TV series)|Say Nothing]]'': "The People in the Dirt" – Joshua Zetumer (FX)
+| style="vertical-align:top;" width="50%"| {{Award category|{{Emmy Awards/color}}|[[Primetime Emmy Award for Outstanding Writing for a Variety Series|Outstanding Writing for a Variety Series]]}}
+* '''''[[Last Week Tonight with John Oliver]]'' (HBO)'''{{double dagger|alt=Winner}}
+** ''[[The Daily Show]]'' (Comedy Central)
+** ''[[Saturday Night Live]]'' (NBC)
+|}
+
+===Bob Hope Humanitarian Award===
+The [[Bob Hope Humanitarian Award]] was presented to married actors [[Ted Danson]] and [[Mary Steenburgen]], in recognition of "a lifetime of extraordinary philanthropy, activism and unwavering commitment to global good". This marked the first time the award was presented to a couple.<ref>{{cite web |last=Schneider |first=Michael |title=Ted Danson and Mary Steenburgen to Receive the TV Academy's Bob Hope Humanitarian Award at the Emmys |url=https://variety.com/2025/tv/news/ted-danson-mary-steenburgen-emmys-bob-hope-humanitarian-award-1236474279/ |access-date=September 18, 2025 |work=[[Variety (magazine)|Variety]] |date=July 30, 2025 |archive-url=https://web.archive.org/web/20250830202321/https://variety.com/2025/tv/news/ted-danson-mary-steenburgen-emmys-bob-hope-humanitarian-award-1236474279/ |archive-date=August 30, 2025 |language=en-US |url-status=live}}</ref>
+
+===Nominations and wins by program===
+For the purposes of the lists below, "major" constitutes the categories listed above (program, acting, directing, and writing), while "total" includes the categories presented at the [[Creative Arts Emmy Awards]]. Programs and networks must have multiple wins or major nominations or at least five total nominations to be included.
+
+{{col-float|width=30em}}
+
+{| class="wikitable plainrowheaders sortable" style="text-align: center; max-width:29em"
+|+ Programs with multiple nominations<ref>{{cite press release |url=https://www.televisionacademy.com/files/assets/Downloads/77thnominations-totals-v1.pdf |title=77th Emmy Nominations Totals Per Program |publisher=[[Academy of Television Arts & Sciences]] |access-date=July 17, 2025 |archive-url=https://web.archive.org/web/20250721084718/https://www.televisionacademy.com/files/assets/Downloads/77thnominations-totals-v1.pdf |archive-date=July 21, 2025 |language=en-US |url-status=live}}</ref>
+|-
+! scope="colgroup" colspan="2"| Nominations
+! scope="col" rowspan="2"| Program
+! scope="col" rowspan="2"| Network
+|-
+! scope="col"| Total
+! scope="col"| Major
+|-
+! scope="row" style="text-align: center"| 27
+| 10
+| ''[[Severance (TV series)|Severance]]''
+| [[Apple TV (streaming service)|Apple TV+]]
+|-
+! scope="row" style="text-align: center"| 24
+| 7
+| data-sort-value="Penguin"| ''[[The Penguin (TV series)|The Penguin]]''
+| rowspan="2"| [[HBO]]
+|-
+! scope="rowgroup" rowspan="2" style="text-align: center"| 23
+| 10
+| data-sort-value="White Lotus"| ''[[The White Lotus]]''
+|-
+| 7
+| data-sort-value="Studio"| ''[[The Studio (TV series)|The Studio]]''
+| Apple TV+
+|-
+! scope="row" style="text-align: center"| 16
+| 3
+| data-sort-value="Last of Us"| ''[[The Last of Us (TV series)|The Last of Us]]''
+| HBO
+|-
+! scope="rowgroup" rowspan="2" style="text-align: center"| 14
+| 5
+| ''[[Hacks]]''
+| [[HBO Max]]
+|-
+| 3
+| ''[[Andor]]''
+| [[Disney+]]
+|-
+! scope="rowgroup" rowspan="3" style="text-align: center"| 13
+| 8
+| ''[[Adolescence (TV series)|Adolescence]]''
+| [[Netflix]]
+|-
+| 7
+| data-sort-value="Pitt"| ''[[The Pitt]]''
+| HBO Max
+|-
+| 6
+| data-sort-value="Bear"| ''[[The Bear (TV series)|The Bear]]''
+| [[FX (TV channel)|FX]]
+|-
+! scope="row" style="text-align: center"| 12
+| 1
+| ''[[Saturday Night Live 50th Anniversary Special|SNL50: The Anniversary Special]]''
+| [[NBC]]
+|-
+! scope="row" style="text-align: center"| 11
+| 4
+| ''[[Monsters: The Lyle and Erik Menendez Story]]''
+| rowspan="2"| Netflix
+|-
+! scope="row" style="text-align: center"| 10
+| 3
+| ''[[Black Mirror]]''
+|-
+! scope="row" style="text-align: center"| 9
+| 6
+| ''[[Dying for Sex]]''
+| FX
+|-
+! scope="rowgroup" rowspan="2" style="text-align: center" style="text-align: center"| 8
+| 2
+| data-sort-value="Daily Show"| ''[[The Daily Show]]''
+| [[Comedy Central]]
+|-
+| 1
+| ''[[RuPaul's Drag Race]]''
+| [[MTV]]
+|-
+! scope="rowgroup" rowspan="3" style="text-align: center"| 7
+| 5
+| ''[[Shrinking (TV series)|Shrinking]]''
+| Apple TV+
+|-
+| 3
+| ''[[Saturday Night Live]]''
+| NBC
+|-
+| 2
+| ''[[Only Murders in the Building]]''
+| [[Hulu]]
+|-
+! scope="rowgroup" rowspan="8" style="text-align: center"| 6
+| 5
+| ''[[Abbott Elementary]]''
+| [[American Broadcasting Company|ABC]]
+|-
+| rowspan="2"| 2
+| ''[[Last Week Tonight with John Oliver]]''
+| HBO
+|-
+| ''[[What We Do in the Shadows (TV series)|What We Do in the Shadows]]''
+| FX
+|-
+| rowspan="3"| 1
+| data-sort-value="Amazing Race"| ''[[The Amazing Race (American TV series)|The Amazing Race]]''
+| [[CBS]]
+|-
+| data-sort-value="Oscars"| ''[[97th Academy Awards|The Oscars]]''
+| ABC
+|-
+| ''[[SNL50: The Homecoming Concert]]''
+| [[Peacock (streaming service)|Peacock]]
+|-
+| rowspan="2"| 0
+| ''[[House of the Dragon]]''
+| rowspan="2"| HBO
+|-
+| data-sort-value="Righteous Gemstones"| ''[[The Righteous Gemstones]]''
+|-
+! scope="rowgroup" rowspan="8" style="text-align: center"| 5
+| 4
+| ''[[Slow Horses]]''
+| Apple TV+
+|-
+| rowspan="2"| 1
+| ''[[Beyoncé 2024 NFL Halftime Show|Beyoncé Bowl]]''
+| Netflix
+|-
+| data-sort-value="Traitors"| ''[[The Traitors (American TV series)|The Traitors]]''
+| Peacock
+|-
+| rowspan="5"| 0
+| ''[[Bridgerton]]''
+| rowspan="2"| Netflix
+|-
+| ''[[Love on the Spectrum (American TV series)|Love on the Spectrum]]''
+|-
+| ''[[Pee-wee as Himself]]''
+| HBO
+|-
+| data-sort-value="Voice"| ''[[The Voice (American TV series)|The Voice]]''
+| NBC
+|-
+| ''[[Will & Harper]]''
+| Netflix
+|-
+! scope="rowgroup" rowspan="7" style="text-align: center"| <5
+| rowspan="2"| 4
+| ''[[Paradise (2025 TV series)|Paradise]]''
+| Hulu
+|-
+| ''[[Presumed Innocent (TV series)|Presumed Innocent]]''
+| Apple TV+
+|-
+| 3
+| ''[[Nobody Wants This]]''
+| rowspan="2"| Netflix
+|-
+| rowspan="4"| 2
+| data-sort-value="Diplomat"| ''[[The Diplomat (American TV series)|The Diplomat]]''
+|-
+| data-sort-value="Rehearsal"| ''[[The Rehearsal (TV series)|The Rehearsal]]''
+| HBO
+|-
+| ''[[Sirens (2025 TV series)|Sirens]]''
+| Netflix
+|-
+| ''[[Somebody Somewhere (TV series)|Somebody Somewhere]]''
+| HBO
+|}
+
+{{col-float-break}}
+
+{| class="wikitable plainrowheaders sortable" style="text-align: center; max-width:29em"
+|+ Programs with multiple wins<ref>{{cite web |last=Porter |first=Rick |title=HBO, HBO Max Rebound at the Emmys While Apple and ''The Studio'' Have a Big Night |url=https://www.hollywoodreporter.com/tv/tv-news/hbo-netflix-tie-most-2025-emmy-wins-1236371288/ |access-date=September 18, 2025 |work=[[The Hollywood Reporter]] |date=September 14, 2025 |archive-url=https://web.archive.org/web/20250918003650/https://www.hollywoodreporter.com/tv/tv-news/hbo-netflix-tie-most-2025-emmy-wins-1236371288/ |archive-date=September 18, 2025 |language=en-US |url-status=live}}</ref>
+|-
+! scope="colgroup" colspan="2"| Wins
+! scope="col" rowspan="2"| Program
+! scope="col" rowspan="2"| Network
+|-
+! scope="col"| Total
+! scope="col"| Major
+|-
+! scope="row" style="text-align: center"| 13
+| 4
+| ''[[The Studio (TV series)|The Studio]]''
+| [[Apple TV (streaming service)|Apple TV+]]
+|-
+! scope="row" style="text-align: center"| 9
+| 1
+| ''[[The Penguin (TV series)|The Penguin]]''
+| [[HBO]]
+|-
+! scope="rowgroup" style="text-align: center" rowspan="3"| 8
+| 6
+| ''[[Adolescence (TV series)|Adolescence]]''
+| [[Netflix]]
+|-
+| 2
+| ''[[Severance (TV series)|Severance]]''
+| Apple TV+
+|-
+| rowspan="2"| 1
+| ''[[Saturday Night Live 50th Anniversary Special|SNL50: The Anniversary Special]]''
+| [[NBC]]
+|-
+! scope="rowgroup" style="text-align: center" rowspan="3"| 5
+| ''[[Andor]]''
+| [[Disney+]]
+|-
+| 3
+| ''[[The Pitt]]''
+| [[HBO Max]]
+|-
+| 1
+| data-sort-value="Traitors"| ''[[The Traitors (American TV series)|The Traitors]]''
+| [[Peacock (streaming service)|Peacock]]
+|-
+! scope="rowgroup" style="text-align: center" rowspan="2"| 4
+| rowspan="4"| 0
+| ''[[Arcane (TV series)|Arcane]]''
+| rowspan="2"| Netflix
+|-
+| ''[[Love, Death & Robots]]''
+|-
+! scope="rowgroup" style="text-align: center" rowspan="5"| 3
+| ''[[The Boys (TV series)|The Boys]]''
+| [[Amazon Prime Video|Prime Video]]
+|-
+| ''[[Bridgerton]]''
+| Netflix
+|-
+| 2
+| ''[[Hacks]]''
+| HBO Max
+|-
+| rowspan="5"| 0
+| ''[[Pee-wee as Himself]]''
+| HBO
+|-
+| ''[[Saturday Night Live]]''
+| NBC
+|-
+! scope="rowgroup" style="text-align: center" rowspan="7"| 2
+| ''[[67th Annual Grammy Awards]]''
+| [[CBS]]
+|-
+| ''[[100 Foot Wave]]''
+| HBO
+|-
+| ''The Daily Show: Desi Lydic Foxsplains''
+| [[YouTube]]
+|-
+| 2
+| ''[[Last Week Tonight with John Oliver]]''
+| HBO
+|-
+| 1
+| ''[[The Late Show with Stephen Colbert]]''
+| CBS
+|-
+| rowspan="2"| 0
+| ''[[Love on the Spectrum (American TV series)|Love on the Spectrum]]''
+| Netflix
+|-
+| ''[[Welcome to Wrexham]]''
+| [[FX (TV channel)|FX]]
+|}
+
+{{col-float-end}}
+
+===Nominations and wins by network===
+{{col-float|width=30em}}
+
+{| class="wikitable plainrowheaders sortable" style="text-align: center; max-width:29em"
+|+ Networks with multiple nominations<ref>{{cite web |last=Pedersen |first=Erik |title=Emmy Scorecards: Nominations by Program & Network |url=https://deadline.com/2025/07/emmys-2025-nominations-by-program-network-1236457364/ |access-date=July 23, 2025 |work=[[Deadline Hollywood]] |date=July 15, 2025 |archive-url=https://web.archive.org/web/20250716190936/https://deadline.com/2025/07/emmys-2025-nominations-by-program-network-1236457364/ |archive-date=July 16, 2025 |language=en-US |url-status=live}}</ref>
+|-
+! scope="colgroup" colspan="2"| Nominations
+! scope="col" rowspan="2"| Network
+|-
+! scope="col"| Total
+! scope="col"| Major
+|-
+! scope="row" style="text-align: center"| 142
+| 38
+| [[HBO]] / [[HBO Max]]
+|-
+! scope="row" style="text-align: center"| 120
+| 26
+| [[Netflix]]
+|-
+! scope="row" style="text-align: center"| 79
+| 33
+| [[Apple TV (streaming service)|Apple TV+]]
+|-
+! scope="row" style="text-align: center"| 37
+| 7
+| [[American Broadcasting Company|ABC]]
+|-
+! scope="row" style="text-align: center"| 35
+| 15
+| [[FX Networks|FX]]
+|-
+! scope="row" style="text-align: center"| 29
+| 4
+| [[NBC]]
+|-
+! scope="row" style="text-align: center"| 28
+| 3
+| [[Disney+]]
+|-
+! scope="row" style="text-align: center"| 26
+| 4
+| [[CBS]]
+|-
+! scope="row" style="text-align: center"| 23
+| 7
+| [[Hulu]]
+|-
+! scope="row" style="text-align: center"| 19
+| 2
+| [[Peacock (streaming service)|Peacock]]
+|-
+! scope="row" style="text-align: center"| 12
+| 0
+| [[Amazon Prime Video|Prime Video]]
+|-
+! scope="rowgroup" style="text-align: center" rowspan="2"| 10
+| 2
+| [[Comedy Central]]
+|-
+| rowspan="2"| 1
+| [[MTV]]
+|-
+! scope="rowgroup" style="text-align: center" rowspan="2"| 7
+| [[Fox Broadcasting Company|Fox]]
+|-
+| rowspan="2"| 0
+| [[Paramount+]]
+|-
+! scope="row" style="text-align: center"| 5
+| [[National Geographic (American TV channel)|Nat Geo]]
+|}
+
+{{col-float-break}}
+
+{| class="wikitable plainrowheaders sortable" style="text-align: center; max-width:29em"
+|+ Networks with multiple wins<ref>{{cite web |last=White |first=Peter |title=Emmy Analysis & Scorecards: ''The Studio'' Breaks Emmy Record, HBO Max & Netflix Share Honors and Apple Lands Best-Ever Awards Haul |url=https://deadline.com/2025/09/emmy-analysis-the-studio-adolescence-the-pitt-hbo-netflix-1236531341/ |access-date=September 18, 2025 |work=[[Deadline Hollywood]] |date=September 14, 2025 |archive-url=https://web.archive.org/web/20250917034824/https://deadline.com/2025/09/emmy-analysis-the-studio-adolescence-the-pitt-hbo-netflix-1236531341/ |archive-date=September 17, 2025 |language=en-US |url-status=live}}</ref>
+|-
+! scope="colgroup" colspan="2"| Wins
+! scope="col" rowspan="2"| Network
+|-
+! scope="col"| Total
+! scope="col"| Major
+|-
+! scope="rowgroup" style="text-align: center" rowspan="2"| 30
+| 9
+| [[HBO]] / [[HBO Max]]
+|-
+| 6
+| [[Netflix]]
+|-
+! scope="row" style="text-align: center"| 22
+| 7
+| [[Apple TV (streaming service)|Apple TV+]]
+|-
+! scope="row" style="text-align: center"| 11
+| rowspan="3"| 1
+| [[NBC]]
+|-
+! scope="row" style="text-align: center"| 7
+| [[Disney+]]
+|-
+! scope="rowgroup" style="text-align: center" rowspan="2"| 5
+| [[Peacock (streaming service)|Peacock]]
+|-
+| 0
+| [[Amazon Prime Video|Prime Video]]
+|-
+! scope="row" style="text-align: center"| 4
+| 1
+| [[CBS]]
+|-
+! scope="row" style="text-align: center"| 3
+| rowspan="3"| 0
+| [[American Broadcasting Company|ABC]]
+|-
+! scope="rowgroup" style="text-align: center"rowspan="2"| 2
+| [[FX Networks|FX]]
+|-
+| [[YouTube]]
+|}
+
+{{col-float-end}}
+
+==Presenters==
+The following people presented awards or other segments:<ref>Multiple sources:
+* {{cite web |last=Sullivan |first=Kevin P. |title=Emmys 2025 Full Ceremony Rundown: When Each Category Will Be Announced and Who's Presenting |url=https://www.goldderby.com/tv/2025/emmys-2025-full-ceremony-rundown/ |work=[[Penske Media Corporation#Gold Derby|Gold Derby]] |date=September 14, 2025 |access-date=September 18, 2025 |archive-url=https://web.archive.org/web/20250917065244/https://www.goldderby.com/tv/2025/emmys-2025-full-ceremony-rundown/ |archive-date=September 17, 2025 |language=en-US |url-status=live}}
+* {{cite web |last1=B. Powell |first1=Tori |last2=Chowdhury |first2=Maureen |last3=Respers France |first3=Lisa |last4=Wagmeister |first4=Elizabeth |last5=Heching |first5=Dan |last6=Meyer |first6=Matt |title=The 77th Primetime Emmy Awards |url=https://edition.cnn.com/entertainment/live-news/emmy-awards-show-updates-09-14-2025 |publisher=[[CNN]] |date=September 15, 2025 |access-date=September 15, 2025 |archive-url=https://web.archive.org/web/20250920095612/https://edition.cnn.com/entertainment/live-news/emmy-awards-show-updates-09-14-2025 |archive-date=September 20, 2025 |language=en-US |url-status=live}}
+* {{cite web |last1=Ambriz |first1=Leslie |last2=Bahr |first2=Lindsey |last3=Clark |first3=Nell |last4=Coyle |first4=Jake |last5=Dalton |first5=Andrew |last6=Fauria |first6=Krysta |last7=Fox |first7=Hilary |last8=Furman |first8=Anna |last9=Harris |first9=Beth |last10=Italie |first10=Leanne |last11=Luna |first11=Itzel |last12=Panzariello |first12=Connie |last13=Rancilio |first13=Alicia |last14=Sen |first14=Malika |title=2025 Emmys: ''The Pitt'' and ''The Studio'' Win Top Awards |url=https://apnews.com/live/emmy-awards-2025-updates |access-date=September 18, 2025 |publisher=[[Associated Press]] |date=September 14, 2025 |archive-url=https://web.archive.org/web/20250918210219/https://apnews.com/live/emmy-awards-2025-updates |archive-date=September 18, 2025 |language=en-US |url-status=live}}
+* {{cite web |last1=Batey |first1=Eve |last2=Busis |first2=Hillary |last3=Coughlan |first3=Maggie |last4=Ford |first4=Rebecca |last5=Howorth |first5=Claire |last6=Murphy |first6=Chris |last7=Pope |first7=Miles |last8=Press |first8=Joy |last9=Ross |first9=John |last10=Vanderhoof |first10=Erin |last11=Walsh |first11=Savannah |last12=Wickman |first12=Kase |title=Emmys 2025 Recap: Winners, Red Carpet Looks & Highlights from TV's Biggest Night |url=https://www.vanityfair.com/live/2025-emmys-live-updates?srsltid=AfmBOooEijjTgCsrU-9qUvo5GlCMl3ymRXj6z4egvBGPyu6XE4gIPnTn |access-date=September 18, 2025 |work=[[Vanity Fair (magazine)|Vanity Fair]] |date=September 14, 2025 |archive-url=https://web.archive.org/web/20250919075250/https://www.vanityfair.com/live/2025-emmys-live-updates?srsltid=AfmBOooEijjTgCsrU-9qUvo5GlCMl3ymRXj6z4egvBGPyu6XE4gIPnTn |archive-date=September 19, 2025 |language=en-US |url-status=live}}</ref>
+
+{| class="wikitable plainrowheaders sortable"
+|+ {{sronly|Presenters at the ceremony}}
+|-
+! scope="col"| Name(s)
+! scope="col"| Role
+|-
+! scope="row"| {{sortname|Stephen|Colbert}}
+| Presented the award for [[Primetime Emmy Award for Outstanding Lead Actor in a Comedy Series|Outstanding Lead Actor in a Comedy Series]]
+|-
+! scope="row"| {{sortname|Jennifer|Coolidge}}
+| Presented the award for [[Primetime Emmy Award for Outstanding Lead Actress in a Comedy Series|Outstanding Lead Actress in a Comedy Series]]
+|-
+! scope="row"| {{sortname|Jenna|Ortega}}<br>[[Catherine Zeta-Jones]]
+| Presented the award for [[Primetime Emmy Award for Outstanding Supporting Actress in a Drama Series|Outstanding Supporting Actress in a Drama Series]]
+|-
+! scope="row"| {{sortname|Jason|Bateman}}<br>[[Jude Law]]
+| Presented the award for [[Primetime Emmy Award for Outstanding Supporting Actor in a Drama Series|Outstanding Supporting Actor in a Drama Series]]
+|-
+!scope="row"| {{sortname|Angela|Bassett}}
+| Presented the award for [[Primetime Emmy Award for Outstanding Lead Actress in a Drama Series|Outstanding Lead Actress in a Drama Series]]
+|-
+! scope="row"| {{sortname|Karen|Fairchild}}<br>[[Reba McEntire]]<br>[[Kimberly Schlapman]]
+| Tribute to the 40th anniversary of ''[[The Golden Girls]]''; Presented the award for [[Primetime Emmy Award for Outstanding Supporting Actress in a Comedy Series|Outstanding Supporting Actress in a Comedy Series]]
+|-
+! scope="row"| {{sortname|Leanne|Morgan}}
+| Presented the award for [[Primetime Emmy Award for Outstanding Reality Competition Program|Outstanding Reality Competition Program]]
+|-
+! scope="row"| {{sortname|Sterling K.|Brown}}<br>[[James Marsden]]<br>[[Julianne Nicholson]]
+| Presented the award for [[Primetime Emmy Award for Outstanding Supporting Actor in a Comedy Series|Outstanding Supporting Actor in a Comedy Series]]
+|-
+! scope="row"| {{sortname|Walton|Goggins}}<br>[[Parker Posey]]
+| Presented the award for [[Primetime Emmy Award for Outstanding Directing for a Comedy Series|Outstanding Directing for a Comedy Series]]
+|-
+! scope="row"| {{sortname|Elizabeth|Banks}}
+| Presented the award for [[Primetime Emmy Award for Outstanding Directing for a Limited or Anthology Series or Movie|Outstanding Directing for a Limited or Anthology Series or Movie]]
+|-
+! scope="row"| {{sortname|Jesse|Williams|dab=actor}}
+| Presented the award for [[Primetime Emmy Award for Outstanding Directing for a Drama Series|Outstanding Directing for a Drama Series]]
+|-
+! scope="row"| {{sortname|Jeff|Probst}}
+| Tribute to the 25th anniversary of ''[[Survivor (American TV series)|Survivor]]''; Presented the award for [[Primetime Emmy Award for Outstanding Scripted Variety Series|Outstanding Scripted Variety Series]]
+|-
+! scope="row"| {{sortname|Hiroyuki|Sanada}}<br>[[Anna Sawai]]
+| Presented the award for [[Primetime Emmy Award for Outstanding Writing for a Drama Series|Outstanding Writing for a Drama Series]]
+|-
+! scope="row"| {{sortname|Sydney|Sweeney}}
+| Presented the award for [[Primetime Emmy Award for Outstanding Supporting Actor in a Limited or Anthology Series or Movie|Outstanding Supporting Actor in a Limited or Anthology Series or Movie]]
+|-
+! scope="row"| {{sortname|Ike|Barinholtz}}<br>[[Kathryn Hahn]]
+| Presented the award for [[Primetime Emmy Award for Outstanding Writing for a Limited or Anthology Series or Movie|Outstanding Writing for a Limited or Anthology Series or Movie]]
+|-
+! scope="row"| {{sortname|Alexis|Bledel}}<br>[[Lauren Graham]]
+| Tribute to the 25th anniversary of ''[[Gilmore Girls]]''; Presented the award for [[Primetime Emmy Award for Outstanding Writing for a Comedy Series|Outstanding Writing for a Comedy Series]]
+|-
+! scope="row"| {{sortname|Tina|Fey}}
+| Presented the award for [[Primetime Emmy Award for Outstanding Variety Special (Live)|Outstanding Variety Special (Live)]]
+|-
+! scope="row"| {{sortname|Kathy|Bates}}<br>[[Alan Cumming]]
+| Presented the award for [[Primetime Emmy Award for Outstanding Writing for a Variety Series|Outstanding Writing for a Variety Series]]
+|-
+! scope="row"| {{sortname|Young|Mazino}}<br>[[Hunter Schafer]]
+| Presented the award for [[Primetime Emmy Award for Outstanding Supporting Actress in a Limited or Anthology Series or Movie|Outstanding Supporting Actress in a Limited or Anthology Series or Movie]]
+|-
+! scope="row"| {{sortname|Charlie|Hunnam}}
+| Presented the award for [[Primetime Emmy Award for Outstanding Lead Actress in a Limited or Anthology Series or Movie|Outstanding Lead Actress in a Limited or Anthology Series or Movie]]
+|-
+! scope="row"| {{sortname|Justin|Hartley}}
+| Introduced the chairman of the Television Academy, [[Cris Abrego]]
+|-
+! scope="row"| {{sortname|Kristen|Bell}}<br>[[Michael Schur]]
+| Presented the [[Bob Hope Humanitarian Award]] to [[Ted Danson]] and [[Mary Steenburgen]]
+|-
+! scope="row"| {{sortname|Phylicia|Rashad}}
+| Presented the In Memoriam segment
+|-
+! scope="row"| {{sortname|Malin|Akerman}}<br>[[Brittany Snow]]
+| Presented the award for [[Primetime Emmy Award for Outstanding Lead Actor in a Limited or Anthology Series or Movie|Outstanding Lead Actor in a Limited or Anthology Series or Movie]]
+|-
+! scope="row"| {{sortname|Bryan|Cranston}}
+| Presented the award for [[Primetime Emmy Award for Outstanding Talk Series|Outstanding Talk Series]]
+|-
+! scope="row"| {{sortname|Sarah|Paulson}}<br>[[Evan Peters]]
+| Presented the award for [[Primetime Emmy Award for Outstanding Limited or Anthology Series|Outstanding Limited or Anthology Series]]
+|-
+! scope="row"| {{sortname|Brad|Garrett}}<br>[[Ray Romano]]
+| Presented the award for [[Primetime Emmy Award for Outstanding Comedy Series|Outstanding Comedy Series]]
+|-
+! scope="row"| {{sortname|Colman|Domingo}}
+| Presented the award for [[Primetime Emmy Award for Outstanding Lead Actor in a Drama Series|Outstanding Lead Actor in a Drama Series]]
+|-
+! scope="row"| {{sortname|Tony|Goldwyn}}<br>[[Ice-T]]<br>[[Mariska Hargitay]]<br>[[Christopher Meloni]]<br>[[S. Epatha Merkerson]]
+| Tribute to the 35th anniversary of the ''[[Law & Order (franchise)|Law & Order]]'' franchise; Presented the award for [[Primetime Emmy Award for Outstanding Drama Series|Outstanding Drama Series]]
+|}
+
+==Ceremony information==
+[[File:Nate Bargatze.jpg|right|thumb|upright|alt=Nate Bargatze in 2017.|[[Nate Bargatze]] hosted the ceremony.]]
+
+On March 5, 2025, the [[Academy of Television Arts & Sciences]], also known as the Television Academy, announced that the 77th Primetime Emmy Awards would be held on September 14.<ref name="CBS Emmys">{{cite web |last=Petski |first=Denise |title=2025 Emmys Gets Airdate on CBS |url=https://deadline.com/2025/03/2025-emmys-airdate-cbs-1236311538/ |access-date=June 15, 2025 |work=[[Deadline Hollywood]] |date=March 5, 2025 |archive-url=https://web.archive.org/web/20250403132131/https://deadline.com/2025/03/2025-emmys-airdate-cbs-1236311538/ |archive-date=April 3, 2025 |url-status=live}}</ref> [[CBS]] broadcast the ceremony as part of a rotating deal among the "Big Four" networks ([[American Broadcasting Company|ABC]], CBS, [[Fox Broadcasting Company|Fox]], and [[NBC]]) signed in 2018.<ref>{{cite web |url=https://www.hollywoodreporter.com/tv/tv-news/emmys-renews-big-four-deal-8-years-1132446/ |title=Emmys Renew Big Four Deal for 8 Years |last=O'Connell |first=Mikey |date=August 6, 2018 |work=[[The Hollywood Reporter]] |access-date=December 7, 2021 |archive-date=December 7, 2021 |archive-url=https://web.archive.org/web/20211207184542/https://www.hollywoodreporter.com/tv/tv-news/emmys-renews-big-four-deal-8-years-1132446/ |url-status=live}}</ref> Additionally, it was announced that the ceremony would be available live and on-demand via [[Paramount Skydance]]'s streaming service [[Paramount+]].<ref name="CBS Emmys"/> The ceremony was produced by Jesse Collins Entertainment (Jesse Collins, Dionne Harmon, and Jeannae Rouzan-Clay) for the third consecutive year.<ref>{{cite web |last=Rice |first=Lynette |title=Jesse Collins Entertainment Will Return to Executive Produce the 77th Annual Emmy Awards |url=https://deadline.com/2025/04/jesse-collins-entertainment-will-return-to-executive-produce-the-77th-annual-emmy-awards-1236374896/ |access-date=May 2, 2025 |work=[[Deadline Hollywood]] |date=April 23, 2025 |archive-url=https://web.archive.org/web/20250515164239/https://deadline.com/2025/04/jesse-collins-entertainment-will-return-to-executive-produce-the-77th-annual-emmy-awards-1236374896/ |archive-date=May 15, 2025 |url-status=live}}</ref> On April 16, comedian [[Nate Bargatze]] was announced as the ceremony's host.<ref>{{cite web |last=Jensen |first=Erin |title=Comedian Nate Bargatze is 'Beyond Excited' to Host the 2025 Emmy Awards |url=https://www.usatoday.com/story/entertainment/tv/2025/04/16/emmys-2025-host-nate-bargatze/83117224007/ |access-date=May 2, 2025 |work=[[USA Today]] |date=April 16, 2025 |archive-url=https://web.archive.org/web/20250604081729/https://www.usatoday.com/story/entertainment/tv/2025/04/16/emmys-2025-host-nate-bargatze/83117224007/ |archive-date=June 4, 2025 |url-status=live}}</ref>
+
+During a press conference held on September 11 promoting the show, producer Collins revealed that the ceremony would feature reunions in tribute to the 25th anniversaries of [[The CW]] and [[The WB|WB]] comedy-drama series ''[[Gilmore Girls]]'' and CBS reality competition series ''[[Survivor (American TV series)|Survivor]]'', and the 35th anniversary of NBC's [[police procedural]] franchise ''[[Law & Order (franchise)|Law & Order]]''. Additionally, the telecast would pay tribute to the 40th anniversary of the NBC sitcom ''[[The Golden Girls]]'' with country singer [[Reba McEntire]] and [[Little Big Town]]'s [[Karen Fairchild]] and [[Kimberly Schlapman]] performing the series' theme song, "[[Thank You for Being a Friend]]".<ref>{{cite web |last=Rice |first=Lynette |title=Emmy Producers Promise ''Golden Girls'' Tribute, More Reunions, and Zero Politics: 'We're Just Celebrating Television' |url=https://deadline.com/2025/09/emmy-producers-promise-golden-girl-tribute-more-reunions-1236528891/ |access-date=September 18, 2025 |work=[[Deadline Hollywood]] |date=September 11, 2025 |archive-url=https://web.archive.org/web/20250912114617/https://deadline.com/2025/09/emmy-producers-promise-golden-girl-tribute-more-reunions-1236528891/ |archive-date=September 12, 2025 |language=en-US |url-status=live}}</ref> [[Eric Dane]] and [[Jesse Williams (actor)|Jesse Williams]] were initially scheduled as co-presenters to honor the 20th anniversary of ABC medical drama ''[[Grey's Anatomy]]'', but Dane was absent from the ceremony while Williams presented alone. According to Collins, he told reporters for ''[[Variety (magazine)|Variety]]'' after the awards ceremony, "I just was told that he wasn't able to make it, and fortunately, Jesse was able to present by himself."<ref>{{cite web |last=Wang |first=Jessica |title=Emmy Producers Address Eric Dane's absence from the Show |url=https://variety.com/2025/tv/news/emmy-producers-show-behind-the-scenes-3-1236519345/ |access-date=September 18, 2025 |work=[[Variety (magazine)|Variety]] |date=September 15, 2025 |archive-url=https://web.archive.org/web/20250915152721/https://variety.com/2025/tv/news/emmy-producers-show-behind-the-scenes-3-1236519345/ |archive-date=September 15, 2025 |language=en-US |url-status=live}}</ref> The following month, Dane revealed during an interview with ''[[The Washington Post]]'' that he was recovering from a fall he suffered in his kitchen shortly before the ceremony. He had previously been diagnosed with [[ALS]] in April 2025.<ref>{{cite magazine |last=Galante |first=Grace |title=Eric Dane Reveals Why He Missed the 2025 Emmy Awards |url=https://parade.com/news/eric-dane-reveals-why-he-missed-2025-emmy-awards |magazine=[[Parade (magazine)|Parade]] |access-date=October 3, 2025 |archive-url=https://web.archive.org/web/20251106061417/https://parade.com/news/eric-dane-reveals-why-he-missed-2025-emmy-awards |archive-date=November 6, 2025 |language=en-US |url-status=live}}</ref>
+
+In an effort to shorten winners' acceptance speeches and have the telecast run on time, Bargatze revealed that he would donate $100,000 to the [[Boys & Girls Clubs of America|Boys & Girls Club of America]]. However, for every second an award winner's speech went over the 45-second limit $1,000 would be deducted from the donation.<ref>{{cite web |last=Schneider |first=Michael |title=Nate Bargatze and Emmys Team on Security Plans, How They're Keeping the Focus on TV — and If Beyoncé Will Show Up |url=https://variety.com/2025/tv/news/nate-bargatze-emmys-producers-security-plans-beyonce-coming-1236515478/ |access-date=September 18, 2025 |work=[[Variety (magazine)|Variety]] |date=September 11, 2025 |archive-url=https://web.archive.org/web/20250914094838/https://variety.com/2025/tv/news/nate-bargatze-emmys-producers-security-plans-beyonce-coming-1236515478/ |archive-date=September 14, 2025 |language=en-US |url-status=live}}</ref> Similarly, for every second under the limit another $1,000 would be added.<ref>{{cite web |last=Rice |first=Lynette |title=Emmy Host Nate Bargatze Reveals Novel Way He'll Keep Speeches Short on Sunday That Involves Docking a Donation to Boys & Girls Club |url=https://deadline.com/2025/09/emmy-host-nate-bargatze-keeping-speeches-short-sunday-1236527861/ |access-date=September 18, 2025 |work=[[Deadline Hollywood]] |date=September 10, 2025 |archive-url=https://web.archive.org/web/20250914172113/https://deadline.com/2025/09/emmy-host-nate-bargatze-keeping-speeches-short-sunday-1236527861/ |archive-date=September 14, 2025 |language=en-US |url-status=live}}</ref> At the end of the show, the sum of money slated be donated fell $60,000 below zero due to several winners' speech going over the time limit.<ref>{{cite web |title=Boys & Girls Clubs of America May Wind Up Biggest Emmy Winner Thanks to Nate Bargatze's Bit |url=https://www.nbcnews.com/news/us-news/boys-girls-clubs-america-may-wind-biggest-emmy-winner-thanks-nate-barg-rcna231518 |access-date=September 18, 2025 |agency=[[NBC News]] |publisher=[[Associated Press]] |date=September 15, 2025 |archive-url=https://web.archive.org/web/20250926235248/https://www.nbcnews.com/news/us-news/boys-girls-clubs-america-may-wind-biggest-emmy-winner-thanks-nate-barg-rcna231518 |archive-date=September 26, 2025 |language=en-US |url-status=live}}</ref> As a result, Bargatze stated that CBS would donate the full $100,000 to the charity, and that he would add an additional $250,000.<ref>{{cite web |last=Mulroy |first=Clare |title=How Much Did Emmys Host Nate Bargatze End Up Donating to Boys and Girls Club? |url=https://www.usatoday.com/story/entertainment/tv/2025/09/15/nate-bargatze-emmys-host-donation/86161971007/ |access-date=September 18, 2025 |work=[[USA Today]] |date=September 15, 2025 |archive-url=https://web.archive.org/web/20250916163032/https://www.usatoday.com/story/entertainment/tv/2025/09/15/nate-bargatze-emmys-host-donation/86161971007/ |archive-date=September 16, 2025 |language=en-US |url-status=live}}</ref>
+
+Several other individuals were involved with the production of the telecast. Alex Rudzinski and [[Rickey Minor]] served as director and musical director for the ceremony, respectively.<ref>{{cite web |title=77th Emmy Awards Program |url=https://www.televisionacademy.com/files/assets/press/emmys-240914-v1a.pdf |publisher=[[Academy of Television Arts & Sciences]] |access-date=September 18, 2025 |archive-url=https://web.archive.org/web/20250904033829/https://www.televisionacademy.com/files/assets/Downloads/77th-emmys-program-v1.pdf |archive-date=September 4, 2025 |page=128 |language=en-US |url-status=live}}</ref> ''[[Entertainment Tonight]]'' co-anchors [[Kevin Frazier]] and [[Nischelle Turner]] hosted a [[red carpet]] pre-show preceding the telecast.<ref>{{cite web |last=Gomez |first=Dessi |title=How to Watch the 2025 Emmys Online and On TV |url=https://deadline.com/2025/09/how-to-watch-2025-emmys-streaming-1236528153/ |access-date=September 18, 2025 |work=[[Deadline Hollywood]] |date=September 10, 2025 |archive-url=https://web.archive.org/web/20250914022206/https://deadline.com/2025/09/how-to-watch-2025-emmys-streaming-1236528153/ |archive-date=September 14, 2025 |language=en-US |url-status=live}}</ref> Comedians [[Mikey Day]], [[James Austin Johnson]], and [[Bowen Yang]] participated in an opening comedy sketch with Bargatze parodying how [[Philo Farnsworth]] invented television, similar to the "Washington's Dream" sketch featured in a [[Saturday Night Live season 50|50th season]] episode of ''[[Saturday Night Live]]''.<ref>{{cite web |last=Shanfield |first=Ethan |title=Nate Bargatze Opens Emmys by Joking CBS Stands for 'Caucasian Broadcast System' and More in 'Inventor of Television' Sketch |url=https://variety.com/2025/tv/news/nate-bargatze-emmys-monologue-2025-1236517956/ |access-date=September 18, 2025 |work=[[Variety (magazine)|Variety]] |date=September 14, 2025 |archive-url=https://web.archive.org/web/20250915010802/https://variety.com/2025/tv/news/nate-bargatze-emmys-monologue-2025-1236517956/ |archive-date=September 15, 2025 |language=en-US |url-status=live}}</ref>
+
+===Category and rule changes===
+On January 8, 2025, the Television Academy announced rule changes that affected the directing and guest performer awards. Starting with the 77th ceremony, individuals or directing teams are permitted to submit multiple episodes for consideration in the directing categories, provided that the episodes are from different programs. In previous years, directors or directing teams could only submit one entry per category.<ref>{{cite web |last=Porter |first=Rick |title=Emmys Modify Rules for Directors, Guest Actors |url=https://www.hollywoodreporter.com/tv/tv-news/emmy-awards-change-rules-directors-guest-actors-1236104152/ |access-date=March 2, 2025 |work=[[The Hollywood Reporter]] |date=January 8, 2025 |archive-url=https://web.archive.org/web/20250402203916/https://www.hollywoodreporter.com/tv/tv-news/emmy-awards-change-rules-directors-guest-actors-1236104152/ |archive-date=April 2, 2025 |language=en-US |url-status=live}}</ref> Additionally, any performer who previously won or has been nominated in the lead or supporting acting categories would be ineligible to submit a performance of the same character in the same series for consideration in the guest performance categories in subsequent years.<ref>{{cite web |last=Schneider |first=Michael |title=Emmy Rule Changes Revealed by Television Academy: No Guest Star Double Dipping, and More Eligibility for Directors |url=https://variety.com/2025/tv/news/emmy-rule-changes-television-academy-guest-star-directors-eligibility-1236269914/ |access-date=March 2, 2025 |work=[[Variety (magazine)|Variety]] |date=January 8, 2025 |archive-url=https://web.archive.org/web/20250130113404/https://variety.com/2025/tv/news/emmy-rule-changes-television-academy-guest-star-directors-eligibility-1236269914/ |archive-date=January 30, 2025 |language=en-US |url-status=live}}</ref>
+
+On July 22, 2025, it was announced that [[Primetime Emmy Award for Outstanding Writing for a Variety Series|Outstanding Writing for a Variety Series]] would be presented at the main ceremony, replacing [[Primetime Emmy Award for Outstanding Writing for a Variety Special|Outstanding Writing for a Variety Special]], which was presented at the Creative Arts ceremony held on September 7.<ref>{{cite web |last=Andreeva |first=Nellie |title=Emmys 2025: Category Breakdown by Night Revealed |url=https://deadline.com/2025/07/emmys-2025-category-breakdown-by-night-creative-arts-1236465463/ |access-date=July 29, 2025 |work=[[Deadline Hollywood]] |date=July 22, 2025 |archive-url=https://web.archive.org/web/20250729083101/https://deadline.com/2025/07/emmys-2025-category-breakdown-by-night-creative-arts-1236465463/ |archive-date=July 29, 2025 |language=en-US |url-status=live}}</ref> Two weeks later, the Television Academy moved the presentation for [[Primetime Emmy Award for Outstanding Variety Special (Live)|Outstanding Variety Special (Live)]] to the main ceremony as well.<ref>{{cite web |last=White |first=Peter |title=Emmys Shakeup: Beyoncé & ''SNL50'' Go Primetime as TV Academy Adds Live Variety Special Category to Main Telecast |url=https://deadline.com/2025/08/emmys-beyonce-snl50-live-variety-special-primetime-1236478660/ |access-date=August 5, 2025 |work=[[Deadline Hollywood]] |date=August 5, 2025 |archive-url=https://web.archive.org/web/20250808121220/https://deadline.com/2025/08/emmys-beyonce-snl50-live-variety-special-primetime-1236478660/ |archive-date=August 8, 2025 |language=en-US |url-status=live}}</ref>
+
+===Critical reviews and viewership===
+The broadcast generally received mixed to negative reviews from critics.<ref>{{cite web |title=Emmys: 77th Emmys Reviews |url=https://www.rottentomatoes.com/tv/emmys/s77/reviews |publisher=[[Rotten Tomatoes]] |access-date=September 18, 2025 |archive-url=https://web.archive.org/web/20250922052155/https://www.rottentomatoes.com/tv/emmys/s77/reviews |archive-date=September 22, 2025 |language=en-US |url-status=live}}</ref> Aramide Tinubu, writing for ''[[Variety (magazine)|Variety]]'', found the onslaught of surprise winners adding to the excitement, but criticized host Bargatze's performance and wrote, "He lacked the enthusiasm and gumption needed to lead a three-hour-long award program and often seemed stunned to be in the spotlight." She also noted that the decision to have a forty-five second acceptance speech rule to caused winners to hurriedly rush through their speeches while contrasting that with presenters' introductions that seemed to drag down the ceremony.<ref>{{cite web |last=Tinubu |first=Aranide |title=The Emmys' Exciting Wins Were Overshadowed by an Uninspiring Host and Countdown-Clock Gimmick: TV Review |url=https://variety.com/2025/tv/news/emmys-2025-review-nate-bargatze-host-fails-1236518864/ |access-date=September 18, 2025 |work=[[Variety (magazine)|Variety]] |date=September 14, 2025 |archive-url=https://web.archive.org/web/20250918144546/https://variety.com/2025/tv/news/emmys-2025-review-nate-bargatze-host-fails-1236518864/ |archive-date=September 18, 2025 |language=en-US |url-status=live}}</ref> Daniel Feinberg of ''[[The Hollywood Reporter]]'' wrote, "It was an ill-conceived mess, punctuated by well-deserved wins and emotional and effective speeches, but rarely helped by Bargatze's consistently uneasy performance."<ref>{{cite web |last=Fienberg |first=Daniel |title=Critic's Notebook: A Flat Nate Bargatze and a Failed Time-Saving Gag Upstage Worthy Winners at the Emmy Awards |url=https://www.hollywoodreporter.com/tv/tv-reviews/2025-emmys-critics-analysis-nate-bargatze-adolescence-1236371441/ |access-date=September 18, 2025 |work=[[The Hollywood Reporter]] |date=September 14, 2025 |archive-url=https://web.archive.org/web/20250915070741/https://www.hollywoodreporter.com/tv/tv-reviews/2025-emmys-critics-analysis-nate-bargatze-adolescence-1236371441/ |archive-date=September 15, 2025 |language=en-US |url-status=live}}</ref> Brian Lowry of ''[[TheWrap]]'' commented, "Unfortunately, racing through the speeches came at too high a cost for the show itself, one that played out in uneven pacing and awkward moments strewn throughout." He concluded that due to the time limit, the ceremony was "an otherwise bland affair, which, one suspects, is just the way the Television Academy wanted it."<ref>{{cite web |last=Lowry |first=Brian |title=Emmys Review: Speeding Up the Acceptance Speeches Came at a Too-High Cost |url=https://www.thewrap.com/emmys-2025-review-speeches/ |access-date=September 18, 2025 |work=[[TheWrap]] |date=September 14, 2025 |archive-url=https://web.archive.org/web/20250915055500/https://www.thewrap.com/emmys-2025-review-speeches/ |archive-date=September 15, 2025 |language=en-US |url-status=live}}</ref>
+
+In a more positive review, Robert Lloyd of the ''[[Los Angeles Times]]'' complimented the show and wrote of host Bargatze, "If your goal was to avoid insulted celebrities, social media outrage or petulant notes from the White House, you could have done no better than to hire Bargatze, a clean, calm, classical, noncontroversial, nonpolitical, very funny, very successful comedian." He also reserved praise for several presenters, including [[Stephen Colbert]], [[Brad Garrett]], and [[Ray Romano]].<ref>{{cite news |last=Lloyd |first=Robert |title=Emmy Awards Host Nate Bargatze Kept the Show Running and Paid the Price — for a Good Cause |url=https://www.latimes.com/entertainment-arts/tv/story/2025-09-14/emmy-awards-2025-broadcast-review-nate-bargatze |access-date=September 18, 2025 |newspaper=[[Los Angeles Times]] |date=September 14, 2025 |archive-url=https://web.archive.org/web/20250920135258/https://www.latimes.com/entertainment-arts/tv/story/2025-09-14/emmy-awards-2025-broadcast-review-nate-bargatze |archive-date=September 20, 2025 |language=en-US |url-status=live}}</ref> Matt Roush of ''[[TV Guide (magazine)#TV Insider|TV Insider]]'' wrote, "There was a sense that for all of the ribbing, this Emmys broadcast was a pleasurable celebration of an ever-evolving medium." He also gave high marks toward Bargatze, but criticized the acceptance speech 45-second rule as tiresome.<ref>{{cite web |last=Roush |first=Matt |title=Critic's Notebook: Surprises Galore in a Fast-Moving Emmy Show |url=https://www.tvinsider.com/1215295/emmys-2025-review/ |access-date=September 18, 2025 |work=[[TV Guide (magazine)#TV Insider|TV Insider]] |date=September 15, 2025 |archive-url=https://web.archive.org/web/20250918091559/https://www.tvinsider.com/1215295/emmys-2025-review/ |archive-date=September 18, 2025 |language=en-US |url-status=live}}</ref> David Nemetz of ''[[TVLine]]'' wrote, "These Emmys were strangely anti-TV at times, with a self-deprecating tone that bordered on masochistic. But they also showcased the best that TV has to offer, with surprise wins and stirring speeches that reminded us of the sheer quantity of top-notch programming we're blessed to have at our fingertips right now."<ref>{{cite web |last=Nemetz |first=Dave |title=Emmys 2025 Review: A Chaotic Night Manages to Honor Television's Best and Slam Them, Too |url=https://tvline.com/reviews/emmys-2025-review-1235513921/ |access-date=September 18, 2025 |work=[[TVLine]] |date=September 14, 2025 |archive-url=https://web.archive.org/web/20250920194220/https://tvline.com/reviews/emmys-2025-review-1235513921/ |archive-date=September 20, 2025 |language=en-US |url-status=live}}</ref>
+
+The ceremony was viewed by 7.59&nbsp;million people in the United States, making it the most-viewed Emmys in [[73rd Primetime Emmy Awards|four years]], representing a 10% increase over the previous year's ceremony.<ref name="Emmy Ratings">{{cite web |last=Porter |first=Rick |title=TV Ratings: Emmy Awards Hit Four-Year High |url=https://www.hollywoodreporter.com/tv/tv-news/emmys-2025-tv-ratings-1236371769/ |access-date=September 18, 2025 |work=[[The Hollywood Reporter]] |date=September 15, 2025 |archive-url=https://web.archive.org/web/20250918072339/https://www.hollywoodreporter.com/tv/tv-news/emmys-2025-tv-ratings-1236371769/ |archive-date=September 18, 2025 |language=en-US |url-status=live}}</ref> It also achieved a 1.28 rating among adults ages 18–49.<ref name="Emmy Ratings"/> Ratings figures included those who watched the telecast on CBS or streamed it on Paramount+.<ref>{{cite web |last=Hailu |first=Selome |title=Emmys Hit 7.4 Million Viewers, Most-Watched Ceremony Since 2021 |url=https://variety.com/2025/tv/news/emmys-2025-ratings-1236519497/ |access-date=September 18, 2025 |work=[[Variety (magazine)|Variety]] |date=September 15, 2025 |archive-url=https://web.archive.org/web/20250915205359/https://variety.com/2025/tv/news/emmys-2025-ratings-1236519497/ |archive-date=September 15, 2025 |language=en-US |url-status=live}}</ref>
+
+==In Memoriam==
+The annual In Memoriam segment was presented by [[Phylicia Rashad]], and featured [[Vince Gill]] and [[Lainey Wilson]] performing Gill's song "[[Go Rest High on That Mountain]]".<ref>{{cite web |last1=Pedersen |first1=Erik |last2=Gomez |first2=Dessi |title=''The Pitt'' Takes Drama Series & ''The Studio'' Tops Comedy as ''Adolescence'' Leads the Field – Full Winners List |url=https://deadline.com/lists/emmys-2025-winners-list/writing-limited-anthology-series-emmy-winner-2025/ |access-date=September 17, 2025 |work=[[Deadline Hollywood]] |date=September 14, 2025 |archive-date=September 24, 2025 |archive-url=https://web.archive.org/web/20250924054419/https://deadline.com/lists/emmys-2025-winners-list/writing-limited-anthology-series-emmy-winner-2025/ |language=en-US |url-status=live}}</ref><ref>{{cite web |url=https://www.youtube.com/watch?v=0JbwPS2Ic8g |title=In Memoriam: 77th Emmy Awards |date=September 14, 2025 |publisher=[[Academy of Television Arts & Sciences]] |access-date=September 18, 2025 |via=[[YouTube]] |archive-date=September 18, 2025 |archive-url=https://web.archive.org/web/20250918200341/https://www.youtube.com/watch?v=0JbwPS2Ic8g |url-status=live}}</ref>
+
+{{div col}}
+
+* [[Malcolm-Jamal Warner]] – performer
+* [[Julian McMahon]] – performer
+* [[Valerie Mahaffey]] – performer
+* [[Teri Garr]] – performer
+* [[Gary Smith (television producer)|Gary Smith]] – producer
+* [[Allan Blye]] – writer, producer
+* [[Terry Louise Fisher]] – writer, producer
+* [[David W. Duclon]] – writer, producer
+* [[Jonathan Kaplan]] – director
+* Glenn Padnick – executive
+* [[Larry Auerbach]] – talent agent
+* Robin Kaye – music supervisor
+* [[Mark Snow]] – composer
+* [[Ozzy Osbourne]] – musician
+* [[Loni Anderson]] – performer
+* [[Alan Rachins]] – performer
+* [[Ruth Buzzi]] – performer
+* [[Chuck Woolery]] – host
+* [[Anne Burrell]] – host
+* [[Wink Martindale]] – host
+* [[Jeff Margolis]] – director
+* [[Dave Flebotte]] – writer, producer
+* [[Jeri Taylor]] – writer, producer
+* [[Marty Callner]] – director
+* Tony Etz – talent agent
+* [[Ronnie Yeskel]] – casting director
+* David Steinberg – manager
+* [[Bill Moyers]] – journalist
+* Dorothy Fox – hairstylist
+* [[Skip Brittenham]] – attorney
+* [[George Wendt]] – performer
+* [[Alf Clausen]] – composer
+* [[Richard Chamberlain]] – performer
+* [[Michelle Trachtenberg]] – performer
+* [[Toni Vaz]] – stunt performer
+* Lane Leavitt – stunt performer, Television Academy governor
+* [[Judith Jamison]] – choreographer
+* [[Peter Kwong (actor)|Peter Kwong]] – performer, Television Academy governor
+* [[Don Mischer]] – director, producer
+* [[Loretta Swit]] – performer
+* [[John Amos]] – performer
+* [[Maggie Smith]] – performer
+* [[David Lynch]] – writer, director
+* [[Linda Lavin]] – performer
+* [[Quincy Jones]] – composer, producer
+
+{{div col end}}
+
+At the beginning of the tribute, Rashad briefly eulogized Warner.<ref>{{cite web |last=Maglio |first=Ton |title=Malcolm-Jamal Warner's TV Mom Phylicia Rashad Opens Emmys In Memoriam with Fitting Tribute |url=https://www.hollywoodreporter.com/tv/tv-news/malcolm-jamal-warner-tribute-emmys-phylicia-rashad-1236370673/ |access-date=September 18, 2025 |work=[[The Hollywood Reporter]] |date=September 14, 2025 |archive-url=https://web.archive.org/web/20250916001946/https://www.hollywoodreporter.com/tv/tv-news/malcolm-jamal-warner-tribute-emmys-phylicia-rashad-1236370673/ |archive-date=September 16, 2025 |language=en-US |url-status=live}}</ref>
+
+==Notes==
+{{notelist}}
+
+==References==
+{{reflist}}
+
+==External links==
+* {{IMDb title|id=tt36034009}}
+* [https://www.televisionacademy.com/ Academy of Television Arts and Sciences website]
+* 2025 Emmy Nominating ballots: [https://web.archive.org/web/20250613031521/https://www.televisionacademy.com/files/assets/ballots/program-2025-v1.pdf Programs], [https://web.archive.org/web/20250613031521/https://www.televisionacademy.com/files/assets/ballots/performer-2025-v1.pdf Performers], [https://web.archive.org/web/20250612190356/https://www.televisionacademy.com/files/assets/ballots/directing-2025-v1.pdf Directing], [https://web.archive.org/web/20250612185333/https://www.televisionacademy.com/files/assets/ballots/writing-2025-v1.pdf Writing]
+
+{{Emmy Awards}}
+
+{{DEFAULTSORT:Primetime Emmy Awards, 077}}
+[[Category:September 2025 in the United States]]
+[[Category:2025 awards in the United States]]
+[[Category:2025 in American television]]
+[[Category:2025 in Los Angeles]]
+[[Category:2025 television awards]]
+[[Category:2025 television specials]]
+[[Category:Primetime Emmy Award ceremonies|077]]
