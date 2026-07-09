@@ -2,7 +2,7 @@
 
 All notable changes to TVC will be documented in this file.
 
-## [0.14.1] - Unreleased
+## [0.14.1] - 09.07.2026
 
 ### Navigation
 
