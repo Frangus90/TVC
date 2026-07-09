@@ -85,7 +85,12 @@ async fn persist(
     // Wikipedia hasn't filled in its winners yet. ISO date strings compare
     // chronologically, so a lexical compare is correct.
     let today = Utc::now().date_naive().to_string();
+    let current_year = Utc::now().year();
     let status = if parsed.has_winners {
+        "past"
+    } else if parsed.categories.is_empty() || year < current_year {
+        // Nothing parseable to predict, or an edition from a past year — never
+        // predictable, regardless of missing winner markers.
         "past"
     } else if let Some(ref d) = parsed.ceremony_date {
         if d.as_str() >= today.as_str() {

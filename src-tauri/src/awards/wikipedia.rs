@@ -233,7 +233,9 @@ pub fn parse_wikitext(text: &str) -> Option<ParsedCeremony> {
     static CAT: OnceLock<Regex> = OnceLock::new();
     let ref_re = REF.get_or_init(|| re(r"(?s)<ref[^>]*>.*?</ref>|<ref[^>]*/>"));
     let comment_re = COMMENT.get_or_init(|| re(r"(?s)<!--.*?-->"));
-    let cat_re = CAT.get_or_init(|| re(r"(?s)\{\{Award category.*?\[\[([^\]]+?)\]\]"));
+    // Category template name varies by era: "{{Award category|…}}" (newer) and
+    // "{{AwardCategory|…}}" (older, camelCase, no space).
+    let cat_re = CAT.get_or_init(|| re(r"(?s)\{\{[Aa]ward ?[Cc]ategory.*?\[\[([^\]]+?)\]\]"));
 
     let section = ref_re.replace_all(section, "");
     let section = comment_re.replace_all(&section, "");
@@ -242,7 +244,8 @@ pub fn parse_wikitext(text: &str) -> Option<ParsedCeremony> {
 
     for raw_line in section.lines() {
         let line = raw_line.trim_start();
-        if line.contains("{{Award category") {
+        let low = line.to_lowercase();
+        if low.contains("{{award category") || low.contains("{{awardcategory") {
             let name = cat_re
                 .captures(line)
                 .map(|c| category_name(&c[1]))
@@ -377,6 +380,8 @@ mod tests {
         for (name, wt) in [
             ("oscars_89", include_str!("fixtures/oscars_89.wikitext")),
             ("emmys_60", include_str!("fixtures/emmys_60.wikitext")),
+            // 86th uses the older "{{AwardCategory}}" (no space) template.
+            ("oscars_86", include_str!("fixtures/oscars_86.wikitext")),
         ] {
             let p = parse_wikitext(wt).expect("has section");
             assert!(p.has_winners, "{name}: should be detected as a past ceremony");
