@@ -13,7 +13,8 @@ use crate::awards::source::AwardType;
 use crate::awards::wikipedia::{parse_wikitext, WikipediaAwardSource};
 use crate::db::connection;
 
-const HISTORY_YEARS: i32 = 20;
+const FULL_YEARS: i32 = 20;
+const RECENT_YEARS: i32 = 5;
 const LAST_SYNC_KEY: &str = "awards_last_sync";
 const AWARDS: [AwardType; 2] = [AwardType::Oscars, AwardType::Emmys];
 
@@ -37,11 +38,10 @@ pub async fn sync(pool: &SqlitePool, full: bool) -> SyncSummary {
 
     for award in AWARDS {
         let base = award.edition_for_year(year);
-        let editions: Vec<i32> = if full {
-            ((base - (HISTORY_YEARS - 1))..=(base + 1)).rev().collect()
-        } else {
-            ((base - 1)..=(base + 1)).rev().collect()
-        };
+        // Full: 20 years of history. Otherwise: the last 5 years. Both probe one
+        // edition ahead so a just-announced ceremony is picked up.
+        let span = if full { FULL_YEARS } else { RECENT_YEARS };
+        let editions: Vec<i32> = ((base - (span - 1))..=(base + 1)).rev().collect();
 
         for edition in editions {
             if edition < 1 {
@@ -126,7 +126,9 @@ pub async fn auto_sync_on_startup(app: AppHandle) {
     if have > 0 && recently_synced {
         return;
     }
-    let _ = sync(&pool, have == 0).await;
+    // Startup always pulls the recent window (last 5 years); a full 20-year
+    // backfill is only done on an explicit "Full refresh".
+    let _ = sync(&pool, false).await;
 }
 
 #[cfg(test)]

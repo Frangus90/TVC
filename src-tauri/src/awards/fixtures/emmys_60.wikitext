@@ -1,0 +1,623 @@
+{{Short description|2008 American television programming awards}}
+{{Use mdy dates|date=February 2025}}
+{{Infobox award
+| name     = 60th Primetime Emmy Awards
+| image    = The_60th_Primetime_Emmy_Awards_Poster.jpg
+| caption  = Promotional poster
+| date     = {{unbulleted list
+| September 21, 2008 <br /> {{small|(Ceremony)}}
+| [[60th Primetime Creative Arts Emmy Awards|September 13, 2008]] <br /> {{small|(Creative Arts Awards)}}
+}}
+| location = [[Peacock Theater|Nokia Theatre]], <br /> [[Los Angeles]], [[California]]
+| presenter = [[Academy of Television Arts and Sciences]]
+| hosts    = [[Tom Bergeron]] <br /> [[Heidi Klum]] <br /> [[Howie Mandel]] <br /> [[Jeff Probst]] <br /> [[Ryan Seacrest]]
+| most_awards      = {{unbulleted list
+| Major: ''[[John Adams (miniseries)|John Adams]]'' (5)
+| All: ''[[John Adams (miniseries)|John Adams]]'' (13)
+}}
+| most_nominations = ''John Adams''<br>''[[Recount (film)|Recount]]'' (8)
+| award1_type = [[Primetime Emmy Award for Outstanding Comedy Series|Outstanding Comedy Series]]
+| award1_winner = ''[[30 Rock]]''
+| award2_type = [[Primetime Emmy Award for Outstanding Drama Series|Outstanding Drama Series]]
+| award2_winner = ''[[Mad Men]]''
+| award3_type = [[Primetime Emmy Award for Outstanding Limited or Anthology Series|Outstanding Miniseries]]
+| award3_winner = ''John Adams''
+| award4_type = [[Primetime Emmy Award for Outstanding Competition Program|Outstanding Reality-Competition Program]]
+| award4_winner = ''[[The Amazing Race (American TV series)|The Amazing Race]]''
+| award5_type = [[Primetime Emmy Award for Outstanding Variety Series|Outstanding Variety, Music or Comedy Series]]
+| award5_winner = ''[[The Daily Show with Jon Stewart]]''
+| network  = [[American Broadcasting Company|ABC]]
+| producer = [[Kenneth Ehrlich|Ken Ehrlich]]
+| director = [[Louis J. Horvitz]]
+| previous = [[59th Primetime Emmy Awards|59th]]
+| main     = {{nowrap|[[Primetime Emmy Award]]s}}
+| next     = [[61st Primetime Emmy Awards|61st]]
+}}
+
+The '''60th Primetime Emmy Awards''' were held on Sunday, September 21, 2008, at the newly opened [[Peacock Theater|Nokia Theatre]] in [[Los Angeles]], [[California]] to honor the best in [[United States|U.S.]] [[prime time]] television.<ref>{{cite news|title=Emmys will move to new venue|work=[[USA Today]]|url=https://www.usatoday.com/life/television/news/2008-03-11-emmys_N.htm|access-date=March 11, 2008 | date=March 11, 2008}}</ref> The ceremony was hosted by [[Tom Bergeron]] (who was also hosting ''[[America's Funniest Home Videos]]'' and ''[[Dancing with the Stars (American TV series)|Dancing with the Stars]]'', both also on [[American Broadcasting Company|ABC]], at the time), [[Heidi Klum]], [[Howie Mandel]], [[Jeff Probst]], and [[Ryan Seacrest]] (all were nominated in the debut category—[[Primetime Emmy Award for Outstanding Host for a Reality or Reality-Competition Program|Outstanding Host for a Reality or Reality-Competition Program]]) and televised in the United States on [[American Broadcasting Company|ABC]]. 28 awards were presented.
+
+The nominations were announced on July 17 by [[Kristin Chenoweth]] and [[Neil Patrick Harris]].<ref>{{cite web|url=http://cdn.emmys.tv/awards/2008pte/60thpte_nomswin.php|title=Noms}}</ref> The [[Creative Arts Emmy Award]]s were held eight days earlier (September 13) at the same venue. The ceremony was hosted by [[Neil Patrick Harris]] and [[Sarah Chalke]].
+
+The telecast was viewed by 12.20 million with a household rating of 8.86/12.79 making it the lowest rated and least viewed ceremony in its televised history.<ref>{{Cite web |url=http://www.worldscreen.com/newscurrent.php?filename=emmys092308.htm |title=World Screen - Home |access-date=2008-10-01 |archive-date=2009-01-12 |archive-url=https://web.archive.org/web/20090112230040/http://www.worldscreen.com/newscurrent.php?filename=emmys092308.htm |url-status=dead }}</ref> Many critics cited lackluster performances from the [[#Hosting|five hosts]] as a reason for the huge decline.<ref>[http://www.thrfeed.com/2008/09/emmy-reviews.html The Live Feed; 60th Emmy Awards reviews]</ref> Others pointed to the field of nominees which were dominated by low-rated and sparsely viewed programs, thus making the Emmys widely considered as a bust, which was panned by critics as "... the worst ever, laid a big, fat ratings egg as well ..."<ref>[http://www.broadcastingcable.com/article/CA6599959.html Give Emmys to Craig] from ''Broadcasting and Cable''</ref><ref>{{cite web |title=Emmy telecast bombs in ratings and reviews |website=[[Reuters]] |archive-url=https://web.archive.org/web/20200915192229/https://www.reuters.com/article/industryNews/idUSTRE48M1L620080923 |archive-date=2020-09-15 |url-status=live |url=https://www.reuters.com/article/industryNews/idUSTRE48M1L620080923}}</ref>
+
+In 2011, when [[Pop (U.S. TV network)|TV Guide Network]] re-did their list of "25 Biggest TV Blunders", this ceremony was included.
+
+For the first time in a decade, the [[Primetime Emmy Award for Outstanding Comedy Series]] was won by the defending champion. ''[[30 Rock]]''
+
+[[Primetime Emmy Award for Outstanding Drama Series|Outstanding Drama Series]] went to [[AMC (TV channel)|AMC]] freshmen series ''[[Mad Men]]''. This marked the first series award for a program on a [[Cable television in the United States#Basic cable|basic cable]] station. ''Mad Men'' led all dramas with six major nominations.
+
+This would be the final ceremony to have five nominees per category, most major categories (acting and programs) were expanded to include at least six slots the following year.
+
+==Winners and nominees==
+Winners are listed first and highlighted in '''bold''':<ref>[http://www.emmys.com/awards/nominees-winners/2008 Emmys.com list of 2008 Nominees & Winners]</ref>
+
+[[File:Alec Baldwin by Gage Skidmore.jpg|right|thumb|150px|[[Alec Baldwin]], Outstanding Lead Actor in a Comedy Series winner]]
+[[File:Tina Fey by Gage Skidmore.jpg|right|thumb|150px|[[Tina Fey]], Outstanding Lead Actress in a Comedy Series winner]]
+[[File:Bryan Cranston by Gage Skidmore 2.jpg|right|thumb|150px|[[Bryan Cranston]], Outstanding Lead Actor in a Drama Series winner]]
+[[File:Glenn Close - Guardians of the Galaxy premiere - July 2014 (cropped).jpg|right|thumb|150px|[[Glenn Close]], Outstanding Lead Actress in a Drama Series winner]]
+[[File:PaulGiamattiSept2013TIFF.jpg|right|thumb|150px|[[Paul Giamatti]], Outstanding Lead Actor in a Miniseries or Movie winner]]
+[[File:Laura Linney 2016 (cropped).jpg|right|thumb|150px|[[Laura Linney]], Outstanding Lead Actress in a Miniseries or Movie winner]]
+[[File:JeremyPivenFeb09.jpg|right|thumb|150px|[[Jeremy Piven]], Outstanding Supporting Actor in a Comedy Series winner]]
+[[File:Jean Smart (2008).jpg|right|thumb|150px|[[Jean Smart]], Outstanding Supporting Actress in a Comedy Series winner]]
+<!-- [[|right|thumb|150px|[[Željko Ivanek]], Outstanding Supporting Actor in a Drama Series winner]] -->
+[[File:Dianne Wiest 2009.jpg|right|thumb|150px|[[Dianne Wiest]], Outstanding Supporting Actress in a Drama Series winner]]
+[[File:Tom Wilkinson.jpg|right|thumb|150px|[[Tom Wilkinson]], Outstanding Supporting Actor in a Miniseries or Movie winner]]
+[[File:Jeff Probst.jpg|right|thumb|150px|[[Jeff Probst]], Outstanding Host for a Reality or Reality-Competition Program winner]]
+[[File:Don Rickles 1973.JPG|right|thumb|150px|[[Don Rickles]], Outstanding Individual Performance in a Variety or Music Program winner]]
+
+===Programs===
+
+{| class="wikitable"
+|+ {{sronly|Programs}}
+|-
+| style="vertical-align:top;" width="50%" | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Comedy Series|Outstanding Comedy Series]]}}
+* '''''[[30 Rock]]'' ([[NBC]])'''
+** ''[[Curb Your Enthusiasm]]'' ([[HBO]])
+** ''[[Entourage (American TV series)|Entourage]]'' (HBO)
+** ''[[The Office (American TV series)|The Office]]'' (NBC)
+** ''[[Two and a Half Men]]'' ([[CBS]])
+| style="vertical-align:top;" width="50%" | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Drama Series|Outstanding Drama Series]]}}
+* '''''[[Mad Men]]'' ([[AMC (TV channel)|AMC]])'''
+** ''[[Boston Legal]]'' ([[American Broadcasting Company|ABC]])
+** ''[[Damages (TV series)|Damages]]'' ([[FX (TV channel)|FX]])
+** ''[[Dexter (TV series)|Dexter]]'' ([[Showtime (TV network)|Showtime]])
+** ''[[House (TV series)|House]]'' ([[Fox Broadcasting Company|Fox]])
+** ''[[Lost (2004 TV series)|Lost]]'' (ABC)
+|-
+| style="vertical-align:top;" width="50%" | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Television Movie|Outstanding Made for Television Movie]]}}
+* '''''[[Recount (film)|Recount]]'' (HBO)'''
+** ''[[Bernard and Doris]]'' (HBO)
+** ''[[Extras (TV series)|Extras: The Extra Special Series Finale]]'' (HBO)
+** ''[[The Memory Keeper's Daughter]]'' ([[Lifetime (TV network)|Lifetime]])
+** ''[[A Raisin in the Sun (2008 film)|A Raisin in the Sun]]'' (ABC)
+| style="vertical-align:top;" width="50%" | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Limited Series|Outstanding Miniseries]]}}
+* '''''[[John Adams (miniseries)|John Adams]]'' (HBO)'''
+** ''[[The Andromeda Strain (miniseries)|The Andromeda Strain]]'' ([[A&E (TV channel)|A&E]])
+** ''[[Cranford (TV series)|Cranford]]'' ([[PBS]])
+** ''[[Tin Man (miniseries)|Tin Man]]'' ([[Syfy|Sci Fi]])
+|-
+| style="vertical-align:top;" width="50%" | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Variety Series|Outstanding Variety, Music or Comedy Series]]}}
+* '''''[[The Daily Show|The Daily Show with Jon Stewart]]'' ([[Comedy Central]])'''
+** ''[[The Colbert Report]]'' (Comedy Central)
+** ''[[Late Show with David Letterman]]'' (CBS)
+** ''[[Real Time with Bill Maher]]'' (HBO)
+** ''[[Saturday Night Live]]'' (NBC)
+| style="vertical-align:top;" width="50%"  | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Reality-Competition Program|Outstanding Reality-Competition Program]]}}
+* '''''[[The Amazing Race (American TV series)|The Amazing Race]]'' (CBS)'''
+** ''[[American Idol]]'' (Fox)
+** ''[[Dancing with the Stars (American TV series)|Dancing with the Stars]]'' (ABC)
+** ''[[Project Runway]]'' (Bravo)
+** ''[[Top Chef]]'' (Bravo)
+|}
+
+===Acting===
+
+====Lead performances====
+{| class="wikitable"
+|+ {{sronly|Lead performances}}
+|-
+| style="vertical-align:top;" width="50%" | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Lead Actor in a Comedy Series|Outstanding Lead Actor in a Comedy Series]]}}
+* '''[[Alec Baldwin]] – ''[[30 Rock]]'' as [[Jack Donaghy]] (NBC)'''
+** [[Steve Carell]] – ''[[The Office (American TV series)|The Office]]'' as [[Michael Scott (The Office)|Michael Scott]] (NBC)
+** [[Lee Pace]] – ''[[Pushing Daisies]]'' as [[Ned (Pushing Daisies)|Ned]] (ABC)
+** [[Tony Shalhoub]] – ''[[Monk (TV series)|Monk]]'' as [[Adrian Monk]] ([[USA Network|USA]])
+** [[Charlie Sheen]] – ''[[Two and a Half Men]]'' as [[Charlie Harper (Two and a Half Men)|Charlie Harper]] (CBS)
+| style="vertical-align:top;" width="50%" | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Lead Actress in a Comedy Series|Outstanding Lead Actress in a Comedy Series]]}}
+* '''[[Tina Fey]] – ''[[30 Rock]]'' as [[Liz Lemon]] (NBC)'''
+** [[Christina Applegate]] – ''[[Samantha Who?]]'' as Samantha Newly (ABC)
+** [[America Ferrera]] – ''[[Ugly Betty]]'' as [[Betty Suarez]] (ABC)
+** [[Julia Louis-Dreyfus]] – ''[[The New Adventures of Old Christine]]'' as [[Christine Campbell (character)|Christine Campbell]] (CBS)
+** [[Mary-Louise Parker]] – ''[[Weeds (TV series)|Weeds]]'' as [[Nancy Botwin]] (Showtime)
+|-
+| style="vertical-align:top;" width="50%" | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Lead Actor in a Drama Series|Outstanding Lead Actor in a Drama Series]]}}
+* '''[[Bryan Cranston]] – ''[[Breaking Bad]]'' as [[Walter White (Breaking Bad)|Walter White]] (AMC)'''
+** [[Gabriel Byrne]] – ''[[In Treatment]]'' as [[Paul Weston (In Treatment)|Dr. Paul Weston]] (HBO)
+** [[Michael C. Hall]] – ''[[Dexter (TV series)|Dexter]]'' as [[Dexter Morgan]] (Showtime)
+** [[Jon Hamm]] – ''[[Mad Men]]'' as [[Don Draper]] (AMC)
+** [[Hugh Laurie]] – ''[[House (TV series)|House]]'' as [[Gregory House|Dr. Gregory House]] (Fox)
+** [[James Spader]] – ''[[Boston Legal]]'' as Alan Shore (ABC)
+| style="vertical-align:top;" width="50%" | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Lead Actress in a Drama Series|Outstanding Lead Actress in a Drama Series]]}}
+* '''[[Glenn Close]] – ''[[Damages (TV series)|Damages]]'' as [[Patty Hewes]] (FX)'''
+** [[Sally Field]] – ''[[Brothers & Sisters (2006 TV series)|Brothers & Sisters]]'' as [[Nora Walker]] (ABC)
+** [[Mariska Hargitay]] – ''[[Law & Order: Special Victims Unit]]'' as [[Olivia Benson]] (NBC)
+** [[Holly Hunter]] – ''[[Saving Grace (American TV series)|Saving Grace]]'' as Grace Hanadarko ([[TNT (American TV network)|TNT]])
+** [[Kyra Sedgwick]] – ''[[The Closer]]'' as [[Brenda Leigh Johnson]] (TNT)
+|-
+| style="vertical-align:top;" width="50%" | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Lead Actor in a Miniseries or a Movie|Outstanding Lead Actor in a Miniseries or Movie]]}}
+* '''[[Paul Giamatti]] – ''[[John Adams (miniseries)|John Adams]]'' as [[John Adams]] (HBO)'''
+** [[Ralph Fiennes]] – ''[[Bernard and Doris]]'' as [[Bernard Lafferty]] (HBO)
+** [[Ricky Gervais]] – ''[[Extras (TV series)|Extras: The Extra Special Series Finale]]'' as Andy Millman (HBO)
+** [[Kevin Spacey]] – ''[[Recount (film)|Recount]]'' as [[Ron Klain]] (HBO)
+** [[Tom Wilkinson]] – ''Recount'' as [[James Baker]] (HBO)
+| style="vertical-align:top;" width="50%" | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Lead Actress in a Miniseries or a Movie|Outstanding Lead Actress in a Miniseries or Movie]]}}
+* '''[[Laura Linney]] – ''[[John Adams (miniseries)|John Adams]]'' as [[Abigail Adams]] (HBO)'''
+** [[Judi Dench]] – ''[[Cranford (TV series)|Cranford]]'' as Matilda "Matty" Jenkyns (PBS)
+** [[Catherine Keener]] – ''[[An American Crime]]'' as [[Gertrude Baniszewski]] (Showtime)
+** [[Phylicia Rashad]] – ''[[A Raisin in the Sun (2008 film)|A Raisin in the Sun]]'' as Lena Younger (ABC)
+** [[Susan Sarandon]] – ''[[Bernard and Doris]]'' as [[Doris Duke]] (HBO)
+|}
+
+====Supporting performances====
+{| class="wikitable"
+|+ {{sronly|Supporting performances}}
+|-
+| style="vertical-align:top;" width="50%" | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Supporting Actor in a Comedy Series|Outstanding Supporting Actor in a Comedy Series]]}}
+* '''[[Jeremy Piven]] – ''[[Entourage (American TV series)|Entourage]]'' as [[Ari Gold (Entourage)|Ari Gold]] (HBO)'''
+** [[Jon Cryer]] – ''[[Two and a Half Men]]'' as [[Alan Harper (Two and a Half Men)|Dr. Alan Harper]] (CBS)
+** [[Kevin Dillon]] – ''Entourage'' as [[Johnny "Drama" Chase]] (HBO)
+** [[Neil Patrick Harris]] – ''[[How I Met Your Mother]]'' as [[Barney Stinson]] (CBS)
+** [[Rainn Wilson]] – ''[[The Office (American TV series)|The Office]]'' as [[Dwight Schrute]] (NBC)
+| style="vertical-align:top;" width="50%" | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Supporting Actress in a Comedy Series|Outstanding Supporting Actress in a Comedy Series]]}}
+* '''[[Jean Smart]] – ''[[Samantha Who?]]'' as Regina Newly (ABC)'''
+** [[Kristin Chenoweth]] – ''[[Pushing Daisies]]'' as Olive Snook (ABC)
+** [[Amy Poehler]] – ''[[Saturday Night Live]]'' as various characters (NBC)
+** [[Holland Taylor]] – ''[[Two and a Half Men]]'' as Evelyn Harper (CBS)
+** [[Vanessa Williams]] – ''[[Ugly Betty]]'' as [[Wilhelmina Slater]] (ABC)
+|-
+| style="vertical-align:top;" width="50%" | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Supporting Actor in a Drama Series|Outstanding Supporting Actor in a Drama Series]]}}
+* '''[[Željko Ivanek]] – ''[[Damages (TV series)|Damages]]'' as Ray Fiske (FX)'''
+** [[Ted Danson]] – ''Damages'' as Arthur Frobisher (FX)
+** [[Michael Emerson]] – ''[[Lost (2004 TV series)|Lost]]'' as [[Ben Linus]] (ABC)
+** [[William Shatner]] – ''[[Boston Legal]]'' as Denny Crane (ABC)
+** [[John Slattery]] – ''[[Mad Men]]'' as [[Roger Sterling|Roger Sterling Jr.]] (AMC)
+| style="vertical-align:top;" width="50%" | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Supporting Actress in a Drama Series|Outstanding Supporting Actress in a Drama Series]]}}
+* '''[[Dianne Wiest]] – ''[[In Treatment]]'' as Dr. Gina Toll (HBO)'''
+** [[Candice Bergen]] – ''[[Boston Legal]]'' as Shirley Schmidt (ABC)
+** [[Rachel Griffiths]] – ''[[Brothers & Sisters (2006 TV series)|Brothers & Sisters]]'' as [[Sarah Walker (Brothers & Sisters)|Sarah Whedon]] (ABC)
+** [[Sandra Oh]] – ''[[Grey's Anatomy]]'' as [[Cristina Yang|Dr. Christina Yang]] (ABC)
+** [[Chandra Wilson]] – ''Grey's Anatomy'' as [[Miranda Bailey|Dr. Miranda Bailey]] (ABC)
+|-
+| style="vertical-align:top;" width="50%" | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Supporting Actor in a Miniseries or a Movie|Outstanding Supporting Actor in a Miniseries or Movie]]}}
+* '''[[Tom Wilkinson]] – ''[[John Adams (miniseries)|John Adams]]'' as [[Benjamin Franklin]] (HBO)'''
+** [[Bob Balaban]] – ''[[Recount (film)|Recount]]'' as [[Benjamin Ginsberg (lawyer)|Benjamin Ginsberg]] (HBO)
+** [[Stephen Dillane]] – ''John Adams'' as [[Thomas Jefferson]] (HBO)
+** [[Denis Leary]] – ''Recount'' as [[Michael Whouley]] (HBO)
+** [[David Morse (actor)|David Morse]] – ''John Adams'' as [[George Washington]] (HBO)
+**
+| style="vertical-align:top;" width="50%" | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Supporting Actress in a Miniseries or a Movie|Outstanding Supporting Actress in a Miniseries or Movie]]}}
+* '''[[Eileen Atkins]] – ''[[Cranford (TV series)|Cranford]]'' as Deborah Jenkyns (PBS)'''
+** [[Laura Dern]] – ''[[Recount (film)|Recount]]'' as [[Katherine Harris]] (HBO)
+** [[Ashley Jensen]] – ''[[Extras (TV series)|Extras: The Extra Special Series Finale]]'' as Maggie Jacobs (HBO)
+** [[Audra McDonald]] – ''[[A Raisin in the Sun (2008 film)|A Raisin in the Sun]]'' as Ruth Younger (ABC)
+** [[Alfre Woodard]] – ''[[Pictures of Hollis Woods (film)|Pictures of Hollis Woods]]'' as Edna Reilly (CBS)
+|}
+
+====Individual performances====
+{| class="wikitable"
+|+ {{sronly|Individual performances}}
+|-
+| style="vertical-align:top;" | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Individual Performance in a Variety or Music Program|Outstanding Individual Performance in a Variety or Music Program]]}}
+* '''[[Don Rickles]] – ''[[Mr. Warmth: The Don Rickles Project]]'' (HBO)'''
+** [[Stephen Colbert]] – ''[[The Colbert Report]]'' (Comedy Central)
+** [[Tina Fey]] – ''[[Saturday Night Live]]'' (NBC)
+** [[David Letterman]] – ''[[Late Show with David Letterman]]'' (CBS)
+** [[Jon Stewart]] – ''[[80th Academy Awards|The 80th Annual Academy Awards]]'' (ABC)
+|}
+
+===Hosting===
+{| class="wikitable"
+|+ {{sronly|Hosting}}
+|-
+| style="vertical-align:top;" | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Host for a Reality or Reality-Competition Program|Outstanding Host for a Reality or Reality-Competition Program]]}}
+* '''[[Jeff Probst]] – ''[[Survivor (American TV series)|Survivor]]'' (CBS)'''
+** [[Tom Bergeron]] – ''[[Dancing with the Stars (American TV series)|Dancing with the Stars]]'' (ABC)
+** [[Heidi Klum]] – ''[[Project Runway]]'' (Bravo)
+** [[Howie Mandel]] – ''[[Deal or No Deal (American game show)|Deal or No Deal]]'' (NBC)
+** [[Ryan Seacrest]] – ''[[American Idol]]'' (Fox)
+|}
+
+===Directing===
+{| class="wikitable"
+|+ {{sronly|Directing}}
+|-
+| style="vertical-align:top;" width="50%" | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Directing for a Comedy Series|Outstanding Directing for a Comedy Series]]}}
+* '''''[[Pushing Daisies]]'': "[[Pie-lette]]" – [[Barry Sonnenfeld]] (ABC)'''
+** ''[[30 Rock]]'': "[[Rosemary's Baby (30 Rock)|Rosemary's Baby]]" – [[Michael Engler]] (NBC)
+** ''[[Entourage (American TV series)|Entourage]]'': "[[No Cannes Do]]" – [[Dan Attias]] (HBO)
+** ''[[Flight of the Conchords (TV series)|Flight of the Conchords]]'': "[[Sally Returns]]" – [[James Bobin]] (HBO)
+** ''[[The Office (American TV series)|The Office]]'': "[[Goodbye, Toby]]" – [[Paul Feig]] (NBC)
+** ''The Office'': "[[Money (The Office)|Money]]" – [[Paul Lieberstein]] (NBC)
+| style="vertical-align:top;" width="50%" | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Directing for a Drama Series|Outstanding Directing for a Drama Series]]}}
+* '''''[[House (TV series)|House]]'': "[[House's Head]]" – [[Greg Yaitanes]] (Fox)'''
+** ''[[Boston Legal]]'': "The Mighty Rogues" – [[Arlene Sanford]] (ABC)
+** ''[[Breaking Bad]]'': "[[Pilot (Breaking Bad)|Pilot]]" – [[Vince Gilligan]] (AMC)
+** ''[[Damages (TV series)|Damages]]'': "[[Get Me a Lawyer]]" – [[Allen Coulter]] (FX)
+** ''[[Mad Men]]'': "[[Smoke Gets in Your Eyes (Mad Men)|Smoke Gets in Your Eyes]]" – [[Alan Taylor (director)|Alan Taylor]] (AMC)
+|-
+| style="vertical-align:top;" width="50%" | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Directing for a Variety Series|Outstanding Directing for a Variety, Music or Comedy Program]]}}
+* '''''[[80th Academy Awards|The 80th Annual Academy Awards]]'' – [[Louis J. Horvitz]] (ABC)'''
+** ''[[The Colbert Report]]'' – [[Jim Hoskinson]] (Comedy Central)
+** ''[[Company (musical)|Company]]'' (''[[Great Performances]]'') – [[Lonny Price]] (PBS)
+** ''[[The Daily Show|The Daily Show with Jon Stewart]]'' – Chuck O'Neil (Comedy Central)
+** ''[[Saturday Night Live]]'' – [[Don Roy King]] (NBC)
+| style="vertical-align:top;" width="50%" | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Directing for a Miniseries, Movie or a Dramatic Special|Outstanding Directing for a Miniseries, Movie or Dramatic Special]]}}
+* '''''[[Recount (film)|Recount]]'' – [[Jay Roach]] (HBO)'''
+** ''[[Bernard and Doris]]'' – [[Bob Balaban]] (HBO)
+** ''[[The Company (miniseries)|The Company]]'' – [[Mikael Salomon]] (TNT)
+** ''[[Extras (TV series)|Extras: The Extra Special Series Finale]]'' – [[Ricky Gervais]] and [[Stephen Merchant]] (HBO)
+** ''[[John Adams (miniseries)|John Adams]]'' – [[Tom Hooper]] (HBO)
+|}
+
+===Writing===
+{| class="wikitable"
+|+ {{sronly|Writing}}
+|-
+| style="vertical-align:top;" width="50%" | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Writing for a Comedy Series|Outstanding Writing for a Comedy Series]]}}
+* '''''[[30 Rock]]'': "[[Cooter (30 Rock)|Cooter]]" – [[Tina Fey]] (NBC)'''
+** ''30 Rock'': "[[Rosemary's Baby (30 Rock)|Rosemary's Baby]]" – [[Jack Burditt]] (NBC)
+** ''[[Flight of the Conchords (TV series)|Flight of the Conchords]]'': "[[Yoko (Flight of the Conchords)|Yoko]]" – [[James Bobin]], [[Jemaine Clement]], and [[Bret McKenzie]] (HBO)
+** ''[[The Office (American TV series)|The Office]]'': "[[Dinner Party (The Office)|Dinner Party]]" – [[Lee Eisenberg]] and [[Gene Stupnitsky]] (NBC)
+** ''[[Pushing Daisies]]'': "[[Pie-lette]]" – [[Bryan Fuller]] (ABC)
+| style="vertical-align:top;" width="50%" | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Writing for a Drama Series|Outstanding Writing for a Drama Series]]}}
+* '''''[[Mad Men]]'': "[[Smoke Gets in Your Eyes (Mad Men)|Smoke Gets in Your Eyes]]" – [[Matthew Weiner]] (AMC)'''
+** ''[[Battlestar Galactica (2004 TV series)|Battlestar Galactica]]'': "[[Six of One (Battlestar Galactica)|Six of One]]" – [[Michael Angeli]] (Sci Fi)
+** ''[[Damages (TV series)|Damages]]'': "[[Get Me a Lawyer]]" – [[Glenn Kessler (screenwriter)|Glenn Kessler]], [[Todd A. Kessler]], and [[Daniel Zelman]] (FX)
+** ''Mad Men'': "[[The Wheel (Mad Men)|The Wheel]]" – [[Robin Veith]] and Matthew Weiner (AMC)
+** ''[[The Wire (TV series)|The Wire]]'': "[[–30– (The Wire)|–30–]]" – [[David Simon]] and [[Ed Burns]] (HBO)
+|-
+| style="vertical-align:top;" width="50%" | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Writing for a Variety Series|Outstanding Writing for a Variety, Music or Comedy Program]]}}
+* '''''[[The Colbert Report]]'' (Comedy Central)'''
+** ''[[The Daily Show|The Daily Show with Jon Stewart]]'' (Comedy Central)
+** ''[[Late Night with Conan O'Brien]]'' (NBC)
+** ''[[Late Show with David Letterman]]'' (CBS)
+** ''[[Saturday Night Live]]'' (NBC)
+| style="vertical-align:top;" width="50%" | {{Award category|#EEDD82|[[Primetime Emmy Award for Outstanding Writing for a Limited Series, Movie or a Dramatic Special|Outstanding Writing for a Miniseries, Movie or Dramatic Special]]}}
+* '''''[[John Adams (miniseries)|John Adams]]'': "Independence" – Kirk Ellis (HBO)'''
+** ''[[Bernard and Doris]]'' – [[Hugh Costello]] (HBO)
+** ''[[Cranford (TV series)|Cranford]]'' – [[Heidi Thomas]] (PBS)
+** ''[[Extras (TV series)|Extras: The Extra Special Series Finale]]'' – [[Ricky Gervais]] and [[Stephen Merchant]] (HBO)
+** ''[[Recount (film)|Recount]]'' – [[Danny Strong]] (HBO)
+|}
+
+==Most major nominations==
+{| class="wikitable"
+|+ Networks with multiple major nominations<ref group="note" name="MW Note">"Major" constitutes the categories listed above: Program, Acting, Directing, and Writing. Does not include the [[Creative Arts Emmy Award|technical categories.]]</ref>
+|-
+! Network
+! No. of<br>Nominations
+|-style="text-align:center"
+| HBO
+| 44
+|-style="text-align:center"
+| NBC
+| 30
+|-style="text-align:center"
+| ABC
+| 29
+|-style="text-align:center"
+| CBS
+| 11
+|}
+
+{| class="wikitable"
+|+ Programs with multiple major nominations
+|-
+! Program
+! Category
+! Network
+! No. of<br>Nominations
+|-style="text-align:center"
+| ''John Adams''
+| Miniseries
+| rowspan="2"|HBO
+| rowspan="2"|8
+|-style="text-align:center"
+| ''Recount''
+| Movie
+|-style="text-align:center"
+| ''30 Rock''
+| Comedy
+| NBC
+| rowspan="4"|6
+|-style="text-align:center"
+| ''Damages''
+| rowspan="2"|Drama
+| FX
+|-style="text-align:center"
+| ''Mad Men''
+| AMC
+|-style="text-align:center"
+| ''The Office''
+| Comedy
+| NBC
+|-style="text-align:center"
+| ''Bernard and Doris''
+| Movie
+| HBO
+| rowspan="4"|5
+|-style="text-align:center"
+| ''Boston Legal''
+| Drama
+| ABC
+|-style="text-align:center"
+| ''Extras: The Extra Special Series Finale''
+| Movie
+| HBO
+|-style="text-align:center"
+| ''Saturday Night Live''
+| rowspan="2"|Variety
+| NBC
+|-style="text-align:center"
+| ''The Colbert Report''
+| Comedy Central
+| rowspan="5"|4
+|-style="text-align:center"
+| ''Cranford''
+| Miniseries
+| PBS
+|-style="text-align:center"
+| ''Entourage''
+| rowspan="3"|Comedy
+| HBO
+|-style="text-align:center"
+| ''Pushing Daisies''
+| ABC
+|-style="text-align:center"
+| ''Two and a Half Men''
+| CBS
+|-style="text-align:center"
+| ''The Daily Show with Jon Stewart''
+| Variety
+| Comedy Central
+| rowspan="4"|3
+|-style="text-align:center"
+| ''House''
+| Drama
+| Fox
+|-style="text-align:center"
+| ''Late Show with David Letterman''
+| Variety
+| CBS
+|-style="text-align:center"
+| ''A Raisin in the Sun''
+| Movie
+| rowspan="2"|ABC
+|-style="text-align:center"
+| ''The 80th Annual Academy Awards''
+| Variety
+| rowspan="15"|2
+|-style="text-align:center"
+| ''American Idol''
+| Competition
+| Fox
+|-style="text-align:center"
+| ''Breaking Bad''
+| rowspan="2"|Drama
+| AMC
+|-style="text-align:center"
+| ''Brothers & Sisters''
+| rowspan="2"|ABC
+|-style="text-align:center"
+| ''Dancing with the Stars''
+| Competition
+|-style="text-align:center"
+| ''Dexter''
+| Drama
+| Showtime
+|-style="text-align:center"
+| ''Flight of the Conchords''
+| Comedy
+| HBO
+|-style="text-align:center"
+| ''Great Performances''
+| Variety
+| PBS
+|-style="text-align:center"
+| ''Grey's Anatomy''
+| rowspan="3"|Drama
+| ABC
+|-style="text-align:center"
+| ''In Treatment''
+| HBO
+|-style="text-align:center"
+| ''Lost''
+| ABC
+|-style="text-align:center"
+| ''Project Runway''
+| Competition
+| Bravo
+|-style="text-align:center"
+| ''Samantha Who?''
+| rowspan="2"|Comedy
+| rowspan="2"|ABC
+|-style="text-align:center"
+| ''Ugly Betty''
+|}
+
+==Most major awards==
+{| class="wikitable"
+|+ Networks with multiple major awards<ref group="note" name="MW Note">"Major" constitutes the categories listed above: Program, Acting, Directing, and Writing. Does not include the [[Creative Arts Emmy Award|technical categories.]]</ref>
+|-
+! Network
+! No. of<br>Awards
+|-style="text-align:center"
+| HBO
+| 10
+|-style="text-align:center"
+| NBC
+| 4
+|-style="text-align:center"
+| ABC
+| rowspan="2"|3
+|-style="text-align:center"
+| AMC
+|-style="text-align:center"
+| CBS
+| rowspan="3"|2
+|-style="text-align:center"
+| Comedy Central
+|-style="text-align:center"
+| FX
+|}
+
+{| class="wikitable"
+|+ Programs with multiple major awards
+|-
+! Program
+! Category
+! Network
+! No. of<br>Awards
+|-style="text-align:center"
+| ''John Adams''
+| Miniseries
+| HBO
+| 5
+|-style="text-align:center"
+| ''30 Rock''
+| Comedy
+| NBC
+| 4
+|-style="text-align:center"
+| ''Damages''
+| rowspan="2"|Drama
+| FX
+| rowspan="3"|2
+|-style="text-align:center"
+| ''Mad Men''
+| AMC
+|-style="text-align:center"
+| ''Recount''
+| Movie
+| HBO
+|}
+
+;Notes
+{{reflist|group="note"}}
+
+==Presenters==
+The awards were presented by the following:
+
+{| class="wikitable sortable"
+|-
+! Name(s) !! Role
+|-
+| {{sortname|Tina|Fey}}<br />{{sortname|Amy|Poehler}} || Presenters of the award for [[Primetime Emmy Award for Outstanding Supporting Actor in a Comedy Series|Outstanding Supporting Actor in a Comedy Series]]
+|-
+| {{sortname|Julia|Louis-Dreyfus}} || Presenter of the award for [[Primetime Emmy Award for Outstanding Supporting Actress in a Comedy Series|Outstanding Supporting Actress in a Comedy Series]]
+|-
+| {{sortname|Marcia|Cross}}<br />{{sortname|Dana|Delany}}<br />{{sortname|Teri|Hatcher}}<br />{{sortname|Felicity|Huffman}}<br />{{sortname|Eva|Longoria}}<br />{{sortname|Nicolette|Sheridan}} || Presenters of the award for [[Primetime Emmy Award for Outstanding Supporting Actor in a Drama Series|Outstanding Supporting Actor in a Drama Series]]
+|-
+| {{sortname|Ricky|Gervais}} || Presenter of the award for [[Primetime Emmy Award for Outstanding Directing for a Variety Special|Outstanding Directing for a Variety, Music or Comedy Program]]
+|-
+| {{sortname|Conan|O'Brien}} || Presenter of the award for [[Primetime Emmy Award for Outstanding Supporting Actress in a Drama Series|Outstanding Supporting Actress in a Drama Series]]
+|-
+| {{sortname|Steve|Martin}} || Presenter of the award for [[Primetime Emmy Award for Outstanding Writing for a Variety Special|Outstanding Writing for a Variety, Music or Comedy Program]]
+|-
+| {{sortname|Alec|Baldwin}} || Presenter of the award for [[Primetime Emmy Award for Outstanding Lead Actress in a Limited Series or Movie|Outstanding Lead Actress in a Miniseries or Movie]]
+|-
+| {{sortname|Ruth|Buzzi}}<br />{{sortname|Gary|Owens}}<br />{{sortname|Alan|Sues}}<br />{{sortname|Lily|Tomlin}}<br />{{sortname|Jo Anne|Worley}} || Presenters of the award for [[Primetime Emmy Award for Outstanding Variety Series|Outstanding Variety, Music or Comedy Series]]
+|-
+| {{sortname|David|Boreanaz}}<br />{{sortname|Lauren|Conrad}} || Introducers of [[Primetime Emmy Award for Outstanding Guest Actress in a Comedy Series|Outstanding Guest Actress in a Comedy Series]] winner [[Kathryn Joosten]]
+|-
+| {{sortname|Kathryn|Joosten}} || Presenter of the award for [[Primetime Emmy Award for Outstanding Directing for a Comedy Series|Outstanding Directing for a Comedy Series]]
+|-
+| {{sortname|David|Boreanaz}}<br />{{sortname|Lauren|Conrad}} || Presenters of the award for [[Primetime Emmy Award for Outstanding Writing for a Comedy Series|Outstanding Writing for a Comedy Series]]
+|-
+| {{sortname|Christina|Applegate}}<br />{{sortname|Christian|Slater}} || Presenters of the award for [[Primetime Emmy Award for Outstanding Television Movie|Outstanding Made for Television Movie]] 
+|-
+| {{sortname|Laurence|Fishburne}}<br />{{sortname|William|Petersen}} || Presenters of the award for [[Primetime Emmy Award for Outstanding Supporting Actor in a Limited Series or Movie|Outstanding Supporting Actor in a Miniseries or Movie]]
+|-
+| {{sortname|Stephen|Colbert}}<br />{{sortname|Jon|Stewart}} || Presenters of the awards for [[Primetime Emmy Award for Outstanding Directing for a Limited or Anthology Series or Movie|Outstanding Directing for a Miniseries, Movie or Dramatic Special]]<br />and [[Primetime Emmy Award for Outstanding Writing for a Limited or Anthology Series or Movie|Outstanding Writing for a Miniseries, Movie or Dramatic Special]]
+|-
+| {{sortname|Patrick|Dempsey}}<br />{{sortname|Sandra|Oh}} || Presenters of the award for [[Primetime Emmy Award for Outstanding Supporting Actress in a Limited Series or Movie|Outstanding Supporting Actress in a Miniseries or Movie]]
+|-
+| {{sortname|Kathy|Griffin}}<br />{{sortname|Don|Rickles}} || Presenters of the award for [[Primetime Emmy Award for Outstanding Reality-Competition Program|Outstanding Reality-Competition Program]]
+|-
+| {{sortname|Sally|Field}} || Presenter of the award for [[Primetime Emmy Award for Outstanding Limited Series|Outstanding Miniseries]]
+|-
+| {{sortname|Kristin|Chenoweth}}<br />{{sortname|Neil Patrick|Harris}} || Presenters of the award for [[Primetime Emmy Award for Outstanding Individual Performance in a Variety or Music Program|Outstanding Individual Performance in a Variety or Music Program]]
+|-
+| {{sortname|Wayne|Brady}}<br />{{sortname|Kate|Walsh|dab=actress}} || Introducers of [[Primetime Emmy Award for Outstanding Guest Actor in a Drama Series|Outstanding Guest Actor in a Drama Series]] winner [[Glynn Turman]] <br />and [[Primetime Emmy Award for Outstanding Guest Actress in a Drama Series|Outstanding Guest Actress in a Drama Series]] winner [[Cynthia Nixon]]
+|-
+|{{sortname|Cynthia|Nixon}}<br />{{sortname|Glynn|Turman}} || Presenters of the award for [[Primetime Emmy Award for Outstanding Directing for a Drama Series|Outstanding Directing for a Drama Series]]<br />and [[Primetime Emmy Award for Outstanding Writing for a Drama Series|Outstanding Writing for a Drama Series]] 
+|-
+| {{sortname|Glenn|Close}} || Presenter of the award for [[Primetime Emmy Award for Outstanding Lead Actor in a Limited Series or Movie|Outstanding Lead Actor in a Miniseries or Movie]]
+|-
+| {{sortname|Candice|Bergen}} || Presenter of the award for [[Primetime Emmy Award for Outstanding Lead Actor in a Comedy Series|Outstanding Lead Actor in a Comedy Series]]
+|-
+| {{sortname|America|Ferrera}}<br />{{sortname|Vanessa|Williams}} || Presenters of the award for [[Primetime Emmy Award for Outstanding Lead Actress in a Drama Series|Outstanding Lead Actress in a Drama Series]]
+|-
+| {{sortname|Kiefer|Sutherland}} || Presenter of the award for [[Primetime Emmy Award for Outstanding Lead Actor in a Drama Series|Outstanding Lead Actor in a Drama Series]]
+|-
+| {{sortname|Craig|Ferguson}}<br />{{sortname|Brooke|Shields}} || Presenters of the award for [[Primetime Emmy Award for Outstanding Lead Actress in a Comedy Series|Outstanding Lead Actress in a Comedy Series]]
+|-
+| {{sortname|Jimmy|Kimmel}} || Presenter of the award for [[Primetime Emmy Award for Outstanding Host for a Reality or Reality-Competition Program|Outstanding Host for a Reality or Reality-Competition Program]]
+|-
+| {{sortname|Mary Tyler|Moore}}<br />{{sortname|Betty|White}} || Presenters of the award for [[Primetime Emmy Award for Outstanding Comedy Series|Outstanding Comedy Series]]
+|-
+| {{sortname|Tom|Selleck}} || Presenter of the award for [[Primetime Emmy Award for Outstanding Drama Series|Outstanding Drama Series]]
+|}
+
+==In Memoriam==
+{{div col}}
+
+* [[George Carlin]] (twice)
+* [[Bernie Brillstein]]
+* [[Joey Bishop]]
+* [[William F. Buckley Jr.]]
+* [[Charlton Heston]]
+* [[Les Crane]]
+* [[Alice Ghostley]]
+* [[Ivan Dixon]]
+* [[Cyd Charisse]]
+* [[Mel Ferrer]]
+* [[Claudio Guzmán]]
+* [[Barry Morse]]
+* [[Deborah Kerr]]
+* [[Larry Harmon]]
+* [[Estelle Getty]]
+* [[Roger King (producer)|Roger King]]
+* [[Sydney Pollack]]
+* [[Ron Leavitt]]
+* [[Bernie Mac]]
+* Eric Lieber
+* [[Suzanne Pleshette]]
+* [[Abby Mann]]
+* [[Dick Martin (comedian)|Dick Martin]]
+* [[Delbert Mann]]
+* [[Harvey Korman]]
+* [[Jim McKay]]
+* [[Lois Nettleton]]
+* [[Mel Tolkin]]
+* [[Richard Widmark]]
+* [[Stan Winston]]
+* [[Tim Russert]]
+* [[Isaac Hayes]]
+
+{{div col end}}
+
+==References==
+{{reflist}}
+
+==External links==
+* [http://www.emmys.com/awards/nominees-winners/2008 Emmys.com list of 2008 Nominees & Winners]
+* [http://www.emmys.tv Academy of Television Arts and Sciences website]
+* {{IMDb event|0000223/2008}}
+
+{{EmmyAwardsbyYear}}
+
+[[Category:Primetime Emmy Award ceremonies|060]]
+[[Category:2008 television awards|Primetime Emmy Awards]]
+[[Category:2008 awards in the United States]]
+[[Category:2008 in Los Angeles]]
+[[Category:September 2008 in the United States]]

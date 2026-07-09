@@ -26,7 +26,11 @@
 
   const detail = $derived(getSelectedCeremony());
   const pastCeremonies = $derived(getCeremonies().filter((c) => c.status === "past"));
-  const openCeremonies = $derived(getCeremonies().filter((c) => c.status !== "past"));
+  // Only the single most recent open ceremony is predictable (ceremonies are
+  // returned newest-first), not a list of every non-past one.
+  const upcomingCeremony = $derived(
+    getCeremonies().find((c) => c.status !== "past") ?? null,
+  );
 
   onMount(() => {
     loadCeremonies();
@@ -214,22 +218,18 @@
           </button>
         {/each}
       </div>
-    {:else if openCeremonies.length === 0}
+    {:else if !upcomingCeremony}
       <div class="text-center text-text-muted py-12">
         No upcoming ceremony with open nominations right now.
       </div>
     {:else}
-      <div class="space-y-2">
-        {#each openCeremonies as c (c.id)}
-          <button
-            onclick={() => open(c)}
-            class="w-full text-left p-3 rounded-lg bg-surface hover:bg-surface-hover border border-border transition-colors"
-          >
-            <div class="font-medium">{c.name}</div>
-            <div class="text-xs text-text-muted">Nominations open — make your picks</div>
-          </button>
-        {/each}
-      </div>
+      <button
+        onclick={() => open(upcomingCeremony)}
+        class="w-full text-left p-4 rounded-lg bg-surface hover:bg-surface-hover border border-border transition-colors"
+      >
+        <div class="font-medium text-lg">{upcomingCeremony.name}</div>
+        <div class="text-sm text-text-muted">Nominations open — make your picks</div>
+      </button>
     {/if}
   {/if}
 </div>

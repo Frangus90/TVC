@@ -109,11 +109,21 @@ fn clean_entry(item: &str) -> (String, bool) {
     static TEMPLATE: OnceLock<Regex> = OnceLock::new();
     static WS: OnceLock<Regex> = OnceLock::new();
 
-    let is_winner = item.contains('\u{2021}') || item.contains("double dagger");
+    static HTML_TAG: OnceLock<Regex> = OnceLock::new();
+    static EMPTY_PARENS: OnceLock<Regex> = OnceLock::new();
+
+    // Winners are bold ('''…'''); nominees are italic only (''…''). Some eras also
+    // tag the winner with a dagger — literal ‡, {{double dagger}}, or {{double-dagger}}.
+    let is_winner = item.contains("'''")
+        || item.contains('\u{2021}')
+        || item.contains("double dagger")
+        || item.contains("double-dagger");
 
     let piped = LINK_PIPED.get_or_init(|| re(r"\[\[[^\]|]+\|([^\]]+)\]\]"));
     let plain = LINK_PLAIN.get_or_init(|| re(r"\[\[([^\]]+)\]\]"));
     let tmpl = TEMPLATE.get_or_init(|| re(r"\{\{[^{}]*\}\}"));
+    let html_tag = HTML_TAG.get_or_init(|| re(r"<[^>]+>"));
+    let empty_parens = EMPTY_PARENS.get_or_init(|| re(r"\(\s*\)"));
     let ws = WS.get_or_init(|| re(r"\s+"));
 
     // [[a|b]] -> b, then [[a]] -> a
@@ -123,16 +133,33 @@ fn clean_entry(item: &str) -> (String, bool) {
     for _ in 0..3 {
         out = tmpl.replace_all(&out, "").to_string();
     }
+    // Strip HTML tags (e.g. <small>…</small>) and decode common entities.
+    out = html_tag.replace_all(&out, "").to_string();
+    out = decode_entities(&out);
     out = out
         .replace("'''''", "")
         .replace("'''", "")
         .replace("''", "")
         .replace('\u{2021}', "");
+    out = empty_parens.replace_all(&out, "").to_string();
     out = ws.replace_all(&out, " ").to_string();
     let out = out
         .trim_matches(|c: char| c.is_whitespace() || c == '\u{2013}' || c == '-' || c == '•')
         .to_string();
     (out, is_winner)
+}
+
+/// Decode the handful of HTML entities that appear in award wikitext.
+fn decode_entities(s: &str) -> String {
+    s.replace("&nbsp;", " ")
+        .replace("&amp;", "&")
+        .replace("&ndash;", "\u{2013}")
+        .replace("&mdash;", "\u{2014}")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&apos;", "'")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
 }
 
 fn normalize_key(text: &str) -> String {
@@ -191,12 +218,12 @@ pub fn parse_wikitext(text: &str) -> Option<ParsedCeremony> {
         }
     }
 
-    // Per-category winner resolution: if a category has a marked winner, non-winners
-    // are `Some(false)`; if it has none, the results aren't out so all become `None`.
+    // Winners are bold (Wikipedia lists them first, in boldface, sometimes with a
+    // dagger); nominees are italic only. A category with no bold/dagger item is
+    // pre-ceremony, so its winners aren't known yet → all `is_winner` become None.
     let mut has_winners = false;
     for cat in &mut categories {
-        let winner_present = cat.nominees.iter().any(|n| n.is_winner == Some(true));
-        if winner_present {
+        if cat.nominees.iter().any(|n| n.is_winner == Some(true)) {
             has_winners = true;
         } else {
             for n in &mut cat.nominees {
@@ -278,5 +305,38 @@ mod tests {
     #[test]
     fn no_section_returns_none() {
         assert!(parse_wikitext("== Something else ==\nnot an awards page").is_none());
+    }
+
+    #[test]
+    fn old_format_winners_and_html_cleaning() {
+        // 89th Oscars uses {{double-dagger}} (hyphen); 60th Emmys use bold-only
+        // winners with no dagger. Both must be detected as past via list depth,
+        // and their &nbsp; / <small> markup must be cleaned out.
+        for (name, wt) in [
+            ("oscars_89", include_str!("fixtures/oscars_89.wikitext")),
+            ("emmys_60", include_str!("fixtures/emmys_60.wikitext")),
+        ] {
+            let p = parse_wikitext(wt).expect("has section");
+            assert!(p.has_winners, "{name}: should be detected as a past ceremony");
+            assert!(p.categories.len() > 5, "{name}: expected many categories");
+
+            let total_winners: usize = p
+                .categories
+                .iter()
+                .map(|c| c.nominees.iter().filter(|n| n.is_winner == Some(true)).count())
+                .sum();
+            assert!(
+                total_winners >= p.categories.len().saturating_sub(1),
+                "{name}: resolved {total_winners} winners across {} categories",
+                p.categories.len()
+            );
+
+            for cat in &p.categories {
+                for n in &cat.nominees {
+                    assert!(!n.title.contains('<'), "{name}: HTML tag leaked in '{}'", n.title);
+                    assert!(!n.title.contains("&nbsp;"), "{name}: entity not decoded in '{}'", n.title);
+                }
+            }
+        }
     }
 }
