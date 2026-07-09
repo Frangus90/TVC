@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { logger } from "../utils/logger";
+import { getDatabase } from "../utils/database";
 
 export type AwardType = "oscars" | "emmys";
 
@@ -49,6 +50,7 @@ let ceremonies = $state<CeremonySummary[]>([]);
 let selectedCeremony = $state<CeremonyDetail | null>(null);
 let loading = $state(false);
 let syncing = $state(false);
+let lastSync = $state<string | null>(null); // ISO timestamp of the last sync
 // Predictions for the selected ceremony: category_id -> nominee_id, plus score.
 let predictions = $state<Record<number, number>>({});
 let score = $state<{ correct: number; total: number } | null>(null);
@@ -68,6 +70,21 @@ export function isLoading() {
 export function isSyncing() {
   return syncing;
 }
+export function getLastSync() {
+  return lastSync;
+}
+
+async function loadLastSync() {
+  try {
+    const db = await getDatabase();
+    const rows = await db.select<{ value: string }[]>(
+      "SELECT value FROM settings WHERE key = 'awards_last_sync'",
+    );
+    lastSync = rows.length > 0 ? rows[0].value : null;
+  } catch (e) {
+    logger.error("[awards] load last sync failed", e);
+  }
+}
 
 export async function setAwardType(t: AwardType) {
   if (awardType === t) return;
@@ -82,6 +99,7 @@ export async function loadCeremonies() {
     ceremonies = await invoke<CeremonySummary[]>("get_award_ceremonies", {
       awardType,
     });
+    await loadLastSync();
   } catch (e) {
     logger.error("[awards] load ceremonies failed", e);
     ceremonies = [];
@@ -162,6 +180,7 @@ export async function refreshAwards(full = false): Promise<SyncSummary> {
   try {
     const summary = await invoke<SyncSummary>("sync_awards", { full });
     await loadCeremonies();
+    await loadLastSync();
     if (selectedCeremony) {
       await selectCeremony(selectedCeremony.id);
     }

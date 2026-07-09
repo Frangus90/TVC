@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { Award, Trophy, RefreshCw, ChevronLeft, Check } from "lucide-svelte";
+  import { Award, Trophy, RefreshCw, ChevronLeft, ChevronDown, Check } from "lucide-svelte";
   import {
     getAwardType,
     setAwardType,
@@ -14,6 +14,7 @@
     refreshAwards,
     getPrediction,
     getScore,
+    getLastSync,
     setPrediction,
     clearPrediction,
     type AwardType,
@@ -23,6 +24,19 @@
 
   type SubTab = "predict" | "history";
   let subTab = $state<SubTab>("history");
+  let refreshMenuOpen = $state(false);
+
+  function relativeTime(iso: string): string {
+    const then = new Date(iso).getTime();
+    if (isNaN(then)) return "";
+    const s = Math.max(0, Math.floor((Date.now() - then) / 1000));
+    if (s < 60) return "just now";
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+  }
 
   const detail = $derived(getSelectedCeremony());
   const pastCeremonies = $derived(getCeremonies().filter((c) => c.status === "past"));
@@ -83,22 +97,50 @@
       {/each}
     </div>
     <div class="flex items-center gap-3">
-      <button
-        onclick={() => doRefresh(true)}
-        disabled={isSyncing()}
-        class="text-xs text-text-muted hover:text-text disabled:opacity-50"
-        title="Re-pull 20 years of history from Wikipedia"
-      >
-        Full refresh
-      </button>
-      <button
-        onclick={() => doRefresh(false)}
-        disabled={isSyncing()}
-        class="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-surface hover:bg-surface-hover text-text disabled:opacity-50"
-      >
-        <RefreshCw class="w-4 h-4 {isSyncing() ? 'animate-spin' : ''}" />
-        Refresh
-      </button>
+      {#if getLastSync()}
+        <span class="text-xs text-text-muted">Updated {relativeTime(getLastSync()!)}</span>
+      {/if}
+      <div class="relative flex">
+        <button
+          onclick={() => doRefresh(false)}
+          disabled={isSyncing()}
+          class="flex items-center gap-1.5 pl-3 pr-2 py-1.5 text-sm rounded-l-lg bg-surface hover:bg-surface-hover text-text disabled:opacity-50"
+          title="Refresh the last 5 years from Wikipedia"
+        >
+          <RefreshCw class="w-4 h-4 {isSyncing() ? 'animate-spin' : ''}" />
+          Refresh
+        </button>
+        <button
+          onclick={() => (refreshMenuOpen = !refreshMenuOpen)}
+          disabled={isSyncing()}
+          aria-label="More refresh options"
+          class="px-1.5 py-1.5 rounded-r-lg bg-surface hover:bg-surface-hover text-text border-l border-border disabled:opacity-50"
+        >
+          <ChevronDown class="w-4 h-4" />
+        </button>
+        {#if refreshMenuOpen}
+          <button
+            type="button"
+            class="fixed inset-0 z-0 cursor-default"
+            tabindex="-1"
+            aria-label="Close menu"
+            onclick={() => (refreshMenuOpen = false)}
+          ></button>
+          <div
+            class="absolute right-0 top-full mt-1 w-48 bg-surface border border-border rounded-lg shadow-lg z-10 overflow-hidden"
+          >
+            <button
+              onclick={() => {
+                refreshMenuOpen = false;
+                doRefresh(true);
+              }}
+              class="w-full text-left px-3 py-2 text-sm hover:bg-surface-hover"
+            >
+              Full refresh (20 years)
+            </button>
+          </div>
+        {/if}
+      </div>
     </div>
   </div>
 
