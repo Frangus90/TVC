@@ -73,8 +73,10 @@ export async function saveSidebarWidth(): Promise<void> {
   }
 }
 
-// Tab state management
-export type SidebarTab = "shows" | "movies" | "archive" | "racing" | "tiers" | "awards";
+// Tab state management — the tab union is derived from the nav config so they
+// can't drift apart.
+import type { NavId } from "../config/navItems";
+export type SidebarTab = NavId;
 let activeTab = $state<SidebarTab>("shows");
 
 export function getSidebarTab() {

@@ -13,6 +13,7 @@
     goToToday,
   } from "../../stores/calendar.svelte";
   import { getSidebarTab } from "../../stores/sidebar.svelte";
+  import { navItemById } from "../../config/navItems";
   import { openConfirmDialog } from "../../stores/confirmDialog.svelte";
   import {
     getUnreadCount,
@@ -42,16 +43,17 @@
   }
 
   const tab = $derived(getSidebarTab());
+  const item = $derived(navItemById(tab));
   const isRacing = $derived(tab === "racing");
-  const isCalendar = $derived(tab === "shows" || tab === "movies" || tab === "archive");
+  const isCalendar = $derived(item.kind === "calendar");
 
   function getHeaderTitle(): string {
     const date = getCurrentDate();
     const mode = getViewMode();
 
+    // Racing is standalone but uses the calendar date-nav, so it keeps a date title.
     if (isRacing) return formatMonthYearLong(date);
-    if (tab === "tiers") return "Tier Rankings";
-    if (tab === "awards") return "Awards";
+    if (item.kind === "standalone") return item.label;
 
     if (mode === "week") {
       const weekStart = startOfWeek(date, { weekStartsOn: 1 });

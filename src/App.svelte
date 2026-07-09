@@ -23,6 +23,7 @@
   import { isWhatsNewOpen } from "./lib/stores/whatsNew.svelte";
   import { initWhatsNew } from "./lib/stores/whatsNew.svelte";
   import { getSidebarTab } from "./lib/stores/sidebar.svelte";
+  import { navItemById } from "./lib/config/navItems";
   import { showSuccess } from "./lib/stores/toast.svelte";
   import {
     setupNotificationListener,
@@ -48,7 +49,6 @@
   let DataManagementComponent = $state<any>(null);
   let UpdateModalComponent = $state<any>(null);
   let WhatsNewComponent = $state<any>(null);
-  let RaceCalendarComponent = $state<any>(null);
   let UnifiedSettingsComponent = $state<any>(null);
   let TierSearchModalComponent = $state<any>(null);
 
@@ -133,10 +133,14 @@
     }
   });
 
+  // Generic loader for standalone nav tabs (Racing/Tiers/Awards), driven by config.
+  let loadedNav = $state<Record<string, any>>({});
+  const activeItem = $derived(navItemById(getSidebarTab()));
   $effect(() => {
-    if (getSidebarTab() === "racing" && !RaceCalendarComponent) {
-      import("./lib/components/racing/RaceCalendar.svelte").then((mod) => {
-        RaceCalendarComponent = mod.default;
+    const item = activeItem;
+    if (item.kind === "standalone" && item.load && !loadedNav[item.id]) {
+      item.load().then((mod) => {
+        loadedNav[item.id] = mod.default;
       }).catch((e) => logger.error("Failed to load component", e));
     }
   });
@@ -161,8 +165,6 @@
   let MonthViewComponent = $state<any>(null);
   let WeekViewComponent = $state<any>(null);
   let AgendaViewComponent = $state<any>(null);
-  let TierViewComponent = $state<any>(null);
-  let AwardsViewComponent = $state<any>(null);
 
   $effect(() => {
     const viewMode = getViewMode();
@@ -177,23 +179,6 @@
     } else if (viewMode === "agenda" && !AgendaViewComponent) {
       import("./lib/components/calendar/AgendaView.svelte").then((mod) => {
         AgendaViewComponent = mod.default;
-      }).catch((e) => logger.error("Failed to load component", e));
-    }
-  });
-
-  // Tier and Awards are sidebar tabs (not calendar view modes) — load on demand.
-  $effect(() => {
-    if (getSidebarTab() === "tiers" && !TierViewComponent) {
-      import("./lib/components/calendar/TierView.svelte").then((mod) => {
-        TierViewComponent = mod.default;
-      }).catch((e) => logger.error("Failed to load component", e));
-    }
-  });
-
-  $effect(() => {
-    if (getSidebarTab() === "awards" && !AwardsViewComponent) {
-      import("./lib/components/awards/AwardsView.svelte").then((mod) => {
-        AwardsViewComponent = mod.default;
       }).catch((e) => logger.error("Failed to load component", e));
     }
   });
@@ -288,28 +273,13 @@
         <Header />
 
         <div class="flex-1 overflow-auto p-6">
-          {#if getSidebarTab() === "racing"}
-            {#if RaceCalendarComponent}
-              <RaceCalendarComponent />
+          {#if activeItem.kind === "standalone"}
+            {#if loadedNav[activeItem.id]}
+              {@const Comp = loadedNav[activeItem.id]}
+              <Comp />
             {:else}
               <div class="flex items-center justify-center h-full">
-                <div class="text-text-muted">Loading race calendar...</div>
-              </div>
-            {/if}
-          {:else if getSidebarTab() === "tiers"}
-            {#if TierViewComponent}
-              <TierViewComponent />
-            {:else}
-              <div class="flex items-center justify-center h-full">
-                <div class="text-text-muted">Loading tier list...</div>
-              </div>
-            {/if}
-          {:else if getSidebarTab() === "awards"}
-            {#if AwardsViewComponent}
-              <AwardsViewComponent />
-            {:else}
-              <div class="flex items-center justify-center h-full">
-                <div class="text-text-muted">Loading awards...</div>
+                <div class="text-text-muted">Loading {activeItem.label}…</div>
               </div>
             {/if}
           {:else}
