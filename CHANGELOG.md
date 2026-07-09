@@ -7,11 +7,13 @@ All notable changes to TVC will be documented in this file.
 ### Awards
 
 - **New Awards section**: Browse Oscar and Emmy nominations and 20 years of history, and play a "guess the winner" game for upcoming ceremonies. Data is pulled live from Wikipedia with a Refresh button and cached locally, so new nominations and winners arrive without shipping an app update. Each ceremony is discovered automatically by edition, so future ceremonies show up on their own
-- **Winner predictions**: For a ceremony whose nominations are out but the winners aren't announced yet, pick one nominee per category. Once the winners are in, the ceremony shows your picks highlighted green (correct) or red (missed) with an overall score
+- **Winner predictions**: For a ceremony whose nominations are out but the winners aren't announced yet, pick one nominee per category. Once the winners are in, the ceremony shows your picks highlighted green (correct) or red (missed) with an overall score. Upcoming ceremonies without nominations yet show when nominations are expected and the ceremony date
+- **Export your picks**: Save your predictions for a ceremony as a shareable image (only the categories you picked, with correct/missed marks once winners are known)
 
 ### Navigation
 
 - **Tiers is now a top-level sidebar tab** — alongside Shows, Movies, Racing, and the new Awards — instead of a calendar view-mode. The Month/Week/Agenda switcher is now calendar-only
+- **Archive moved to Data Management**: Archived shows and movies are now viewed and restored under Data Management → Archive, keeping the main navigation focused on browsing
 
 ## [0.13.5] - 28.06.2026
 
