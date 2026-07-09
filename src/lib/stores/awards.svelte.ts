@@ -38,11 +38,20 @@ export interface SyncSummary {
   errors: string[];
 }
 
+interface PredictionResults {
+  picks: { category_id: number; nominee_id: number }[];
+  correct: number;
+  total: number;
+}
+
 let awardType = $state<AwardType>("oscars");
 let ceremonies = $state<CeremonySummary[]>([]);
 let selectedCeremony = $state<CeremonyDetail | null>(null);
 let loading = $state(false);
 let syncing = $state(false);
+// Predictions for the selected ceremony: category_id -> nominee_id, plus score.
+let predictions = $state<Record<number, number>>({});
+let score = $state<{ correct: number; total: number } | null>(null);
 
 export function getAwardType() {
   return awardType;
@@ -87,6 +96,7 @@ export async function selectCeremony(id: number) {
     selectedCeremony = await invoke<CeremonyDetail>("get_ceremony_detail", {
       ceremonyId: id,
     });
+    await loadResults(id);
   } catch (e) {
     logger.error("[awards] load ceremony detail failed", e);
   } finally {
@@ -96,6 +106,54 @@ export async function selectCeremony(id: number) {
 
 export function clearSelectedCeremony() {
   selectedCeremony = null;
+  predictions = {};
+  score = null;
+}
+
+export function getPrediction(categoryId: number): number | undefined {
+  return predictions[categoryId];
+}
+
+export function getScore() {
+  return score;
+}
+
+async function loadResults(ceremonyId: number) {
+  try {
+    const res = await invoke<PredictionResults>("get_award_prediction_results", {
+      ceremonyId,
+    });
+    const map: Record<number, number> = {};
+    for (const p of res.picks) map[p.category_id] = p.nominee_id;
+    predictions = map;
+    score = { correct: res.correct, total: res.total };
+  } catch (e) {
+    logger.error("[awards] load prediction results failed", e);
+    predictions = {};
+    score = null;
+  }
+}
+
+export async function setPrediction(categoryId: number, nomineeId: number) {
+  try {
+    await invoke("set_award_prediction", { categoryId, nomineeId });
+    predictions = { ...predictions, [categoryId]: nomineeId };
+    if (selectedCeremony) await loadResults(selectedCeremony.id);
+  } catch (e) {
+    logger.error("[awards] set prediction failed", e);
+  }
+}
+
+export async function clearPrediction(categoryId: number) {
+  try {
+    await invoke("clear_award_prediction", { categoryId });
+    const next = { ...predictions };
+    delete next[categoryId];
+    predictions = next;
+    if (selectedCeremony) await loadResults(selectedCeremony.id);
+  } catch (e) {
+    logger.error("[awards] clear prediction failed", e);
+  }
 }
 
 /** Pull fresh data from Wikipedia. `full` re-pulls 20 years; otherwise incremental. */

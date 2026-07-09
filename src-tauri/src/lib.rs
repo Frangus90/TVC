@@ -320,6 +320,9 @@ pub fn run() {
             commands::awards::sync_awards,
             commands::awards::get_award_ceremonies,
             commands::awards::get_ceremony_detail,
+            commands::awards::set_award_prediction,
+            commands::awards::clear_award_prediction,
+            commands::awards::get_award_prediction_results,
             // App commands
             commands::app::exit_app,
         ])

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { Award, Trophy, RefreshCw, ChevronLeft } from "lucide-svelte";
+  import { Award, Trophy, RefreshCw, ChevronLeft, Check } from "lucide-svelte";
   import {
     getAwardType,
     setAwardType,
@@ -12,6 +12,10 @@
     selectCeremony,
     clearSelectedCeremony,
     refreshAwards,
+    getPrediction,
+    getScore,
+    setPrediction,
+    clearPrediction,
     type AwardType,
     type CeremonySummary,
   } from "../../stores/awards.svelte";
@@ -47,6 +51,15 @@
 
   function open(c: CeremonySummary) {
     selectCeremony(c.id);
+  }
+
+  function togglePick(categoryId: number, nomineeId: number) {
+    if (getSelectedCeremony()?.status === "past") return;
+    if (getPrediction(categoryId) === nomineeId) {
+      clearPrediction(categoryId);
+    } else {
+      setPrediction(categoryId, nomineeId);
+    }
   }
 </script>
 
@@ -86,6 +99,7 @@
   </div>
 
   {#if detail}
+    {@const isOpen = detail.status !== "past"}
     <!-- Ceremony detail -->
     <button
       onclick={clearSelectedCeremony}
@@ -93,31 +107,70 @@
     >
       <ChevronLeft class="w-4 h-4" /> Back
     </button>
-    <h2 class="text-xl font-semibold">{detail.name}</h2>
-    <p class="text-sm text-text-muted mb-4">
-      {detail.status === "past"
-        ? "Winners & nominees"
-        : "Nominations — winners not yet announced"}
-    </p>
+    <div class="flex items-start justify-between mb-4 gap-4">
+      <div>
+        <h2 class="text-xl font-semibold">{detail.name}</h2>
+        <p class="text-sm text-text-muted">
+          {isOpen
+            ? "Nominations open — tap a nominee to pick the winner"
+            : "Winners & nominees"}
+        </p>
+      </div>
+      {#if !isOpen && getScore() && getScore()!.total > 0}
+        <div class="text-right flex-shrink-0">
+          <div class="text-2xl font-bold text-accent">
+            {getScore()!.correct}/{getScore()!.total}
+          </div>
+          <div class="text-xs text-text-muted">correct picks</div>
+        </div>
+      {/if}
+    </div>
     <div class="space-y-4">
       {#each detail.categories as cat (cat.id)}
         <div class="bg-surface rounded-lg p-3 border border-border">
           <h3 class="font-medium mb-2">{cat.name}</h3>
           <ul class="space-y-1">
             {#each cat.nominees as nom (nom.id)}
-              <li
-                class="flex items-start gap-2 px-2 py-1 rounded {nom.is_winner
-                  ? 'bg-green-500/10'
-                  : ''}"
-              >
-                {#if nom.is_winner}
-                  <Trophy class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                {:else}
-                  <span class="w-4 flex-shrink-0"></span>
-                {/if}
-                <span class={nom.is_winner ? "font-medium text-text" : "text-text-muted"}>
-                  {nom.title}
-                </span>
+              {@const picked = getPrediction(cat.id) === nom.id}
+              <li>
+                <button
+                  type="button"
+                  disabled={!isOpen}
+                  onclick={() => togglePick(cat.id, nom.id)}
+                  class="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left transition-colors
+                    {nom.is_winner ? 'bg-green-500/10' : ''}
+                    {picked && isOpen ? 'ring-1 ring-accent bg-accent/10' : ''}
+                    {picked && !isOpen && !nom.is_winner ? 'bg-red-500/10' : ''}
+                    {isOpen ? 'hover:bg-surface-hover cursor-pointer' : 'cursor-default'}"
+                >
+                  {#if nom.is_winner}
+                    <Trophy class="w-4 h-4 text-green-500 flex-shrink-0" />
+                  {:else if picked}
+                    <Check class="w-4 h-4 text-accent flex-shrink-0" />
+                  {:else}
+                    <span class="w-4 flex-shrink-0"></span>
+                  {/if}
+                  <span
+                    class={nom.is_winner
+                      ? "font-medium text-text"
+                      : picked
+                        ? "text-text"
+                        : "text-text-muted"}
+                  >
+                    {nom.title}
+                  </span>
+                  {#if picked}
+                    <span
+                      class="ml-auto text-xs {!isOpen
+                        ? nom.is_winner
+                          ? 'text-green-500'
+                          : 'text-red-400'
+                        : 'text-accent'}"
+                    >
+                      your pick{!isOpen ? (nom.is_winner ? " ✓" : " ✗") : ""}
+                    </span>
+                  {/if}
+                </button>
               </li>
             {/each}
           </ul>

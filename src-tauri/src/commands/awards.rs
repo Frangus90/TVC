@@ -39,3 +39,37 @@ pub async fn get_ceremony_detail(
         .map_err(|e| format!("Database error: {e}"))?;
     db::get_ceremony_detail(&pool, ceremony_id).await
 }
+
+/// Set (or replace) the user's winner pick for a category.
+#[tauri::command]
+pub async fn set_award_prediction(
+    app: AppHandle,
+    category_id: i64,
+    nominee_id: i64,
+) -> Result<(), String> {
+    let pool = connection::get_pool(&app)
+        .await
+        .map_err(|e| format!("Database error: {e}"))?;
+    db::set_prediction(&pool, category_id, nominee_id).await
+}
+
+/// Remove the user's pick for a category.
+#[tauri::command]
+pub async fn clear_award_prediction(app: AppHandle, category_id: i64) -> Result<(), String> {
+    let pool = connection::get_pool(&app)
+        .await
+        .map_err(|e| format!("Database error: {e}"))?;
+    db::clear_prediction(&pool, category_id).await
+}
+
+/// The user's picks for a ceremony plus their score against revealed winners.
+#[tauri::command]
+pub async fn get_award_prediction_results(
+    app: AppHandle,
+    ceremony_id: i64,
+) -> Result<db::PredictionResults, String> {
+    let pool = connection::get_pool(&app)
+        .await
+        .map_err(|e| format!("Database error: {e}"))?;
+    db::get_prediction_results(&pool, ceremony_id).await
+}

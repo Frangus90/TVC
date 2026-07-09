@@ -4,6 +4,9 @@
 
 use serde::Serialize;
 use sqlx::{Row, SqlitePool};
+use std::collections::HashMap;
+
+use crate::awards::scoring::score_predictions;
 
 #[derive(Debug, Serialize)]
 pub struct CeremonySummary {
@@ -246,4 +249,171 @@ pub async fn get_setting(pool: &SqlitePool, key: &str) -> Option<String> {
         .await
         .ok()
         .flatten()
+}
+
+#[derive(Debug, Serialize)]
+pub struct CategoryPick {
+    pub category_id: i64,
+    pub nominee_id: i64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PredictionResults {
+    /// The user's pick per category (only categories they've picked).
+    pub picks: Vec<CategoryPick>,
+    /// Correct picks among categories whose winner is known.
+    pub correct: u32,
+    /// Categories that had both a pick and a revealed winner (i.e. scored).
+    pub total: u32,
+}
+
+/// Set (or replace) the user's pick for a category.
+pub async fn set_prediction(
+    pool: &SqlitePool,
+    category_id: i64,
+    nominee_id: i64,
+) -> Result<(), String> {
+    sqlx::query(
+        "INSERT INTO award_predictions (category_id, nominee_id, created_at, updated_at)
+         VALUES (?, ?, datetime('now'), datetime('now'))
+         ON CONFLICT(category_id) DO UPDATE SET
+             nominee_id = excluded.nominee_id, updated_at = datetime('now')",
+    )
+    .bind(category_id)
+    .bind(nominee_id)
+    .execute(pool)
+    .await
+    .map_err(|e| format!("set prediction: {e}"))?;
+    Ok(())
+}
+
+/// Remove the user's pick for a category.
+pub async fn clear_prediction(pool: &SqlitePool, category_id: i64) -> Result<(), String> {
+    sqlx::query("DELETE FROM award_predictions WHERE category_id = ?")
+        .bind(category_id)
+        .execute(pool)
+        .await
+        .map_err(|e| format!("clear prediction: {e}"))?;
+    Ok(())
+}
+
+/// The user's picks for one ceremony plus their score against revealed winners.
+pub async fn get_prediction_results(
+    pool: &SqlitePool,
+    ceremony_id: i64,
+) -> Result<PredictionResults, String> {
+    let pick_rows = sqlx::query(
+        "SELECT p.category_id AS category_id, p.nominee_id AS nominee_id
+         FROM award_predictions p
+         JOIN award_categories c ON c.id = p.category_id
+         WHERE c.ceremony_id = ?",
+    )
+    .bind(ceremony_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| format!("get predictions: {e}"))?;
+
+    let picks: Vec<CategoryPick> = pick_rows
+        .into_iter()
+        .map(|r| CategoryPick {
+            category_id: r.get("category_id"),
+            nominee_id: r.get("nominee_id"),
+        })
+        .collect();
+
+    let winner_rows = sqlx::query(
+        "SELECT n.category_id AS category_id, n.id AS nominee_id
+         FROM award_nominees n
+         JOIN award_categories c ON c.id = n.category_id
+         WHERE c.ceremony_id = ? AND n.is_winner = 1",
+    )
+    .bind(ceremony_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| format!("get winners: {e}"))?;
+
+    let winners: HashMap<i64, i64> = winner_rows
+        .into_iter()
+        .map(|r| (r.get::<i64, _>("category_id"), r.get::<i64, _>("nominee_id")))
+        .collect();
+
+    let pick_pairs: Vec<(i64, i64)> = picks.iter().map(|p| (p.category_id, p.nominee_id)).collect();
+    let (correct, total) = score_predictions(&pick_pairs, &winners);
+
+    Ok(PredictionResults {
+        picks,
+        correct,
+        total,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sqlx::sqlite::SqlitePoolOptions;
+
+    const SCHEMA: &str = "
+        CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT);
+        CREATE TABLE award_ceremonies (id INTEGER PRIMARY KEY AUTOINCREMENT, award_type TEXT NOT NULL,
+            edition INTEGER NOT NULL, name TEXT NOT NULL, year INTEGER NOT NULL, ceremony_date TEXT,
+            status TEXT NOT NULL, wiki_title TEXT NOT NULL, last_synced TEXT, UNIQUE(award_type, edition));
+        CREATE TABLE award_categories (id INTEGER PRIMARY KEY AUTOINCREMENT, ceremony_id INTEGER NOT NULL,
+            name TEXT NOT NULL, display_order INTEGER, UNIQUE(ceremony_id, name));
+        CREATE TABLE award_nominees (id INTEGER PRIMARY KEY AUTOINCREMENT, category_id INTEGER NOT NULL,
+            title TEXT NOT NULL, detail TEXT, is_winner INTEGER, source_key TEXT NOT NULL,
+            UNIQUE(category_id, source_key));
+        CREATE TABLE award_predictions (id INTEGER PRIMARY KEY AUTOINCREMENT, category_id INTEGER NOT NULL,
+            nominee_id INTEGER NOT NULL, created_at TEXT, updated_at TEXT, UNIQUE(category_id));
+    ";
+
+    async fn setup() -> (SqlitePool, i64, i64, i64, i64) {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        for stmt in SCHEMA.split(';').filter(|s| !s.trim().is_empty()) {
+            sqlx::query(stmt).execute(&pool).await.unwrap();
+        }
+        let cer = upsert_ceremony(&pool, "oscars", 97, "97th Academy Awards", 2025, "past", "97th Academy Awards")
+            .await
+            .unwrap();
+        let cat = upsert_category(&pool, cer, "Best Picture", 0).await.unwrap();
+        upsert_nominee(&pool, cat, "Anora", None, Some(1), "anora").await.unwrap();
+        upsert_nominee(&pool, cat, "Conclave", None, Some(0), "conclave").await.unwrap();
+        let winner: i64 = sqlx::query_scalar("SELECT id FROM award_nominees WHERE source_key='anora'")
+            .fetch_one(&pool).await.unwrap();
+        let loser: i64 = sqlx::query_scalar("SELECT id FROM award_nominees WHERE source_key='conclave'")
+            .fetch_one(&pool).await.unwrap();
+        (pool, cer, cat, winner, loser)
+    }
+
+    #[tokio::test]
+    async fn prediction_scoring_roundtrip() {
+        let (pool, cer, cat, winner, loser) = setup().await;
+
+        // No picks yet.
+        let r = get_prediction_results(&pool, cer).await.unwrap();
+        assert_eq!((r.correct, r.total, r.picks.len()), (0, 0, 0));
+
+        // Pick the eventual winner.
+        set_prediction(&pool, cat, winner).await.unwrap();
+        let r = get_prediction_results(&pool, cer).await.unwrap();
+        assert_eq!((r.correct, r.total, r.picks.len()), (1, 1, 1));
+
+        // Change the pick to a loser (upsert replaces).
+        set_prediction(&pool, cat, loser).await.unwrap();
+        let r = get_prediction_results(&pool, cer).await.unwrap();
+        assert_eq!((r.correct, r.total), (0, 1));
+
+        // Clear the pick.
+        clear_prediction(&pool, cat).await.unwrap();
+        let r = get_prediction_results(&pool, cer).await.unwrap();
+        assert_eq!((r.correct, r.total, r.picks.len()), (0, 0, 0));
+
+        // Detail read still works and orders the winner first.
+        let detail = get_ceremony_detail(&pool, cer).await.unwrap();
+        assert_eq!(detail.categories.len(), 1);
+        assert_eq!(detail.categories[0].nominees[0].is_winner, Some(true));
+    }
 }
