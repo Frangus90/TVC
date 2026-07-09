@@ -46,7 +46,7 @@ export interface CleanupEpisodePreview {
 
 // State
 let modalOpen = $state(false);
-let activeTab = $state<"overview" | "duplicates" | "cleanup">("overview");
+let activeTab = $state<"overview" | "duplicates" | "cleanup" | "archive">("overview");
 let loading = $state(false);
 let error = $state<string | null>(null);
 
@@ -101,7 +101,7 @@ export function closeDataManagement() {
   error = null;
 }
 
-export function setActiveTab(tab: "overview" | "duplicates" | "cleanup") {
+export function setActiveTab(tab: "overview" | "duplicates" | "cleanup" | "archive") {
   activeTab = tab;
 
   // Load data for the tab

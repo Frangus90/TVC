@@ -1,4 +1,4 @@
-import { Tv, Film, Archive, Flag, Layers, Award } from "lucide-svelte";
+import { Tv, Film, Flag, Layers, Award } from "lucide-svelte";
 import type { Component } from "svelte";
 
 /**
@@ -11,12 +11,13 @@ import type { Component } from "svelte";
  * - `kind: "standalone"` — main area is `load()`'s component, full-width, no list
  *   panel (Racing/Tiers/Awards).
  */
-export type NavId = "shows" | "movies" | "archive" | "racing" | "tiers" | "awards";
+export type NavId = "shows" | "movies" | "racing" | "tiers" | "awards";
 
 export interface NavItem {
   id: NavId;
   label: string;
-  icon: Component;
+  // lucide-svelte icon component (its props don't match Svelte's bare Component<{}>).
+  icon: any;
   kind: "calendar" | "standalone";
   /** Lazy loader for a standalone tab's main-area component. */
   load?: () => Promise<{ default: Component }>;
@@ -25,7 +26,6 @@ export interface NavItem {
 export const navItems: NavItem[] = [
   { id: "shows", label: "Shows", icon: Tv, kind: "calendar" },
   { id: "movies", label: "Movies", icon: Film, kind: "calendar" },
-  { id: "archive", label: "Archive", icon: Archive, kind: "calendar" },
   {
     id: "racing",
     label: "Racing",

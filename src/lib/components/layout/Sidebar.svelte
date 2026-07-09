@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Plus, Tv, Trash2, RefreshCw, Check, Film, Archive, RotateCcw, CalendarX, BarChart3, Database, PanelLeftClose, PanelLeft, Sparkles, Settings } from "lucide-svelte";
+  import { Plus, Tv, Trash2, RefreshCw, Check, Film, Archive, CalendarX, BarChart3, Database, PanelLeftClose, PanelLeft, Sparkles, Settings } from "lucide-svelte";
   import { onMount } from "svelte";
   import { navItems } from "../../config/navItems";
   import {
@@ -8,11 +8,7 @@
     openSearchModal,
     removeShow,
     archiveShow,
-    getArchivedShows,
-    loadArchivedShows,
-    unarchiveShow,
     isShowsLoading,
-    isArchivedShowsLoading,
   } from "../../stores/shows.svelte";
   import {
     getTrackedMovies,
@@ -20,13 +16,9 @@
     openMovieSearchModal,
     removeMovie,
     archiveMovie,
-    getArchivedMovies,
-    loadArchivedMovies,
-    unarchiveMovie,
     unscheduleMovie,
     openMovieDetail,
     isMoviesLoading,
-    isArchivedMoviesLoading,
   } from "../../stores/movies.svelte";
   import { openShowDetail } from "../../stores/showDetail.svelte";
   import {
@@ -78,8 +70,6 @@
     Promise.all([
       loadTrackedShows(),
       loadTrackedMovies(),
-      loadArchivedShows(),
-      loadArchivedMovies(),
       loadRacingSeries(),
       loadRacingConfig(),
       loadSidebarWidth(),
@@ -177,14 +167,6 @@
     }
   }
 
-  async function handleUnarchiveShow(showId: number) {
-    await unarchiveShow(showId);
-  }
-
-  async function handleUnarchiveMovie(movieId: number) {
-    await unarchiveMovie(movieId);
-  }
-
   function handleAddClick() {
     if (activeTab === "shows") {
       openSearchModal();
@@ -193,32 +175,6 @@
     }
   }
 
-  // Combined archive items with type indicator
-  interface ArchiveItem {
-    id: number;
-    name: string;
-    poster_url: string | null;
-    type: "show" | "movie";
-    color?: string | null;
-  }
-
-  function getArchiveItems(): ArchiveItem[] {
-    const shows: ArchiveItem[] = getArchivedShows().map(s => ({
-      id: s.id,
-      name: s.name,
-      poster_url: s.poster_url,
-      type: "show" as const,
-      color: s.color,
-    }));
-    const movies: ArchiveItem[] = getArchivedMovies().map(m => ({
-      id: m.id,
-      name: m.title,
-      poster_url: m.poster_url,
-      type: "movie" as const,
-      color: m.color,
-    }));
-    return [...shows, ...movies].sort((a, b) => a.name.localeCompare(b.name));
-  }
 </script>
 
 <aside
@@ -534,78 +490,6 @@
                   </div>
                 </div>
               {/if}
-            </li>
-          {/each}
-        </ul>
-      {/if}
-    {/if}
-
-    <!-- Archive Tab -->
-    {#if activeTab === "archive"}
-      {@const archiveItems = getArchiveItems()}
-      {#if isArchivedShowsLoading() || isArchivedMoviesLoading()}
-        <div class="space-y-2 py-2">
-          {#each Array(5) as _}
-            <div class="flex items-center gap-3 px-3 py-2">
-              {#if !theme.hidePosters}
-                <SkeletonLoader width="2rem" height="3rem" />
-              {/if}
-              <SkeletonLoader width="60%" height="1rem" />
-            </div>
-          {/each}
-        </div>
-      {:else if archiveItems.length === 0}
-        <EmptyState
-          icon={Archive}
-          title="No archived items"
-          message="Archive shows or movies you're done with to keep your list clean."
-        />
-      {:else}
-        <ul class="space-y-1">
-          {#each archiveItems as item}
-            <li>
-              <div class="group w-full flex items-center {isCompactList ? 'gap-2 px-2 py-1' : 'gap-3 px-3 py-2'} rounded-lg hover:bg-surface-hover transition-colors">
-                <div class="flex-1 flex items-center {isCompactList ? 'gap-2' : 'gap-3'}">
-                  {#if !theme.hidePosters}
-                    {#if item.poster_url}
-                      <img src={item.poster_url} alt="" class="w-8 h-12 rounded object-cover" loading="lazy" decoding="async" />
-                    {:else}
-                      <div class="w-8 h-12 rounded bg-border flex items-center justify-center">
-                        {#if item.type === "show"}
-                          <Tv class="w-4 h-4 text-text-muted" />
-                        {:else}
-                          <Film class="w-4 h-4 text-text-muted" />
-                        {/if}
-                      </div>
-                    {/if}
-                  {/if}
-                  <div class="flex-1 flex flex-col min-w-0">
-                    <div class="flex items-center gap-2">
-                      {#if item.color}
-                        <div
-                          class="w-3 h-3 rounded-full flex-shrink-0"
-                          style="background-color: {item.color};"
-                        ></div>
-                      {/if}
-                      <span class="text-sm truncate">{item.name}</span>
-                    </div>
-                    {#if !isCompactList}
-                      <span class="text-xs text-text-muted">
-                        {item.type === "show" ? "TV Show" : "Movie"}
-                      </span>
-                    {/if}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onclick={() => item.type === "show" ? handleUnarchiveShow(item.id) : handleUnarchiveMovie(item.id)}
-                  class="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-accent/20 text-accent transition-all"
-                  aria-label="Restore from archive"
-                  title="Restore from archive"
-                >
-                  <RotateCcw class="w-4 h-4" />
-                </button>
-              </div>
             </li>
           {/each}
         </ul>

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { fade, scale } from "svelte/transition";
   import { X, Database, Copy, RefreshCw, AlertTriangle, Check, CloudDownload, Download, Upload, ChevronDown, HelpCircle } from "lucide-svelte";
+  import ArchiveManager from "./ArchiveManager.svelte";
   import UnmigratedShowsResolver from "./UnmigratedShowsResolver.svelte";
   import {
     getUnmigratedShows,
@@ -367,6 +368,15 @@
           : 'text-text-muted hover:text-text'}"
       >
         Cleanup
+      </button>
+      <button
+        type="button"
+        onclick={() => setActiveTab("archive")}
+        class="px-4 py-3 text-sm font-medium transition-colors {activeTab === 'archive'
+          ? 'text-accent border-b-2 border-accent'
+          : 'text-text-muted hover:text-text'}"
+      >
+        Archive
       </button>
     </div>
 
@@ -819,6 +829,8 @@
             </div>
           </div>
         {/if}
+      {:else if activeTab === "archive"}
+        <ArchiveManager />
       {/if}
     </div>
 
