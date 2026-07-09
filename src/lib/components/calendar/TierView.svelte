@@ -26,7 +26,6 @@
   } from "../../stores/tiers.svelte";
   import { openShowDetail } from "../../stores/showDetail.svelte";
   import { openMovieDetail } from "../../stores/movies.svelte";
-  import { setSidebarTab } from "../../stores/sidebar.svelte";
   import { removeShow } from "../../stores/shows.svelte";
   import { removeMovie } from "../../stores/movies.svelte";
 
@@ -44,11 +43,11 @@
     }
   }
 
-  // Sync sidebar when sub-tab changes
+  // Switch between the shows and movies tier lists (local to this view now that
+  // Tiers is its own sidebar tab — must not touch the sidebar navigation).
   function switchSubTab(tab: TierSubTab) {
     subTab = tab;
     searchQuery = "";
-    setSidebarTab(tab);
   }
 
   // Context menu state
