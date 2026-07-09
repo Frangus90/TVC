@@ -6,7 +6,9 @@
 //! items are only exercised by tests, hence the module-wide dead_code allowance.
 #![allow(dead_code)]
 
+pub mod db;
 pub mod models;
 pub mod scoring;
 pub mod source;
+pub mod sync;
 pub mod wikipedia;

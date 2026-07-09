@@ -9,6 +9,7 @@ pub mod backup;
 pub mod arr;
 pub mod plex;
 pub mod racing;
+pub mod awards;
 pub mod notifications;
 pub mod tiers;
 pub mod app;

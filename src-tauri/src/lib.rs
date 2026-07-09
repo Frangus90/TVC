@@ -316,6 +316,10 @@ pub fn run() {
             commands::notifications::dismiss_notification,
             commands::notifications::dismiss_all_notifications,
             commands::notifications::test_in_app_notification,
+            // Awards commands
+            commands::awards::sync_awards,
+            commands::awards::get_award_ceremonies,
+            commands::awards::get_ceremony_detail,
             // App commands
             commands::app::exit_app,
         ])
@@ -375,6 +379,12 @@ pub fn run() {
             let app_handle2 = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 racing::auto_start_scheduler(app_handle2).await;
+            });
+
+            // Sync awards data in the background (full backfill if empty, else throttled)
+            let app_handle_awards = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                awards::sync::auto_sync_on_startup(app_handle_awards).await;
             });
 
             Ok(())
