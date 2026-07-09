@@ -132,6 +132,10 @@ export function getPrediction(categoryId: number): number | undefined {
   return predictions[categoryId];
 }
 
+export function getPredictionsMap(): Record<number, number> {
+  return predictions;
+}
+
 export function getScore() {
   return score;
 }

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { Award, Trophy, RefreshCw, ChevronLeft, ChevronDown, Check } from "lucide-svelte";
+  import { Award, Trophy, RefreshCw, ChevronLeft, ChevronDown, Check, Download } from "lucide-svelte";
+  import { exportPredictionsAsImage } from "../../utils/predictionExport";
   import {
     getAwardType,
     setAwardType,
@@ -13,6 +14,7 @@
     clearSelectedCeremony,
     refreshAwards,
     getPrediction,
+    getPredictionsMap,
     getScore,
     getLastSync,
     setPrediction,
@@ -78,6 +80,14 @@
     } else {
       setPrediction(categoryId, nomineeId);
     }
+  }
+
+  const pickCount = $derived(
+    detail ? detail.categories.filter((c) => getPrediction(c.id) != null).length : 0,
+  );
+
+  function exportPicks() {
+    if (detail) exportPredictionsAsImage(detail, getPredictionsMap());
   }
 </script>
 
@@ -162,14 +172,25 @@
             : "Winners & nominees"}
         </p>
       </div>
-      {#if !isOpen && getScore() && getScore()!.total > 0}
-        <div class="text-right flex-shrink-0">
-          <div class="text-2xl font-bold text-accent">
-            {getScore()!.correct}/{getScore()!.total}
+      <div class="flex items-center gap-4 flex-shrink-0">
+        {#if pickCount > 0}
+          <button
+            onclick={exportPicks}
+            class="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-surface hover:bg-surface-hover text-text"
+            title="Save your picks as a shareable image"
+          >
+            <Download class="w-4 h-4" /> Export picks
+          </button>
+        {/if}
+        {#if !isOpen && getScore() && getScore()!.total > 0}
+          <div class="text-right">
+            <div class="text-2xl font-bold text-accent">
+              {getScore()!.correct}/{getScore()!.total}
+            </div>
+            <div class="text-xs text-text-muted">correct picks</div>
           </div>
-          <div class="text-xs text-text-muted">correct picks</div>
-        </div>
-      {/if}
+        {/if}
+      </div>
     </div>
     <div class="space-y-4">
       {#each detail.categories as cat (cat.id)}
