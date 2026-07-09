@@ -2,6 +2,13 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.14.1] - Unreleased
+
+### Navigation
+
+- **Sidebar tabs no longer overflow at narrow widths**: With five tabs, the labels could stop fitting and spill over the calendar when the sidebar was resized. Below 340px the tab row now switches to larger icon-only tabs — labels return when you widen the sidebar, and tooltips are always available
+- **Color-coded, more distinctive nav icons**: Each tab now has its own icon color (Shows purple, Movies blue, Racing red, Tiers green, Awards gold), and Movies/Awards use more distinctive icons (clapperboard, trophy) so the icon-only row is easy to parse at a glance
+
 ## [0.14.0] - 09.07.2026
 
 ### Awards

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Plus, Tv, Trash2, RefreshCw, Check, Film, Archive, CalendarX, BarChart3, Database, PanelLeftClose, PanelLeft, Sparkles, Settings } from "lucide-svelte";
+  import { Plus, Tv, Trash2, RefreshCw, Check, Film, Flag, Archive, CalendarX, BarChart3, Database, PanelLeftClose, PanelLeft, Sparkles, Settings } from "lucide-svelte";
   import { onMount } from "svelte";
   import { navItems } from "../../config/navItems";
   import {
@@ -42,6 +42,7 @@
     loadSidebarWidth,
     saveSidebarWidth,
     SIDEBAR_COLLAPSED_WIDTH,
+    SIDEBAR_NAV_LABELS_MIN_WIDTH,
   } from "../../stores/sidebar.svelte";
   import {
     getEnabledSeries,
@@ -59,6 +60,10 @@
 
   // Use shared sidebar tab state
   const activeTab = $derived(getSidebarTab());
+  // Tab labels only fit above a minimum width; below it the row is icon-only.
+  const showTabLabels = $derived(
+    !isSidebarCollapsed() && getSidebarWidth() >= SIDEBAR_NAV_LABELS_MIN_WIDTH
+  );
   let selectedItems = $state<Set<number>>(new Set());
   let bulkMode = $state(false);
 
@@ -216,21 +221,25 @@
   </div>
 
   <!-- Tab Row (rendered from the nav config) -->
-  <div class="flex {isSidebarCollapsed() ? 'flex-col' : ''} border-b border-border">
+  <div class="flex {isSidebarCollapsed() ? 'flex-col' : ''} border-b border-border overflow-hidden">
     {#each navItems as item (item.id)}
       {@const Icon = item.icon}
+      {@const isActive = activeTab === item.id}
       <button
         type="button"
         onclick={() => switchTab(item.id)}
         class="flex-1 flex items-center justify-center gap-1 px-1 py-2.5 text-xs font-medium transition-colors
-          {activeTab === item.id ? 'text-accent border-b-2 border-accent bg-accent/5' : 'text-text-muted hover:text-text hover:bg-surface-hover'}
+          {isActive ? 'border-b-2' : 'text-text-muted hover:text-text hover:bg-surface-hover'}
           {isSidebarCollapsed() ? 'border-b-0 border-l-2' : ''}"
+        style={isActive ? `color: ${item.color}; border-color: ${item.color}; background-color: ${item.color}14;` : ""}
         aria-label={item.label}
-        aria-pressed={activeTab === item.id}
+        aria-pressed={isActive}
         title={item.label}
       >
-        <Icon class="w-3.5 h-3.5 flex-shrink-0" />
-        {#if !isSidebarCollapsed()}
+        <span class="flex-shrink-0 {isActive ? '' : 'opacity-75'}" style="color: {item.color}">
+          <Icon class={showTabLabels ? "w-3.5 h-3.5" : "w-5 h-5"} />
+        </span>
+        {#if showTabLabels}
           <span>{item.label}</span>
         {/if}
       </button>

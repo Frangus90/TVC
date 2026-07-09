@@ -7,6 +7,9 @@ export const SIDEBAR_DEFAULT_WIDTH = 256;
 export const SIDEBAR_MIN_WIDTH = 200;
 export const SIDEBAR_MAX_WIDTH = 500;
 export const SIDEBAR_COLLAPSED_WIDTH = 64;
+// Below this width the 5 labeled nav tabs can't fit on one line; the tab row
+// drops labels and shows icons only (with tooltips).
+export const SIDEBAR_NAV_LABELS_MIN_WIDTH = 340;
 
 let collapsed = $state(false);
 let width = $state(SIDEBAR_DEFAULT_WIDTH);
