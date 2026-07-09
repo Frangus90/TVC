@@ -34,5 +34,8 @@ pub struct ParsedCeremony {
     /// when present. Used to tell a genuinely-upcoming (predictable) ceremony from
     /// one that is already over.
     pub ceremony_date: Option<String>,
+    /// Date nominations are announced (ISO), from the Key dates table. Present for
+    /// upcoming ceremonies whose nominations aren't out yet.
+    pub nominations_date: Option<String>,
     pub categories: Vec<ParsedCategory>,
 }

@@ -1,0 +1,102 @@
+{{Short description|Award ceremony for films of 2026}}
+{{Oscars short description|films-year=2026}}
+{{Use American English|date=March 2026}}
+{{Use mdy dates|date=March 2026}}
+{{Infobox film awards
+| number = 99
+| award = Academy Awards
+| image = 
+| image_size = 220px
+| caption = 
+| alt = 
+| date = March 14, 2027
+| site = [[Dolby Theatre]],<br>[[Hollywood, Los Angeles]], California, U.S.
+| host = [[Conan O'Brien]]
+| preshow = 
+| producer = Raj Kapoor<br>Katy Mullan
+| director = 
+| best_picture = 
+| most_wins = 
+| most_nominations = 
+| network = '''Broadcast:'''<br>[[American Broadcasting Company|ABC]]<br>'''Streaming:'''<br>[[Hulu]]
+| duration = 
+| ratings = 
+| last = 98th
+| next = 100th
+}}
+The '''99th Academy Awards''' ceremony, presented by the [[Academy of Motion Picture Arts and Sciences]] (AMPAS), are scheduled to take place March 14, 2027, at the [[Dolby Theatre]] in [[Hollywood, Los Angeles]]. During the gala, the AMPAS will present [[Academy Awards]] (commonly referred to as the Oscars) in 24 categories, honoring [[2026 in film|films released in 2026]]. [[Conan O'Brien]] will host for the third straight year.
+
+In related events, the Academy is set to hold its 17th [[Governors Awards]] ceremony at the Ray Dolby Ballroom of the [[Ovation Hollywood]] complex in Hollywood on November 15, 2026.<ref name="Governors Awards">{{cite web |url=https://variety.com/2026/film/awards/glenn-close-ridley-scott-governors-awards-honorary-oscars-1236771529/ |title=Oscars: Glenn Close, Ridley Scott, Disney’s First Black Animator and Killer Films Founders Set for Honorary Prizes |last=Davis |first=Clayton |website=[[Variety (magazine)|Variety]] |date=June 10, 2026 |access-date=June 10, 2026 |url-status=live |archive-url=https://web.archive.org/web/20260610182721/https://variety.com/2026/film/awards/glenn-close-ridley-scott-governors-awards-honorary-oscars-1236771529/ |archive-date=June 10, 2026}}</ref>
+
+== Key dates ==
+{| class="wikitable"
+|+{{nowrap|Upcoming dates leading up to the 99th Academy Awards<ref name="Dates"/>}}
+!Date
+!Event
+|-
+|December 7, 2026
+|Preliminary voting begins
+|-
+|December 11, 2026
+|Preliminary voting ends
+|-
+|January 11, 2027
+|Nominations voting begins
+|-
+|January 15, 2027
+|Nominations voting ends
+|-
+|January 21, 2027
+|Nominations announced
+|-
+|February 25, 2027
+|Final voting begins
+|-
+|March 4, 2027
+|Final voting ends
+|-
+|March 14, 2027
+|Ceremony
+|}
+
+== Governors Awards ==
+On June 10, 2026, The Academy announced recipients on the [[Governors Awards]]. The ceremony is set to be held on November 15, 2026, during which the following awards will be presented:<ref name="Governors Awards"/>
+
+===Academy Honorary Awards===
+* [[Glenn Close]]{{snd}}"throughout her extraordinary body of work, Glenn Close's unparalleled emotional range has brought to life some of the most complex characters in cinema".<ref name="Governors Awards"/>
+* [[Floyd Norman]]{{snd}}"the legendary animator who has broken barriers and inspired generations of artists over his remarkable career".<ref name="Governors Awards"/>
+* [[Ridley Scott]]{{snd}}"a true visionary whose decades-long legacy has left an immeasurable impact on global cinema and culture".<ref name="Governors Awards"/>
+
+===Irving G. Thalberg Memorial Award===
+* [[Christine Vachon]] and [[Pamela Koffler]]{{snd}}who "play a central role in [[List of American independent films|American independent cinema]], championing bold, ambitious and distinctive storytelling".<ref name="Governors Awards"/>
+
+== Ceremony information ==
+[[File:Conan O'Brien by Gage Skidmore 2.jpg|thumb|[[Conan O'Brien]] will host for the third consecutive year.|265x265px]]
+On April 7, 2026, AMPAS announced the date of the ceremony and key dates pertaining to the 99 edition.<ref name="Dates">{{Cite web |last=Feinberg |first=Scott |date=April 7, 2026 |title=Oscars Dates Set for 2027 and 2028 |url=https://www.hollywoodreporter.com/movies/movie-news/oscars-dates-2027-2028-1236557925/ |access-date=May 7, 2025 |website=[[The Hollywood Reporter]] |url-status=live |archive-url=https://web.archive.org/web/20260407212850/https://www.hollywoodreporter.com/movies/movie-news/oscars-dates-2027-2028-1236557925/ |archive-date=April 7, 2026}}</ref> On May 12, 2026, it was announced that Raj Kapoor and Katy Mullan would return as executive producers for the fourth year in a row, and that [[Conan O'Brien]] would return as host for the third year in a row. In a joint statement, AMPAS CEO [[Bill Kramer (executive)|Bill Kramer]] and president [[Lynette Howell Taylor]] stated that "[Kapoor and Mullan] are an incredible team and have produced such captivating, entertaining and heartfelt shows over the last two years. We are so grateful for their ongoing partnership as we honor our global film community — and we look forward to Conan superbly leading the celebration with his brilliance and humor."<ref>{{Cite web|url=https://deadline.com/2026/05/conan-obrien-return-oscars-host-2027-1236899641/|title=Conan O’Brien To Return As Oscars Host In 2027, Raj Kapoor & Katy Mullan Back As Executive Producers|last=Andreeva|first=Nellie|date=May 12, 2026|website=[[Deadline Hollywood]]|access-date=May 12, 2026 |url-status=live |archive-url=https://web.archive.org/web/20260512210909/https://deadline.com/2026/05/conan-obrien-return-oscars-host-2027-1236899641/ |archive-date=May 12, 2026}}</ref>
+
+=== Rule and eligibility changes ===
+On May 1, 2026, the Academy announced several major rule changes taking effect for the 99th ceremony:<ref name="IndieWireChanges">{{Cite web |last=Jones |first=Marcus |date=May 1, 2026 |title=The Academy Announces Huge, Long-Awaited Change to Best International Feature Oscar Eligibility |url=https://www.indiewire.com/awards/industry/academy-rule-changes-99th-oscars-international-feature-1235191838/ |access-date=May 7, 2026 |website=[[IndieWire]] |url-status=live |archive-url=https://web.archive.org/web/20260512210909/https://www.indiewire.com/awards/industry/academy-rule-changes-99th-oscars-international-feature-1235191838/ |archive-date=May 12, 2026}}</ref><ref name="DeadlineChanges">{{Cite web |last=Hammond |first=Pete |date=May 1, 2026 |title=Oscar Rules Changes: Seismic Moves In Acting and International Film Categories |url=https://deadline.com/2026/05/oscar-rules-changes-2026-acting-international-film-1236878201/ |access-date=May 1, 2026 |website=[[Deadline Hollywood]] |url-status=live |archive-url=https://web.archive.org/web/20260502154020/https://deadline.com/2026/05/oscar-rules-changes-2026-acting-international-film-1236878201/ |archive-date=May 2, 2026}}</ref>
+
+* Eligibility for [[Academy Award for Best International Feature Film|Best International Feature Film]] will be expanded to also include non-English language films that win top jury awards at the [[Berlin International Film Festival|Berlin]] ([[Golden Bear]]), [[Busan International Film Festival|Busan]] (Best Film Award), [[Cannes Film Festival|Cannes]] ([[Palme d'Or]]), [[Sundance Film Festival|Sundance]] (World Cinema [[Grand Jury Prize Dramatic|Grand Jury Prize]]), [[Toronto International Film Festival|Toronto]] ([[Platform Prize]]), and [[Venice Film Festival|Venice]] ([[Golden Lion]]) film festivals, in addition to submissions made to the Academy's international film committee by individual countries. The changes came following examples of high-profile (such as ''[[Anatomy of a Fall]]'') and politically motivated snubs in the submissions process for International Feature Film at previous Academy Awards. Due to this change, the films themselves will be formally credited as recipients, rather than the submitting country; the director will continue to accept the award on behalf of the winning film's creative team. If the winning film is a national submission, the submitting country will continue to receive a statuette and inscription on its behalf as before.<ref name="DeadlineChanges" /><ref>{{Cite web |last=Hoepfner |first=Fran |date=May 1, 2026 |title=The Oscars Fixed Best International Feature! Or … Did They? |url=https://www.vulture.com/article/oscars-new-rules-best-international-feature-category.html |access-date=May 1, 2026 |website=[[Vulture (magazine)|Vulture]]  |url-status=live |archive-url=https://web.archive.org/web/20260502202124/https://www.vulture.com/article/oscars-new-rules-best-international-feature-category.html |archive-date=May 2, 2026}}</ref>
+* In alignment with other categories such as [[Academy Award for Best Director|Best Director]], an individual actor may now hold multiple nominations in a single acting category for their performances in different films, rather than only receiving a nomination for the performance that received the most votes.<ref name="IndieWireChanges" /><ref name="DeadlineChanges" />
+* Eligibility rules for the acting and writing categories now explicitly prohibit the use of [[Generative AI|generative artificial intelligence]], with writing categories restricting eligibility to works of human authorship, and acting categories requiring roles to be held by a billed cast member and "demonstrably performed by humans with their consent".<ref name="IndieWireChanges" /><ref name="DeadlineChanges" />
+
+==References==
+{{reflist}}
+
+==External links==
+* {{Official website|https://oscar.go.com/|Academy Awards official website}}
+* {{Official website|https://www.oscars.org/|The Academy of Motion Picture Arts and Sciences official website}}
+* [https://www.youtube.com/user/Oscars Oscars Channel] at [[YouTube]] (run by the [[Academy of Motion Picture Arts and Sciences]])
+
+
+{{Academy Awards}}
+
+{{Portal bar|Film|Lists|Greater Los Angeles|California|United States}}
+
+{{DEFAULTSORT:Academy Awards, 99}}
+[[Category:2026 film awards]]
+[[Category:2027 in Los Angeles]]
+[[Category:Academy Awards ceremonies]]
+[[Category:2027 in the United States]]
+[[Category:2027 awards in the United States]]

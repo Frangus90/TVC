@@ -11,6 +11,7 @@ export interface CeremonySummary {
   name: string;
   year: number;
   ceremony_date: string | null;
+  nominations_date: string | null;
   status: string; // "past" | "nominated" | "upcoming"
 }
 

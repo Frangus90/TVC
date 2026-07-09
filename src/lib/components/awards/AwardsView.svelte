@@ -89,6 +89,16 @@
   function exportPicks() {
     if (detail) exportPredictionsAsImage(detail, getPredictionsMap());
   }
+
+  function fmtDate(iso: string): string {
+    const d = new Date(iso + "T00:00:00");
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  }
 </script>
 
 <div class="max-w-4xl mx-auto">
@@ -169,7 +179,8 @@
         <p class="text-sm text-text-muted">
           {isOpen
             ? "Nominations open — tap a nominee to pick the winner"
-            : "Winners & nominees"}
+            : "Winners & nominees"}{#if detail.ceremony_date}
+            · Ceremony {fmtDate(detail.ceremony_date)}{/if}
         </p>
       </div>
       <div class="flex items-center gap-4 flex-shrink-0">
@@ -283,7 +294,25 @@
       </div>
     {:else if !upcomingCeremony}
       <div class="text-center text-text-muted py-12">
-        No upcoming ceremony with open nominations right now.
+        No upcoming ceremony right now.
+      </div>
+    {:else if upcomingCeremony.status === "upcoming"}
+      <!-- Nominations not out yet — informational, not pickable. -->
+      <div class="w-full p-4 rounded-lg bg-surface border border-border">
+        <div class="font-medium text-lg">{upcomingCeremony.name}</div>
+        {#if upcomingCeremony.nominations_date}
+          <div class="text-sm text-text-muted">
+            Nominations expected {fmtDate(upcomingCeremony.nominations_date)}
+          </div>
+        {/if}
+        {#if upcomingCeremony.ceremony_date}
+          <div class="text-sm text-text-muted">
+            Ceremony {fmtDate(upcomingCeremony.ceremony_date)}
+          </div>
+        {/if}
+        <div class="text-xs text-text-muted mt-2">
+          Picks open once nominations are announced.
+        </div>
       </div>
     {:else}
       <button
@@ -291,7 +320,12 @@
         class="w-full text-left p-4 rounded-lg bg-surface hover:bg-surface-hover border border-border transition-colors"
       >
         <div class="font-medium text-lg">{upcomingCeremony.name}</div>
-        <div class="text-sm text-text-muted">Nominations open — make your picks</div>
+        {#if upcomingCeremony.ceremony_date}
+          <div class="text-sm text-text-muted">
+            Ceremony {fmtDate(upcomingCeremony.ceremony_date)}
+          </div>
+        {/if}
+        <div class="text-sm text-accent mt-1">Make your picks →</div>
       </button>
     {/if}
   {/if}

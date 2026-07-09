@@ -86,19 +86,22 @@ async fn persist(
     // chronologically, so a lexical compare is correct.
     let today = Utc::now().date_naive().to_string();
     let current_year = Utc::now().year();
+    // Is the ceremony still ahead of us? Prefer the parsed ceremony date; fall back
+    // to the edition year when there's no date.
+    let is_future = match &parsed.ceremony_date {
+        Some(d) => d.as_str() >= today.as_str(),
+        None => year >= current_year,
+    };
     let status = if parsed.has_winners {
         "past"
-    } else if parsed.categories.is_empty() || year < current_year {
-        // Nothing parseable to predict, or an edition from a past year — never
-        // predictable, regardless of missing winner markers.
+    } else if !is_future {
+        // Already happened (or an old edition) — never predictable.
         "past"
-    } else if let Some(ref d) = parsed.ceremony_date {
-        if d.as_str() >= today.as_str() {
-            "nominated"
-        } else {
-            "past"
-        }
+    } else if parsed.categories.is_empty() {
+        // Future ceremony whose nominations aren't out yet.
+        "upcoming"
     } else {
+        // Future ceremony with nominations out — predictable.
         "nominated"
     };
     // `name` and `wiki_title` are both the page title (e.g. "97th Academy Awards").
@@ -109,6 +112,7 @@ async fn persist(
         title,
         year,
         parsed.ceremony_date.as_deref(),
+        parsed.nominations_date.as_deref(),
         status,
         title,
     )
@@ -176,7 +180,7 @@ mod it_tests {
         CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT);
         CREATE TABLE award_ceremonies (id INTEGER PRIMARY KEY AUTOINCREMENT, award_type TEXT NOT NULL,
             edition INTEGER NOT NULL, name TEXT NOT NULL, year INTEGER NOT NULL, ceremony_date TEXT,
-            status TEXT NOT NULL, wiki_title TEXT NOT NULL, last_synced TEXT, UNIQUE(award_type, edition));
+            nominations_date TEXT, status TEXT NOT NULL, wiki_title TEXT NOT NULL, last_synced TEXT, UNIQUE(award_type, edition));
         CREATE TABLE award_categories (id INTEGER PRIMARY KEY AUTOINCREMENT,
             ceremony_id INTEGER NOT NULL, name TEXT NOT NULL, display_order INTEGER, UNIQUE(ceremony_id, name));
         CREATE TABLE award_nominees (id INTEGER PRIMARY KEY AUTOINCREMENT, category_id INTEGER NOT NULL,
@@ -210,8 +214,9 @@ mod it_tests {
 
         let oscars = db::get_ceremonies(&pool, "oscars").await.unwrap();
         assert!(!oscars.is_empty(), "oscars ceremonies stored");
-        let detail = db::get_ceremony_detail(&pool, oscars[0].id).await.unwrap();
-        assert!(!detail.categories.is_empty(), "ceremony has categories");
+        let past = oscars.iter().find(|c| c.status == "past").expect("a past oscar");
+        let detail = db::get_ceremony_detail(&pool, past.id).await.unwrap();
+        assert!(!detail.categories.is_empty(), "past ceremony has categories");
 
         // Date-aware status: a ceremony is only predictable ("nominated") when its
         // nominations are out and the ceremony is still in the future.

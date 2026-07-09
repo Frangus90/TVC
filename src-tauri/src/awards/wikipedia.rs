@@ -92,17 +92,16 @@ fn winner_section(text: &str) -> Option<&str> {
     Some(&tail[..end])
 }
 
-/// Ceremony date (ISO `YYYY-MM-DD`) from the page's "Key dates" table, if present.
-/// The table lists (Date, Event) rows; the ceremony is the row whose event is the
-/// ceremony/telecast. Returns `None` for pages without a Key-dates section (most
-/// past ceremonies) or an unparseable date.
-fn parse_ceremony_date(text: &str) -> Option<String> {
+/// `(date, event)` rows from the page's "Key dates" table (empty if none).
+fn key_date_rows(text: &str) -> Vec<(String, String)> {
     static START: OnceLock<Regex> = OnceLock::new();
     static NEXT: OnceLock<Regex> = OnceLock::new();
     let start = START.get_or_init(|| re(r"(?m)^==\s*Key dates\s*==\s*$"));
     let next = NEXT.get_or_init(|| re(r"(?m)^==[^=].*==\s*$"));
 
-    let m = start.find(text)?;
+    let Some(m) = start.find(text) else {
+        return Vec::new();
+    };
     let tail = &text[m.end()..];
     let end = next.find(tail).map(|mm| mm.start()).unwrap_or(tail.len());
     let section = &tail[..end];
@@ -121,17 +120,37 @@ fn parse_ceremony_date(text: &str) -> Option<String> {
         .map(|l| l.trim_start_matches('|').trim().to_string())
         .collect();
 
-    for pair in cells.chunks(2) {
-        if let [date, event] = pair {
-            let e = event.to_lowercase();
-            if e.contains("ceremony") || e.contains("telecast") {
-                if let Some(iso) = parse_date_to_iso(date) {
-                    return Some(iso);
-                }
-            }
+    cells
+        .chunks(2)
+        .filter_map(|p| match p {
+            [date, event] => Some((date.clone(), event.clone())),
+            _ => None,
+        })
+        .collect()
+}
+
+/// Ceremony date (ISO `YYYY-MM-DD`) from the Key-dates table — the ceremony/telecast
+/// row. `None` for pages without a Key-dates section (most past ceremonies).
+fn parse_ceremony_date(text: &str) -> Option<String> {
+    key_date_rows(text).into_iter().find_map(|(date, event)| {
+        let e = event.to_lowercase();
+        if e.contains("ceremony") || e.contains("telecast") {
+            parse_date_to_iso(&date)
+        } else {
+            None
         }
-    }
-    None
+    })
+}
+
+/// Date nominations are announced (ISO) from the Key-dates table.
+fn parse_nominations_date(text: &str) -> Option<String> {
+    key_date_rows(text).into_iter().find_map(|(date, event)| {
+        if event.to_lowercase().contains("nominations announced") {
+            parse_date_to_iso(&date)
+        } else {
+            None
+        }
+    })
 }
 
 /// Parse a "Month D, YYYY" date cell to ISO `YYYY-MM-DD`.
@@ -220,11 +239,33 @@ fn normalize_key(text: &str) -> String {
     text.to_lowercase().split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-/// Parse a ceremony page's wikitext into structured categories + nominees.
-/// Returns `None` if the page has no "Winners and nominees" section.
+/// Parse a ceremony page's wikitext into structured categories + nominees, plus
+/// its ceremony/nominations dates. Returns `None` only for a page that is neither
+/// an awards ceremony (no nominees) nor scheduled (no Key-dates table) — so a
+/// not-yet-nominated upcoming ceremony still parses (with empty categories).
 pub fn parse_wikitext(text: &str) -> Option<ParsedCeremony> {
-    let section = winner_section(text)?;
+    let ceremony_date = parse_ceremony_date(text);
+    let nominations_date = parse_nominations_date(text);
 
+    let (has_winners, categories) = match winner_section(text) {
+        Some(section) => parse_winner_section(section),
+        None => (false, Vec::new()),
+    };
+
+    if categories.is_empty() && ceremony_date.is_none() && nominations_date.is_none() {
+        return None;
+    }
+
+    Some(ParsedCeremony {
+        has_winners,
+        ceremony_date,
+        nominations_date,
+        categories,
+    })
+}
+
+/// Parse the "Winners and nominees" section into categories with resolved winners.
+fn parse_winner_section(section: &str) -> (bool, Vec<ParsedCategory>) {
     // Strip multi-line refs and comments first: their bulleted `* {{cite}}` lines
     // would otherwise leak in as nominees, and refs can sit between a category's
     // `[[link]]` and its closing `}}`.
@@ -289,11 +330,7 @@ pub fn parse_wikitext(text: &str) -> Option<ParsedCeremony> {
         }
     }
 
-    Some(ParsedCeremony {
-        has_winners,
-        ceremony_date: parse_ceremony_date(text),
-        categories,
-    })
+    (has_winners, categories)
 }
 
 #[cfg(test)]
@@ -370,6 +407,17 @@ mod tests {
         // 78th Emmys "Key dates" lists "September 14, 2026 | NBC Telecast …".
         let e78 = parse_wikitext(include_str!("fixtures/emmys_78.wikitext")).unwrap();
         assert_eq!(e78.ceremony_date.as_deref(), Some("2026-09-14"));
+    }
+
+    #[test]
+    fn upcoming_ceremony_without_nominations_parses_dates_only() {
+        // 99th Oscars: no "Winners and nominees" section yet, but a Key-dates table
+        // with the nominations-announced and ceremony dates.
+        let o99 = parse_wikitext(include_str!("fixtures/oscars_99.wikitext")).unwrap();
+        assert!(o99.categories.is_empty(), "no nominees yet");
+        assert!(!o99.has_winners);
+        assert_eq!(o99.ceremony_date.as_deref(), Some("2027-03-14"));
+        assert_eq!(o99.nominations_date.as_deref(), Some("2027-01-21"));
     }
 
     #[test]

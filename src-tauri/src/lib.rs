@@ -33,6 +33,7 @@ const MIGRATION_014: &str = include_str!("../migrations/014_add_tiers.sql");
 const MIGRATION_015: &str = include_str!("../migrations/015_tvdb_to_tmdb.sql");
 const MIGRATION_016: &str = include_str!("../migrations/016_racing_session_feeds.sql");
 const MIGRATION_017: &str = include_str!("../migrations/017_add_awards.sql");
+const MIGRATION_018: &str = include_str!("../migrations/018_awards_nominations_date.sql");
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -56,6 +57,7 @@ pub fn run() {
         MigrationDef { version: 15, sql: MIGRATION_015 },
         MigrationDef { version: 16, sql: MIGRATION_016 },
         MigrationDef { version: 17, sql: MIGRATION_017 },
+        MigrationDef { version: 18, sql: MIGRATION_018 },
     ]);
 
     let migrations = vec![
@@ -159,6 +161,12 @@ pub fn run() {
             version: 17,
             description: "add awards tables",
             sql: MIGRATION_017,
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 18,
+            description: "add awards nominations date",
+            sql: MIGRATION_018,
             kind: MigrationKind::Up,
         },
     ];
