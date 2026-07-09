@@ -30,5 +30,9 @@ pub struct ParsedCategory {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParsedCeremony {
     pub has_winners: bool,
+    /// Ceremony date (ISO `YYYY-MM-DD`) parsed from the page's "Key dates" table,
+    /// when present. Used to tell a genuinely-upcoming (predictable) ceremony from
+    /// one that is already over.
+    pub ceremony_date: Option<String>,
     pub categories: Vec<ParsedCategory>,
 }

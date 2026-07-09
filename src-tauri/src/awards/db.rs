@@ -52,20 +52,22 @@ pub async fn upsert_ceremony(
     edition: i32,
     name: &str,
     year: i32,
+    ceremony_date: Option<&str>,
     status: &str,
     wiki_title: &str,
 ) -> Result<i64, String> {
     sqlx::query(
-        "INSERT INTO award_ceremonies (award_type, edition, name, year, status, wiki_title, last_synced)
-         VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+        "INSERT INTO award_ceremonies (award_type, edition, name, year, ceremony_date, status, wiki_title, last_synced)
+         VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
          ON CONFLICT(award_type, edition) DO UPDATE SET
-             name = excluded.name, year = excluded.year, status = excluded.status,
-             wiki_title = excluded.wiki_title, last_synced = excluded.last_synced",
+             name = excluded.name, year = excluded.year, ceremony_date = excluded.ceremony_date,
+             status = excluded.status, wiki_title = excluded.wiki_title, last_synced = excluded.last_synced",
     )
     .bind(award_type)
     .bind(edition)
     .bind(name)
     .bind(year)
+    .bind(ceremony_date)
     .bind(status)
     .bind(wiki_title)
     .execute(pool)
@@ -406,7 +408,7 @@ mod tests {
         for stmt in SCHEMA.split(';').filter(|s| !s.trim().is_empty()) {
             sqlx::query(stmt).execute(&pool).await.unwrap();
         }
-        let cer = upsert_ceremony(&pool, "oscars", 97, "97th Academy Awards", 2025, "past", "97th Academy Awards")
+        let cer = upsert_ceremony(&pool, "oscars", 97, "97th Academy Awards", 2025, None, "past", "97th Academy Awards")
             .await
             .unwrap();
         let cat = upsert_category(&pool, cer, "Best Picture", 0).await.unwrap();

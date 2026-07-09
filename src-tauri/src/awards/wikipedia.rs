@@ -7,6 +7,7 @@
 //! the winner marker (`‡` on Oscars, `{{double dagger}}` on Emmys).
 
 use crate::awards::models::{ParsedCategory, ParsedCeremony, ParsedNominee};
+use chrono::NaiveDate;
 use regex::Regex;
 use std::sync::OnceLock;
 
@@ -89,6 +90,56 @@ fn winner_section(text: &str) -> Option<&str> {
     let tail = &text[m.end()..];
     let end = next.find(tail).map(|mm| mm.start()).unwrap_or(tail.len());
     Some(&tail[..end])
+}
+
+/// Ceremony date (ISO `YYYY-MM-DD`) from the page's "Key dates" table, if present.
+/// The table lists (Date, Event) rows; the ceremony is the row whose event is the
+/// ceremony/telecast. Returns `None` for pages without a Key-dates section (most
+/// past ceremonies) or an unparseable date.
+fn parse_ceremony_date(text: &str) -> Option<String> {
+    static START: OnceLock<Regex> = OnceLock::new();
+    static NEXT: OnceLock<Regex> = OnceLock::new();
+    let start = START.get_or_init(|| re(r"(?m)^==\s*Key dates\s*==\s*$"));
+    let next = NEXT.get_or_init(|| re(r"(?m)^==[^=].*==\s*$"));
+
+    let m = start.find(text)?;
+    let tail = &text[m.end()..];
+    let end = next.find(tail).map(|mm| mm.start()).unwrap_or(tail.len());
+    let section = &tail[..end];
+
+    // Data cells are lines starting with a single '|' (not |-, |+, |}); within the
+    // table they alternate (date, event).
+    let cells: Vec<String> = section
+        .lines()
+        .map(|l| l.trim())
+        .filter(|l| {
+            l.starts_with('|')
+                && !l.starts_with("|-")
+                && !l.starts_with("|+")
+                && !l.starts_with("|}")
+        })
+        .map(|l| l.trim_start_matches('|').trim().to_string())
+        .collect();
+
+    for pair in cells.chunks(2) {
+        if let [date, event] = pair {
+            let e = event.to_lowercase();
+            if e.contains("ceremony") || e.contains("telecast") {
+                if let Some(iso) = parse_date_to_iso(date) {
+                    return Some(iso);
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Parse a "Month D, YYYY" date cell to ISO `YYYY-MM-DD`.
+fn parse_date_to_iso(cell: &str) -> Option<String> {
+    let (cleaned, _) = clean_entry(cell);
+    NaiveDate::parse_from_str(cleaned.trim(), "%B %d, %Y")
+        .ok()
+        .map(|d| d.format("%Y-%m-%d").to_string())
 }
 
 /// Category display name from the last `[[link|Display]]` (or `[[link]]`) inside an
@@ -237,6 +288,7 @@ pub fn parse_wikitext(text: &str) -> Option<ParsedCeremony> {
 
     Some(ParsedCeremony {
         has_winners,
+        ceremony_date: parse_ceremony_date(text),
         categories,
     })
 }
@@ -308,6 +360,13 @@ mod tests {
     #[test]
     fn no_section_returns_none() {
         assert!(parse_wikitext("== Something else ==\nnot an awards page").is_none());
+    }
+
+    #[test]
+    fn parses_ceremony_date_from_key_dates() {
+        // 78th Emmys "Key dates" lists "September 14, 2026 | NBC Telecast …".
+        let e78 = parse_wikitext(include_str!("fixtures/emmys_78.wikitext")).unwrap();
+        assert_eq!(e78.ceremony_date.as_deref(), Some("2026-09-14"));
     }
 
     #[test]

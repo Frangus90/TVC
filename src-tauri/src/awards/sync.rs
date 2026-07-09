@@ -80,10 +80,34 @@ async fn persist(
     summary: &mut SyncSummary,
 ) -> Result<(), String> {
     let year = award.year_for_edition(edition);
-    let status = if parsed.has_winners { "past" } else { "nominated" };
+    // Predictable only if nominations are out (no winners yet) AND the ceremony is
+    // still in the future. A ceremony that's already happened is "past" even if
+    // Wikipedia hasn't filled in its winners yet. ISO date strings compare
+    // chronologically, so a lexical compare is correct.
+    let today = Utc::now().date_naive().to_string();
+    let status = if parsed.has_winners {
+        "past"
+    } else if let Some(ref d) = parsed.ceremony_date {
+        if d.as_str() >= today.as_str() {
+            "nominated"
+        } else {
+            "past"
+        }
+    } else {
+        "nominated"
+    };
     // `name` and `wiki_title` are both the page title (e.g. "97th Academy Awards").
-    let ceremony_id =
-        db::upsert_ceremony(pool, award.as_str(), edition, title, year, status, title).await?;
+    let ceremony_id = db::upsert_ceremony(
+        pool,
+        award.as_str(),
+        edition,
+        title,
+        year,
+        parsed.ceremony_date.as_deref(),
+        status,
+        title,
+    )
+    .await?;
     summary.ceremonies += 1;
 
     for cat in &parsed.categories {
@@ -183,5 +207,17 @@ mod it_tests {
         assert!(!oscars.is_empty(), "oscars ceremonies stored");
         let detail = db::get_ceremony_detail(&pool, oscars[0].id).await.unwrap();
         assert!(!detail.categories.is_empty(), "ceremony has categories");
+
+        // Date-aware status: a ceremony is only predictable ("nominated") when its
+        // nominations are out and the ceremony is still in the future.
+        let emmys = db::get_ceremonies(&pool, "emmys").await.unwrap();
+        let open = |cs: &[db::CeremonySummary]| {
+            cs.iter()
+                .filter(|c| c.status != "past")
+                .map(|c| format!("{} ({})", c.name, c.ceremony_date.clone().unwrap_or_default()))
+                .collect::<Vec<_>>()
+        };
+        println!("predictable oscars: {:?}", open(&oscars));
+        println!("predictable emmys: {:?}", open(&emmys));
     }
 }
