@@ -123,7 +123,9 @@ fn clean_entry(item: &str) -> (String, bool) {
     let plain = LINK_PLAIN.get_or_init(|| re(r"\[\[([^\]]+)\]\]"));
     let tmpl = TEMPLATE.get_or_init(|| re(r"\{\{[^{}]*\}\}"));
     let html_tag = HTML_TAG.get_or_init(|| re(r"<[^>]+>"));
-    let empty_parens = EMPTY_PARENS.get_or_init(|| re(r"\(\s*\)"));
+    // Also eat a leading space so "Name (), Rest" -> "Name, Rest" (the () is often
+    // an emptied <small>(…)</small> after tag stripping).
+    let empty_parens = EMPTY_PARENS.get_or_init(|| re(r" *\(\s*\)"));
     let ws = WS.get_or_init(|| re(r"\s+"));
 
     // [[a|b]] -> b, then [[a]] -> a
@@ -143,6 +145,7 @@ fn clean_entry(item: &str) -> (String, bool) {
         .replace('\u{2021}', "");
     out = empty_parens.replace_all(&out, "").to_string();
     out = ws.replace_all(&out, " ").to_string();
+    out = out.replace(" ,", ",");
     let out = out
         .trim_matches(|c: char| c.is_whitespace() || c == '\u{2013}' || c == '-' || c == '•')
         .to_string();

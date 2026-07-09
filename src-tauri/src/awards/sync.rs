@@ -89,6 +89,7 @@ async fn persist(
     for cat in &parsed.categories {
         let cat_id = db::upsert_category(pool, ceremony_id, &cat.name, cat.display_order).await?;
         summary.categories += 1;
+        let mut keys = Vec::with_capacity(cat.nominees.len());
         for nom in &cat.nominees {
             let is_winner = nom.is_winner.map(|w| if w { 1_i64 } else { 0_i64 });
             db::upsert_nominee(
@@ -100,11 +101,15 @@ async fn persist(
                 &nom.source_key,
             )
             .await?;
+            keys.push(nom.source_key.clone());
             summary.nominees += 1;
             if nom.is_winner == Some(true) {
                 summary.winners += 1;
             }
         }
+        // Drop rows from a previous sync that this parse no longer produces
+        // (old-format/uncleaned entries) so re-syncing can't leave duplicates.
+        db::delete_nominees_not_in(pool, cat_id, &keys).await?;
     }
     Ok(())
 }

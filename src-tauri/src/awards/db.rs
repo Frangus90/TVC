@@ -131,6 +131,37 @@ pub async fn upsert_nominee(
     Ok(())
 }
 
+/// Remove a category's nominees whose `source_key` is not in `keep` — i.e. rows
+/// left over from a previous sync (stale/renamed/old-format entries). Rows that
+/// match are left in place by the caller's upsert, so their ids (and any
+/// predictions pointing at them) survive.
+pub async fn delete_nominees_not_in(
+    pool: &SqlitePool,
+    category_id: i64,
+    keep: &[String],
+) -> Result<(), String> {
+    if keep.is_empty() {
+        sqlx::query("DELETE FROM award_nominees WHERE category_id = ?")
+            .bind(category_id)
+            .execute(pool)
+            .await
+            .map_err(|e| format!("prune nominees: {e}"))?;
+        return Ok(());
+    }
+    let placeholders = std::iter::repeat("?").take(keep.len()).collect::<Vec<_>>().join(",");
+    let sql = format!(
+        "DELETE FROM award_nominees WHERE category_id = ? AND source_key NOT IN ({placeholders})"
+    );
+    let mut q = sqlx::query(&sql).bind(category_id);
+    for k in keep {
+        q = q.bind(k);
+    }
+    q.execute(pool)
+        .await
+        .map_err(|e| format!("prune nominees: {e}"))?;
+    Ok(())
+}
+
 pub async fn get_ceremonies(
     pool: &SqlitePool,
     award_type: &str,
@@ -415,5 +446,32 @@ mod tests {
         let detail = get_ceremony_detail(&pool, cer).await.unwrap();
         assert_eq!(detail.categories.len(), 1);
         assert_eq!(detail.categories[0].nominees[0].is_winner, Some(true));
+    }
+
+    #[tokio::test]
+    async fn resync_prunes_stale_nominees_but_keeps_predictions() {
+        let (pool, cer, cat, winner, _loser) = setup().await;
+        // A leftover row from an earlier parse (different, "dirty" source_key).
+        upsert_nominee(&pool, cat, "Anora stale", None, Some(0), "anora-stale")
+            .await
+            .unwrap();
+        // The user's pick points at the good winner row.
+        set_prediction(&pool, cat, winner).await.unwrap();
+
+        // Re-sync keeps only the current source_keys and drops the stale one.
+        delete_nominees_not_in(&pool, cat, &["anora".into(), "conclave".into()])
+            .await
+            .unwrap();
+
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM award_nominees WHERE category_id = ?")
+            .bind(cat)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count, 2, "stale row pruned, current rows kept");
+
+        // Prediction on the surviving winner row is intact.
+        let r = get_prediction_results(&pool, cer).await.unwrap();
+        assert_eq!((r.correct, r.total), (1, 1));
     }
 }
