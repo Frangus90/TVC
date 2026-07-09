@@ -41,15 +41,17 @@
     }
   }
 
-  const isRacing = $derived(getSidebarTab() === "racing");
+  const tab = $derived(getSidebarTab());
+  const isRacing = $derived(tab === "racing");
+  const isCalendar = $derived(tab === "shows" || tab === "movies" || tab === "archive");
 
   function getHeaderTitle(): string {
     const date = getCurrentDate();
     const mode = getViewMode();
 
-    if (isRacing) {
-      return formatMonthYearLong(date);
-    }
+    if (isRacing) return formatMonthYearLong(date);
+    if (tab === "tiers") return "Tier Rankings";
+    if (tab === "awards") return "Awards";
 
     if (mode === "week") {
       const weekStart = startOfWeek(date, { weekStartsOn: 1 });
@@ -57,8 +59,6 @@
       return formatWeekRange(weekStart, weekEnd);
     } else if (mode === "agenda") {
       return "Upcoming Episodes";
-    } else if (mode === "tier") {
-      return "Tier Rankings";
     }
     return formatMonthYearLong(date);
   }
@@ -66,7 +66,7 @@
 
 <header class="h-14 bg-surface border-b border-border flex items-center justify-between px-4">
   <div class="flex items-center gap-2">
-    {#if isRacing || (getViewMode() !== "agenda" && getViewMode() !== "tier")}
+    {#if isRacing || (isCalendar && getViewMode() !== "agenda")}
       <button
         onclick={previousPeriod}
         class="p-1.5 rounded-lg hover:bg-surface-hover transition-colors"
@@ -103,28 +103,26 @@
   </h1>
 
   <div class="flex items-center gap-2">
-    {#if !isRacing}
-      {#if getViewMode() !== "tier"}
-        <div class="flex bg-background rounded-lg p-1">
-          {#each [{ value: "all", label: "All" }, { value: "shows", label: "Shows" }, { value: "movies", label: "Movies" }] as option}
-            <button
-              onclick={() => setCalendarFilter(option.value as "all" | "shows" | "movies")}
-              class="px-3 py-1 text-sm rounded-md transition-colors {getCalendarFilter() === option.value
-                ? 'bg-surface text-text'
-                : 'text-text-muted hover:text-text'}"
-              aria-label="Show {option.label.toLowerCase()}"
-              aria-pressed={getCalendarFilter() === option.value}
-              title="Show {option.label.toLowerCase()}"
-            >
-              {option.label}
-            </button>
-          {/each}
-        </div>
-      {/if}
+    {#if isCalendar}
       <div class="flex bg-background rounded-lg p-1">
-        {#each ["month", "week", "agenda", "tier"] as mode}
+        {#each [{ value: "all", label: "All" }, { value: "shows", label: "Shows" }, { value: "movies", label: "Movies" }] as option}
           <button
-            onclick={() => setViewMode(mode as "month" | "week" | "agenda" | "tier")}
+            onclick={() => setCalendarFilter(option.value as "all" | "shows" | "movies")}
+            class="px-3 py-1 text-sm rounded-md transition-colors {getCalendarFilter() === option.value
+              ? 'bg-surface text-text'
+              : 'text-text-muted hover:text-text'}"
+            aria-label="Show {option.label.toLowerCase()}"
+            aria-pressed={getCalendarFilter() === option.value}
+            title="Show {option.label.toLowerCase()}"
+          >
+            {option.label}
+          </button>
+        {/each}
+      </div>
+      <div class="flex bg-background rounded-lg p-1">
+        {#each ["month", "week", "agenda"] as mode}
+          <button
+            onclick={() => setViewMode(mode as "month" | "week" | "agenda")}
             class="px-3 py-1 text-sm rounded-md transition-colors capitalize {getViewMode() === mode
               ? 'bg-surface text-text'
               : 'text-text-muted hover:text-text'}"

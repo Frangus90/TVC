@@ -74,7 +74,7 @@ export async function saveSidebarWidth(): Promise<void> {
 }
 
 // Tab state management
-export type SidebarTab = "shows" | "movies" | "archive" | "racing";
+export type SidebarTab = "shows" | "movies" | "archive" | "racing" | "tiers" | "awards";
 let activeTab = $state<SidebarTab>("shows");
 
 export function getSidebarTab() {

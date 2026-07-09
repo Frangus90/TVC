@@ -162,6 +162,7 @@
   let WeekViewComponent = $state<any>(null);
   let AgendaViewComponent = $state<any>(null);
   let TierViewComponent = $state<any>(null);
+  let AwardsViewComponent = $state<any>(null);
 
   $effect(() => {
     const viewMode = getViewMode();
@@ -177,9 +178,22 @@
       import("./lib/components/calendar/AgendaView.svelte").then((mod) => {
         AgendaViewComponent = mod.default;
       }).catch((e) => logger.error("Failed to load component", e));
-    } else if (viewMode === "tier" && !TierViewComponent) {
+    }
+  });
+
+  // Tier and Awards are sidebar tabs (not calendar view modes) — load on demand.
+  $effect(() => {
+    if (getSidebarTab() === "tiers" && !TierViewComponent) {
       import("./lib/components/calendar/TierView.svelte").then((mod) => {
         TierViewComponent = mod.default;
+      }).catch((e) => logger.error("Failed to load component", e));
+    }
+  });
+
+  $effect(() => {
+    if (getSidebarTab() === "awards" && !AwardsViewComponent) {
+      import("./lib/components/awards/AwardsView.svelte").then((mod) => {
+        AwardsViewComponent = mod.default;
       }).catch((e) => logger.error("Failed to load component", e));
     }
   });
@@ -282,6 +296,22 @@
                 <div class="text-text-muted">Loading race calendar...</div>
               </div>
             {/if}
+          {:else if getSidebarTab() === "tiers"}
+            {#if TierViewComponent}
+              <TierViewComponent />
+            {:else}
+              <div class="flex items-center justify-center h-full">
+                <div class="text-text-muted">Loading tier list...</div>
+              </div>
+            {/if}
+          {:else if getSidebarTab() === "awards"}
+            {#if AwardsViewComponent}
+              <AwardsViewComponent />
+            {:else}
+              <div class="flex items-center justify-center h-full">
+                <div class="text-text-muted">Loading awards...</div>
+              </div>
+            {/if}
           {:else}
             {#key getViewMode()}
               <div in:fade={{ duration: 150, delay: 50 }} out:fade={{ duration: 100 }}>
@@ -307,14 +337,6 @@
                   {:else}
                     <div class="flex items-center justify-center h-full">
                       <div class="text-text-muted">Loading calendar...</div>
-                    </div>
-                  {/if}
-                {:else if getViewMode() === "tier"}
-                  {#if TierViewComponent}
-                    <TierViewComponent />
-                  {:else}
-                    <div class="flex items-center justify-center h-full">
-                      <div class="text-text-muted">Loading tier list...</div>
                     </div>
                   {/if}
                 {/if}

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Plus, Tv, Trash2, RefreshCw, Check, Film, Archive, RotateCcw, CalendarX, BarChart3, Database, PanelLeftClose, PanelLeft, Sparkles, Flag, Settings } from "lucide-svelte";
+  import { Plus, Tv, Trash2, RefreshCw, Check, Film, Archive, RotateCcw, CalendarX, BarChart3, Database, PanelLeftClose, PanelLeft, Sparkles, Flag, Settings, Layers, Award } from "lucide-svelte";
   import { onMount } from "svelte";
   import {
     getTrackedShows,
@@ -318,6 +318,36 @@
       <Flag class="w-3.5 h-3.5 flex-shrink-0" />
       {#if !isSidebarCollapsed()}
         <span>Racing</span>
+      {/if}
+    </button>
+    <button
+      type="button"
+      onclick={() => switchTab("tiers")}
+      class="flex-1 flex items-center justify-center gap-1 px-1 py-2.5 text-xs font-medium transition-colors
+        {activeTab === 'tiers' ? 'text-accent border-b-2 border-accent bg-accent/5' : 'text-text-muted hover:text-text hover:bg-surface-hover'}
+        {isSidebarCollapsed() ? 'border-b-0 border-l-2' : ''}"
+      aria-label="Tiers"
+      aria-pressed={activeTab === 'tiers'}
+      title="Tiers"
+    >
+      <Layers class="w-3.5 h-3.5 flex-shrink-0" />
+      {#if !isSidebarCollapsed()}
+        <span>Tiers</span>
+      {/if}
+    </button>
+    <button
+      type="button"
+      onclick={() => switchTab("awards")}
+      class="flex-1 flex items-center justify-center gap-1 px-1 py-2.5 text-xs font-medium transition-colors
+        {activeTab === 'awards' ? 'text-accent border-b-2 border-accent bg-accent/5' : 'text-text-muted hover:text-text hover:bg-surface-hover'}
+        {isSidebarCollapsed() ? 'border-b-0 border-l-2' : ''}"
+      aria-label="Awards"
+      aria-pressed={activeTab === 'awards'}
+      title="Awards"
+    >
+      <Award class="w-3.5 h-3.5 flex-shrink-0" />
+      {#if !isSidebarCollapsed()}
+        <span>Awards</span>
       {/if}
     </button>
   </div>
