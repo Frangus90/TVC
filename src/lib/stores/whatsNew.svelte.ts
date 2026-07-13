@@ -1,5 +1,6 @@
 import { getVersion } from "@tauri-apps/api/app";
 import { logger } from "../utils/logger";
+import changelog from "../../../CHANGELOG.md?raw";
 
 const LAST_SEEN_VERSION_KEY = "tvc_last_seen_version";
 
@@ -8,12 +9,24 @@ let modalOpen = $state(false);
 let appVersion = $state<string | null>(null);
 let hasUnseen = $state(false);
 
+// In dev builds, display the newest changelog version (with a -dev suffix)
+// instead of the real Tauri app version, so the sidebar reflects unreleased
+// work. This only affects what's displayed — appVersion (used for the
+// hasUnseenChanges/last-seen comparison) always stays the real app version.
+function getDevDisplayVersion(): string | null {
+  const match = changelog.match(/^##\s+\[(\d+\.\d+\.\d+)\]/m);
+  return match ? `${match[1]}-dev` : null;
+}
+
 // Getters
 export function isWhatsNewOpen() {
   return modalOpen;
 }
 
 export function getAppVersion() {
+  if (import.meta.env.DEV) {
+    return getDevDisplayVersion() ?? appVersion;
+  }
   return appVersion;
 }
 

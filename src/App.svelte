@@ -186,12 +186,16 @@
   // Check for updates on app start and listen for Plex scrobble events
   onMount(() => {
     logger.debug("[TVC] App mounted, will check for updates in 2s...");
-    setTimeout(() => {
-      logger.debug("[TVC] Checking for updates...");
-      checkForUpdates(false).catch((err) => {
-        logger.error("[TVC] Update check failed", err);
-      });
-    }, 2000);
+    if (!import.meta.env.DEV) {
+      setTimeout(() => {
+        logger.debug("[TVC] Checking for updates...");
+        checkForUpdates(false).catch((err) => {
+          logger.error("[TVC] Update check failed", err);
+        });
+      }, 2000);
+    } else {
+      logger.debug("[TVC] Dev build - skipping automatic update check");
+    }
 
     // Initialize What's New (check if user needs to see changelog)
     initWhatsNew().catch((err) => {

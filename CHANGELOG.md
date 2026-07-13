@@ -2,7 +2,20 @@
 
 All notable changes to TVC will be documented in this file.
 
-## [0.14.0] - Unreleased
+## [0.14.2] - Unreleased
+
+### Calendar
+
+- **Open details from the day view**: In the day pop-up, click a show's name/poster or a movie to open its full details — no more hunting for it in the sidebar list
+
+## [0.14.1] - 09.07.2026
+
+### Navigation
+
+- **Sidebar tabs no longer overflow at narrow widths**: With five tabs, the labels could stop fitting and spill over the calendar when the sidebar was resized. Below 340px the tab row now switches to larger icon-only tabs — labels return when you widen the sidebar, and tooltips are always available
+- **Color-coded, more distinctive nav icons**: Each tab now has its own icon color (Shows purple, Movies blue, Racing red, Tiers green, Awards gold), and Movies/Awards use more distinctive icons (clapperboard, trophy) so the icon-only row is easy to parse at a glance
+
+## [0.14.0] - 09.07.2026
 
 ### Awards
 
@@ -14,12 +27,6 @@ All notable changes to TVC will be documented in this file.
 
 - **Tiers is now a top-level sidebar tab** — alongside Shows, Movies, Racing, and the new Awards — instead of a calendar view-mode. The Month/Week/Agenda switcher is now calendar-only
 - **Archive moved to Data Management**: Archived shows and movies are now viewed and restored under Data Management → Archive, keeping the main navigation focused on browsing
-- **Sidebar tabs no longer overflow at narrow widths**: With five tabs, the labels could stop fitting and spill over the calendar when the sidebar was resized. Below 340px the tab row now switches to larger icon-only tabs — labels return when you widen the sidebar, and tooltips are always available
-- **Color-coded, more distinctive nav icons**: Each tab now has its own icon color (Shows purple, Movies blue, Racing red, Tiers green, Awards gold), and Movies/Awards use more distinctive icons (clapperboard, trophy) so the icon-only row is easy to parse at a glance
-
-### Calendar
-
-- **Open details from the day view**: In the day pop-up, click a show's name/poster or a movie to open its full details — no more hunting for it in the sidebar list
 
 ## [0.13.5] - 28.06.2026
 

@@ -15,6 +15,29 @@ function Write-Success { param($msg) Write-Host $msg -ForegroundColor Green }
 function Write-Err { param($msg) Write-Host $msg -ForegroundColor Red }
 function Write-Info { param($msg) Write-Host $msg -ForegroundColor Yellow }
 
+# Step 0: Pre-commit any pending working-tree changes before starting the release
+Write-Step "Checking working tree for pending changes..."
+
+Push-Location $ProjectRoot
+try {
+    $preReleaseStatus = git status --porcelain
+    if ($preReleaseStatus) {
+        Write-Host $preReleaseStatus
+        git add -A
+        if ($LASTEXITCODE -ne 0) { throw "git add failed" }
+        git commit -m "Check changelog"
+        if ($LASTEXITCODE -ne 0) {
+            Write-Err "Pre-commit failed - aborting release."
+            exit 1
+        }
+        Write-Success "  Pre-committed pending changes"
+    } else {
+        Write-Info "  Working tree clean - nothing to pre-commit."
+    }
+} finally {
+    Pop-Location
+}
+
 # Check latest GitHub release
 Write-Step "Checking GitHub releases..."
 $latestRelease = $null
@@ -150,7 +173,7 @@ $changelogNotes = $null
 if (-not $Notes -and (Test-Path $changelogPath)) {
     Write-Step "Reading release notes from CHANGELOG.md..."
 
-    $changelogLines = Get-Content $changelogPath
+    $changelogLines = Get-Content $changelogPath -Encoding UTF8
     $inVersionSection = $false
     $notesLines = @()
 
