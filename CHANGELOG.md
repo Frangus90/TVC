@@ -2,7 +2,7 @@
 
 All notable changes to TVC will be documented in this file.
 
-## [0.14.2] - Unreleased
+## [0.14.2] - 13.07.2026
 
 ### Calendar
 
