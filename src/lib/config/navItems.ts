@@ -1,4 +1,4 @@
-import { Tv, Film, Flag, Layers, Award } from "lucide-svelte";
+import { Tv, Clapperboard, Flag, Layers, Trophy } from "lucide-svelte";
 import type { Component } from "svelte";
 
 /**
@@ -18,18 +18,21 @@ export interface NavItem {
   label: string;
   // lucide-svelte icon component (its props don't match Svelte's bare Component<{}>).
   icon: any;
+  /** Per-tab identity color, used for the tab icon and active indicator. */
+  color: string;
   kind: "calendar" | "standalone";
   /** Lazy loader for a standalone tab's main-area component. */
   load?: () => Promise<{ default: Component }>;
 }
 
 export const navItems: NavItem[] = [
-  { id: "shows", label: "Shows", icon: Tv, kind: "calendar" },
-  { id: "movies", label: "Movies", icon: Film, kind: "calendar" },
+  { id: "shows", label: "Shows", icon: Tv, color: "#a78bfa", kind: "calendar" },
+  { id: "movies", label: "Movies", icon: Clapperboard, color: "#38bdf8", kind: "calendar" },
   {
     id: "racing",
     label: "Racing",
     icon: Flag,
+    color: "#f87171",
     kind: "standalone",
     load: () => import("../components/racing/RaceCalendar.svelte"),
   },
@@ -37,13 +40,15 @@ export const navItems: NavItem[] = [
     id: "tiers",
     label: "Tiers",
     icon: Layers,
+    color: "#34d399",
     kind: "standalone",
     load: () => import("../components/calendar/TierView.svelte"),
   },
   {
     id: "awards",
     label: "Awards",
-    icon: Award,
+    icon: Trophy,
+    color: "#fbbf24",
     kind: "standalone",
     load: () => import("../components/awards/AwardsView.svelte"),
   },

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { fade, scale } from "svelte/transition";
-  import { X, Check, Calendar, CalendarX, Eye, EyeOff, Trash2, Film } from "lucide-svelte";
+  import { X, Check, Calendar, CalendarX, Eye, EyeOff, Trash2, Film, ChevronRight } from "lucide-svelte";
   import {
     isDayDetailOpen,
     getDayDetailDate,
@@ -15,9 +15,11 @@
     getMoviesForDate,
     markMovieWatched,
     unscheduleMovie,
+    openMovieDetail,
     type CalendarMovie,
   } from "../stores/movies.svelte";
   import { openConfirmDialog } from "../stores/confirmDialog.svelte";
+  import { openShowDetail } from "../stores/showDetail.svelte";
   import { formatLongDate } from "../utils/dateFormat";
 
   interface GroupedEpisodes {
@@ -219,7 +221,13 @@
           {#each groupedEpisodes() as group}
             <div class="bg-background rounded-lg p-4">
               <!-- Show header -->
-              <div class="flex items-center gap-4 mb-4">
+              <button
+                type="button"
+                class="flex items-center gap-4 mb-4 w-full text-left rounded-lg p-1 -m-1 hover:bg-surface-hover transition-colors group/showhead"
+                onclick={() => openShowDetail(group.showId)}
+                title="Open show details"
+                aria-label="Open details for {group.showName}"
+              >
                 {#if group.posterUrl}
                   <img
                     src={group.posterUrl}
@@ -235,7 +243,8 @@
                     {group.episodes.length} episode{group.episodes.length !== 1 ? 's' : ''}
                   </p>
                 </div>
-              </div>
+                <ChevronRight class="w-4 h-4 text-text-muted ml-auto opacity-0 group-hover/showhead:opacity-100 transition-opacity" />
+              </button>
 
               <!-- Episodes -->
               <div class="space-y-2">
@@ -299,33 +308,41 @@
           {#each moviesForDate() as movie}
             <div class="bg-background rounded-lg p-4">
               <div class="flex items-center gap-4">
-                {#if movie.poster_url}
-                  <img
-                    src={movie.poster_url}
-                    alt=""
-                    class="w-14 h-[84px] rounded object-cover flex-shrink-0"
-                  />
-                {:else}
-                  <div class="w-14 h-[84px] rounded bg-border flex-shrink-0 flex items-center justify-center">
-                    <Film class="w-6 h-6 text-text-muted" />
+                <button
+                  type="button"
+                  class="flex-1 min-w-0 flex items-center gap-4 text-left rounded-lg p-1 -m-1 hover:bg-surface-hover transition-colors"
+                  onclick={() => openMovieDetail(movie.id)}
+                  title="Open movie details"
+                  aria-label="Open details for {movie.title}"
+                >
+                  {#if movie.poster_url}
+                    <img
+                      src={movie.poster_url}
+                      alt=""
+                      class="w-14 h-[84px] rounded object-cover flex-shrink-0"
+                    />
+                  {:else}
+                    <div class="w-14 h-[84px] rounded bg-border flex-shrink-0 flex items-center justify-center">
+                      <Film class="w-6 h-6 text-text-muted" />
+                    </div>
+                  {/if}
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                      {#if movie.watched}
+                        <Check class="w-4 h-4 text-watched flex-shrink-0" />
+                      {:else}
+                        <Film class="w-4 h-4 text-premiere flex-shrink-0" />
+                      {/if}
+                      <h3 class="font-semibold text-lg truncate {movie.watched ? 'text-watched line-through' : ''}">{movie.title}</h3>
+                    </div>
+                    <p class="text-sm text-text-muted">
+                      Movie
+                      {#if movie.runtime}
+                        &bull; {Math.floor(movie.runtime / 60)}h {movie.runtime % 60}m
+                      {/if}
+                    </p>
                   </div>
-                {/if}
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2">
-                    {#if movie.watched}
-                      <Check class="w-4 h-4 text-watched flex-shrink-0" />
-                    {:else}
-                      <Film class="w-4 h-4 text-premiere flex-shrink-0" />
-                    {/if}
-                    <h3 class="font-semibold text-lg truncate {movie.watched ? 'text-watched line-through' : ''}">{movie.title}</h3>
-                  </div>
-                  <p class="text-sm text-text-muted">
-                    Movie
-                    {#if movie.runtime}
-                      &bull; {Math.floor(movie.runtime / 60)}h {movie.runtime % 60}m
-                    {/if}
-                  </p>
-                </div>
+                </button>
                 <div class="flex items-center gap-1">
                   <button
                     onclick={() => handleToggleMovieWatched(movie)}
