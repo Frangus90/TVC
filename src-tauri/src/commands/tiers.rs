@@ -683,6 +683,12 @@ pub async fn remove_show_from_tier_list(app: AppHandle, id: i64) -> Result<(), S
 
     match tier_only {
         Some(1) => {
+            sqlx::query("DELETE FROM episodes WHERE show_id = ?")
+                .bind(id)
+                .execute(&pool)
+                .await
+                .map_err(|e| format!("Failed to delete episodes for tier-only show: {}", e))?;
+
             sqlx::query("DELETE FROM shows WHERE id = ?")
                 .bind(id)
                 .execute(&pool)

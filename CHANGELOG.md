@@ -2,6 +2,13 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.14.3] - Unreleased
+
+### Data Cleanup
+
+- Cleanup no longer suggests deleting episodes that belong to tier-only shows (tier data is now independent of calendar cleanup)
+- Removing a tier-only show from a tier list now also removes its episodes, so they no longer appear as orphaned episodes in cleanup
+
 ## [0.14.2] - 13.07.2026
 
 ### Calendar

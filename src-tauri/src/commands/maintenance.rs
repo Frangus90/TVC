@@ -67,7 +67,8 @@ pub async fn get_database_stats(app: AppHandle) -> Result<DatabaseStats, String>
         r#"SELECT COUNT(*) as count FROM episodes
            WHERE (aired IS NULL OR aired = '')
            AND (scheduled_date IS NULL OR scheduled_date = '')
-           AND watched = 0"#
+           AND watched = 0
+           AND NOT EXISTS (SELECT 1 FROM shows s WHERE s.id = episodes.show_id AND s.tier_only = 1)"#
     )
     .fetch_one(&pool)
     .await
@@ -118,7 +119,8 @@ pub async fn cleanup_unaired_episodes(app: AppHandle) -> Result<i64, String> {
         r#"DELETE FROM episodes
            WHERE (aired IS NULL OR aired = '')
            AND (scheduled_date IS NULL OR scheduled_date = '')
-           AND watched = 0"#
+           AND watched = 0
+           AND NOT EXISTS (SELECT 1 FROM shows s WHERE s.id = episodes.show_id AND s.tier_only = 1)"#
     )
     .execute(&pool)
     .await
@@ -172,6 +174,7 @@ pub async fn get_unaired_episodes_preview(app: AppHandle) -> Result<Vec<CleanupE
            WHERE (e.aired IS NULL OR e.aired = '')
            AND (e.scheduled_date IS NULL OR e.scheduled_date = '')
            AND e.watched = 0
+           AND COALESCE(s.tier_only, 0) = 0
            ORDER BY show_name, e.season_number, e.episode_number
            LIMIT 50"#
     )
@@ -234,7 +237,8 @@ pub async fn run_full_cleanup(app: AppHandle) -> Result<CleanupResult, String> {
         r#"DELETE FROM episodes
            WHERE (aired IS NULL OR aired = '')
            AND (scheduled_date IS NULL OR scheduled_date = '')
-           AND watched = 0"#
+           AND watched = 0
+           AND NOT EXISTS (SELECT 1 FROM shows s WHERE s.id = episodes.show_id AND s.tier_only = 1)"#
     )
     .execute(&pool)
     .await

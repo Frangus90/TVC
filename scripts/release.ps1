@@ -348,6 +348,21 @@ try {
 
 Write-Success "  Build complete!"
 
+# Step 3b: Sweep stale build cache (non-fatal)
+Write-Step "Sweeping stale build artifacts..."
+
+Push-Location "$ProjectRoot\src-tauri"
+try {
+    cargo sweep --time 30
+    if ($LASTEXITCODE -ne 0) {
+        Write-Info "  cargo-sweep not available or failed - skipping target cleanup"
+    } else {
+        Write-Success "  Swept stale build artifacts"
+    }
+} finally {
+    Pop-Location
+}
+
 # Step 4: Create latest.json
 Write-Step "Creating latest.json..."
 
@@ -443,3 +458,29 @@ Write-Host "  Release v$Version complete!" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
 Write-Host "`nRelease URL: https://github.com/Frangus90/TVC/releases/tag/v$Version"
 Write-Host "`nUsers with older versions will now see the update popup!"
+
+# Step 7: Ensure all release commits are pushed (build may have left Cargo.lock or other files dirty)
+Write-Step "Checking for uncommitted changes from the build..."
+
+Push-Location $ProjectRoot
+try {
+    $finalStatus = git status --porcelain
+    if ($finalStatus) {
+        Write-Host $finalStatus
+        git add -A
+        if ($LASTEXITCODE -ne 0) { Write-Err "  git add failed" }
+        git commit -m "Update Cargo.lock for v$Version"
+        if ($LASTEXITCODE -ne 0) { Write-Err "  git commit failed" }
+    } else {
+        Write-Info "  Working tree clean - nothing to commit."
+    }
+
+    git push
+    if ($LASTEXITCODE -ne 0) {
+        Write-Err "  git push failed - push the pending commit(s) manually."
+    } else {
+        Write-Success "  All release commits pushed."
+    }
+} finally {
+    Pop-Location
+}
