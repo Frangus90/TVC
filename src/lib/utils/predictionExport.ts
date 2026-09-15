@@ -7,6 +7,7 @@ import PredictionExport from "../components/awards/PredictionExport.svelte";
 import type { CeremonyDetail } from "../stores/awards.svelte";
 import { showInfo, showSuccess, showError } from "../stores/toast.svelte";
 import { logger } from "./logger";
+import { predictionOutcome } from "./awardPredictions";
 
 interface Pick {
   category: string;
@@ -28,7 +29,6 @@ export async function exportPredictionsAsImage(
   ceremony: CeremonyDetail,
   predictions: Record<number, number>,
 ): Promise<void> {
-  const isPast = ceremony.status === "past";
   const picks: Pick[] = [];
   for (const cat of ceremony.categories) {
     const nomineeId = predictions[cat.id];
@@ -38,7 +38,7 @@ export async function exportPredictionsAsImage(
     picks.push({
       category: cat.name,
       pick: nom.title,
-      result: isPast ? (nom.is_winner ? "win" : "miss") : null,
+      result: predictionOutcome(cat, nomineeId),
     });
   }
 

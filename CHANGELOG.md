@@ -2,6 +2,17 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.14.4] - Unreleased
+
+### Awards Predictions
+
+- Past predictions now stay under Predict → Prediction history, with the History tab dedicated to winners and nominees.
+- Ceremony History includes a “View your predictions” shortcut when you have saved picks, so you can open their results directly.
+- Missing results show as pending in the app and exported picks instead of being marked wrong.
+- Emmy refresh also retrieves the six categories moved to the Creative Arts ceremony, so their winners and prediction scores update correctly.
+- Preserve saved picks across nominee spacing and punctuation changes, including Wikipedia's nonbreaking-space templates. Unmatched saved nominees remain pending instead of being deleted.
+- Prediction scores accept either winner when a category has a tie.
+
 ## [0.14.3] - 28.07.2026
 
 ### Data Cleanup

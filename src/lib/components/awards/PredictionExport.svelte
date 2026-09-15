@@ -42,6 +42,8 @@
           <div style="color:#22c55e; font-size:16px; font-weight:700; line-height:1.3;">✓</div>
         {:else if p.result === "miss"}
           <div style="color:#ef4444; font-size:16px; font-weight:700; line-height:1.3;">✗</div>
+        {:else}
+          <div style="color:#a3a3a3; font-size:12px; line-height:1.3;">Pending</div>
         {/if}
       </div>
     {/each}

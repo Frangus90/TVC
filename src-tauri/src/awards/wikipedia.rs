@@ -181,6 +181,7 @@ fn clean_entry(item: &str) -> (String, bool) {
 
     static HTML_TAG: OnceLock<Regex> = OnceLock::new();
     static EMPTY_PARENS: OnceLock<Regex> = OnceLock::new();
+    static NBSP: OnceLock<Regex> = OnceLock::new();
 
     // Winners are bold ('''…'''); nominees are italic only (''…''). Some eras also
     // tag the winner with a dagger — literal ‡, {{double dagger}}, or {{double-dagger}}.
@@ -201,6 +202,10 @@ fn clean_entry(item: &str) -> (String, bool) {
     // [[a|b]] -> b, then [[a]] -> a
     let mut out = piped.replace_all(item, "$1").to_string();
     out = plain.replace_all(&out, "$1").to_string();
+    // A formatting-only Wikipedia edit must not concatenate words and change
+    // nominee identities (e.g. Apple{{nbsp}}TV and Dr.{{nbsp}}Michael).
+    let nbsp = NBSP.get_or_init(|| re(r"(?i)\{\{\s*nbsp\s*\}\}"));
+    out = nbsp.replace_all(&out, " ").to_string();
     // Drop {{…}} templates (a few passes unwrap simple nesting).
     for _ in 0..3 {
         out = tmpl.replace_all(&out, "").to_string();
@@ -235,8 +240,21 @@ fn decode_entities(s: &str) -> String {
         .replace("&gt;", ">")
 }
 
-fn normalize_key(text: &str) -> String {
-    text.to_lowercase().split_whitespace().collect::<Vec<_>>().join(" ")
+pub(super) fn normalize_key(text: &str) -> String {
+    text.to_lowercase()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .replace(" – (", " (")
+}
+
+/// Conservative fallback for formatting-only changes. Word/credit changes are
+/// not matched; callers must also require a unique match within the category.
+pub(super) fn nominee_identity_key(text: &str) -> String {
+    text.to_lowercase()
+        .chars()
+        .filter(|c| c.is_alphanumeric())
+        .collect()
 }
 
 /// Parse a ceremony page's wikitext into structured categories + nominees, plus
@@ -337,6 +355,15 @@ fn parse_winner_section(section: &str) -> (bool, Vec<ParsedCategory>) {
 mod tests {
     use super::*;
 
+    #[test]
+    fn nonbreaking_space_templates_preserve_nominee_names() {
+        let (title, winner) = clean_entry(
+            "'''[[Noah Wyle]] – ''The Pitt'' as Dr.{{nbsp}}Michael (Apple{{nbsp}}TV)'''",
+        );
+        assert_eq!(title, "Noah Wyle – The Pitt as Dr. Michael (Apple TV)");
+        assert!(winner);
+    }
+
     struct Expect {
         fixture: &'static str,
         has_winners: bool,
@@ -345,11 +372,36 @@ mod tests {
     }
 
     const CASES: &[Expect] = &[
-        Expect { fixture: include_str!("fixtures/emmys_76.wikitext"), has_winners: true,  categories: 25, nominees: 147 },
-        Expect { fixture: include_str!("fixtures/emmys_77.wikitext"), has_winners: true,  categories: 26, nominees: 144 },
-        Expect { fixture: include_str!("fixtures/emmys_78.wikitext"), has_winners: false, categories: 24, nominees: 137 },
-        Expect { fixture: include_str!("fixtures/oscars_96.wikitext"), has_winners: true, categories: 23, nominees: 122 },
-        Expect { fixture: include_str!("fixtures/oscars_97.wikitext"), has_winners: true, categories: 23, nominees: 123 },
+        Expect {
+            fixture: include_str!("fixtures/emmys_76.wikitext"),
+            has_winners: true,
+            categories: 25,
+            nominees: 147,
+        },
+        Expect {
+            fixture: include_str!("fixtures/emmys_77.wikitext"),
+            has_winners: true,
+            categories: 26,
+            nominees: 144,
+        },
+        Expect {
+            fixture: include_str!("fixtures/emmys_78.wikitext"),
+            has_winners: false,
+            categories: 24,
+            nominees: 137,
+        },
+        Expect {
+            fixture: include_str!("fixtures/oscars_96.wikitext"),
+            has_winners: true,
+            categories: 23,
+            nominees: 122,
+        },
+        Expect {
+            fixture: include_str!("fixtures/oscars_97.wikitext"),
+            has_winners: true,
+            categories: 23,
+            nominees: 123,
+        },
     ];
 
     #[test]
@@ -359,25 +411,36 @@ mod tests {
             assert_eq!(parsed.categories.len(), c.categories, "category count");
             assert_eq!(parsed.has_winners, c.has_winners, "has_winners");
 
-            let total_nominees: usize = parsed.categories.iter().map(|cat| cat.nominees.len()).sum();
+            let total_nominees: usize =
+                parsed.categories.iter().map(|cat| cat.nominees.len()).sum();
             assert_eq!(total_nominees, c.nominees, "nominee count");
 
             // No category should fail to parse its name.
             assert!(
-                parsed.categories.iter().all(|cat| cat.name != "(unparsed category)"),
+                parsed
+                    .categories
+                    .iter()
+                    .all(|cat| cat.name != "(unparsed category)"),
                 "every category name parsed"
             );
 
             if c.has_winners {
                 // A completed ceremony: exactly one winner per category.
                 for cat in &parsed.categories {
-                    let winners = cat.nominees.iter().filter(|n| n.is_winner == Some(true)).count();
+                    let winners = cat
+                        .nominees
+                        .iter()
+                        .filter(|n| n.is_winner == Some(true))
+                        .count();
                     assert_eq!(winners, 1, "exactly one winner in '{}'", cat.name);
                 }
             } else {
                 // Pre-ceremony: nominees present, but no winner is marked anywhere.
                 assert!(
-                    parsed.categories.iter().all(|cat| cat.nominees.iter().all(|n| n.is_winner.is_none())),
+                    parsed
+                        .categories
+                        .iter()
+                        .all(|cat| cat.nominees.iter().all(|n| n.is_winner.is_none())),
                     "no winners marked before the ceremony"
                 );
             }
@@ -387,14 +450,38 @@ mod tests {
     #[test]
     fn known_winners_are_correct() {
         let o97 = parse_wikitext(include_str!("fixtures/oscars_97.wikitext")).unwrap();
-        let best_pic = o97.categories.iter().find(|c| c.name == "Best Picture").unwrap();
-        let winner = best_pic.nominees.iter().find(|n| n.is_winner == Some(true)).unwrap();
-        assert!(winner.title.contains("Anora"), "Best Picture winner was {}", winner.title);
+        let best_pic = o97
+            .categories
+            .iter()
+            .find(|c| c.name == "Best Picture")
+            .unwrap();
+        let winner = best_pic
+            .nominees
+            .iter()
+            .find(|n| n.is_winner == Some(true))
+            .unwrap();
+        assert!(
+            winner.title.contains("Anora"),
+            "Best Picture winner was {}",
+            winner.title
+        );
 
         let e77 = parse_wikitext(include_str!("fixtures/emmys_77.wikitext")).unwrap();
-        let drama = e77.categories.iter().find(|c| c.name == "Outstanding Drama Series").unwrap();
-        let winner = drama.nominees.iter().find(|n| n.is_winner == Some(true)).unwrap();
-        assert!(winner.title.contains("The Pitt"), "Drama winner was {}", winner.title);
+        let drama = e77
+            .categories
+            .iter()
+            .find(|c| c.name == "Outstanding Drama Series")
+            .unwrap();
+        let winner = drama
+            .nominees
+            .iter()
+            .find(|n| n.is_winner == Some(true))
+            .unwrap();
+        assert!(
+            winner.title.contains("The Pitt"),
+            "Drama winner was {}",
+            winner.title
+        );
     }
 
     #[test]
@@ -432,13 +519,21 @@ mod tests {
             ("oscars_86", include_str!("fixtures/oscars_86.wikitext")),
         ] {
             let p = parse_wikitext(wt).expect("has section");
-            assert!(p.has_winners, "{name}: should be detected as a past ceremony");
+            assert!(
+                p.has_winners,
+                "{name}: should be detected as a past ceremony"
+            );
             assert!(p.categories.len() > 5, "{name}: expected many categories");
 
             let total_winners: usize = p
                 .categories
                 .iter()
-                .map(|c| c.nominees.iter().filter(|n| n.is_winner == Some(true)).count())
+                .map(|c| {
+                    c.nominees
+                        .iter()
+                        .filter(|n| n.is_winner == Some(true))
+                        .count()
+                })
                 .sum();
             assert!(
                 total_winners >= p.categories.len().saturating_sub(1),
@@ -448,8 +543,16 @@ mod tests {
 
             for cat in &p.categories {
                 for n in &cat.nominees {
-                    assert!(!n.title.contains('<'), "{name}: HTML tag leaked in '{}'", n.title);
-                    assert!(!n.title.contains("&nbsp;"), "{name}: entity not decoded in '{}'", n.title);
+                    assert!(
+                        !n.title.contains('<'),
+                        "{name}: HTML tag leaked in '{}'",
+                        n.title
+                    );
+                    assert!(
+                        !n.title.contains("&nbsp;"),
+                        "{name}: entity not decoded in '{}'",
+                        n.title
+                    );
                 }
             }
         }

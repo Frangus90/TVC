@@ -9,7 +9,7 @@ use tauri::AppHandle;
 
 use crate::awards::db;
 use crate::awards::models::ParsedCeremony;
-use crate::awards::source::AwardType;
+use crate::awards::source::{ordinal, AwardType, MOVED_EMMY_CATEGORIES};
 use crate::awards::wikipedia::{parse_wikitext, WikipediaAwardSource};
 use crate::db::connection;
 
@@ -53,7 +53,23 @@ pub async fn sync(pool: &SqlitePool, full: bool) -> SyncSummary {
                 Err(e) => summary.errors.push(e),
                 Ok(Some(wikitext)) => match parse_wikitext(&wikitext) {
                     None => {} // no "Winners and nominees" section — skip
-                    Some(parsed) => {
+                    Some(mut parsed) => {
+                        if award == AwardType::Emmys && edition >= 78 {
+                            let supplement_title =
+                                format!("{} Primetime Creative Arts Emmy Awards", ordinal(edition));
+                            match source.fetch_wikitext(&supplement_title).await {
+                                Ok(Some(text)) => match parse_wikitext(&text) {
+                                    Some(supplement) => {
+                                        merge_emmy_categories(&mut parsed, supplement)
+                                    }
+                                    None => summary.errors.push(format!(
+                                        "{supplement_title}: no categories could be parsed"
+                                    )),
+                                },
+                                Ok(None) => {} // Future page may not exist yet.
+                                Err(e) => summary.errors.push(e),
+                            }
+                        }
                         if let Err(e) =
                             persist(pool, award, edition, &title, &parsed, &mut summary).await
                         {
@@ -69,6 +85,27 @@ pub async fn sync(pool: &SqlitePool, full: bool) -> SyncSummary {
 
     let _ = db::set_setting(pool, LAST_SYNC_KEY, &Utc::now().to_rfc3339()).await;
     summary
+}
+
+fn merge_emmy_categories(main: &mut ParsedCeremony, supplement: ParsedCeremony) {
+    for mut category in supplement.categories {
+        if !MOVED_EMMY_CATEGORIES.contains(&category.name.as_str()) {
+            continue;
+        }
+        if let Some(existing) = main.categories.iter_mut().find(|c| c.name == category.name) {
+            // Prefer revealed results; an unfinished supplemental page must not
+            // replace winners already supplied by the main ceremony page.
+            if !existing.nominees.iter().any(|n| n.is_winner == Some(true)) {
+                category.display_order = existing.display_order;
+                *existing = category;
+            }
+        } else {
+            category.display_order = main.categories.len() as i64;
+            main.categories.push(category);
+        }
+    }
+    // Keep main.has_winners: Creative Arts happens earlier and must not close
+    // predictions for the main telecast before its own winners are revealed.
 }
 
 async fn persist(
@@ -158,7 +195,12 @@ pub async fn auto_sync_on_startup(app: AppHandle) {
     let recently_synced = db::get_setting(&pool, LAST_SYNC_KEY)
         .await
         .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-        .map(|t| Utc::now().signed_duration_since(t.with_timezone(&Utc)).num_hours() < 12)
+        .map(|t| {
+            Utc::now()
+                .signed_duration_since(t.with_timezone(&Utc))
+                .num_hours()
+                < 12
+        })
         .unwrap_or(false);
 
     if have > 0 && recently_synced {
@@ -186,6 +228,9 @@ mod it_tests {
         CREATE TABLE award_nominees (id INTEGER PRIMARY KEY AUTOINCREMENT, category_id INTEGER NOT NULL,
             title TEXT NOT NULL, detail TEXT, is_winner INTEGER, source_key TEXT NOT NULL,
             UNIQUE(category_id, source_key));
+        CREATE TABLE award_predictions (id INTEGER PRIMARY KEY AUTOINCREMENT, category_id INTEGER NOT NULL,
+            nominee_id INTEGER NOT NULL REFERENCES award_nominees(id) ON DELETE CASCADE,
+            created_at TEXT, updated_at TEXT, UNIQUE(category_id));
     ";
 
     async fn mem_pool() -> SqlitePool {
@@ -201,22 +246,173 @@ mod it_tests {
     }
 
     #[tokio::test]
+    async fn emmy_results_preserve_picks_across_page_moves_and_formatting_edits() {
+        let pool = mem_pool().await;
+        let old = parse_wikitext(include_str!("fixtures/emmys_78.wikitext")).unwrap();
+        let mut summary = SyncSummary::default();
+        persist(
+            &pool,
+            AwardType::Emmys,
+            78,
+            "78th Primetime Emmy Awards",
+            &old,
+            &mut summary,
+        )
+        .await
+        .unwrap();
+        let ceremony = db::get_ceremonies(&pool, "emmys").await.unwrap().remove(0);
+        let before = db::get_ceremony_detail(&pool, ceremony.id).await.unwrap();
+        let picks = [
+            ("Outstanding Comedy Series", "Widow's Bay", true),
+            (
+                "Outstanding Lead Actor in a Drama Series",
+                "Noah Wyle",
+                true,
+            ),
+            (
+                "Outstanding Directing for a Comedy Series",
+                "Widow's Bay:",
+                true,
+            ),
+            (
+                "Outstanding Supporting Actor in a Limited or Anthology Series or Movie",
+                "Nick Offerman",
+                false,
+            ),
+            (
+                "Outstanding Supporting Actress in a Limited or Anthology Series or Movie",
+                "Linda Cardellini",
+                true,
+            ),
+            (
+                "Outstanding Directing for a Limited or Anthology Series or Movie",
+                "DTF St. Louis",
+                true,
+            ),
+            (
+                "Outstanding Writing for a Limited or Anthology Series or Movie",
+                "DTF St. Louis",
+                true,
+            ),
+            (
+                "Outstanding Writing for a Variety Series",
+                "The Late Show",
+                true,
+            ),
+        ];
+        let mut saved = Vec::new();
+        for (category, title, won) in picks {
+            let cat = before
+                .categories
+                .iter()
+                .find(|c| c.name == category)
+                .unwrap();
+            let nom = cat
+                .nominees
+                .iter()
+                .find(|n| n.title.starts_with(title))
+                .unwrap();
+            db::set_prediction(&pool, cat.id, nom.id).await.unwrap();
+            saved.push((cat.id, nom.id, won));
+        }
+        // Simulate the pre-fix source key of a saved variety-writing prediction.
+        sqlx::query("UPDATE award_nominees SET source_key = 'the late show with stephen colbert – (cbs)' WHERE id = ?")
+            .bind(saved.last().unwrap().1).execute(&pool).await.unwrap();
+
+        let mut results =
+            parse_wikitext(include_str!("fixtures/emmys_78_results.wikitext")).unwrap();
+        let supplement =
+            parse_wikitext(include_str!("fixtures/emmys_78_creative_arts.wikitext")).unwrap();
+        assert_eq!(supplement.categories.len(), 6);
+        merge_emmy_categories(&mut results, supplement);
+        for _ in 0..2 {
+            // Repeating refresh must be idempotent.
+            persist(
+                &pool,
+                AwardType::Emmys,
+                78,
+                "78th Primetime Emmy Awards",
+                &results,
+                &mut summary,
+            )
+            .await
+            .unwrap();
+        }
+        let after = db::get_ceremony_detail(&pool, ceremony.id).await.unwrap();
+        for (category, nominee, won) in saved {
+            let cat = after.categories.iter().find(|c| c.id == category).unwrap();
+            let nom = cat
+                .nominees
+                .iter()
+                .find(|n| n.id == nominee)
+                .expect("same nominee ID survives refresh");
+            assert_eq!(nom.is_winner, Some(won), "{}", cat.name);
+        }
+        let score = db::get_prediction_results(&pool, ceremony.id)
+            .await
+            .unwrap();
+        assert_eq!((score.picks.len(), score.correct, score.total), (8, 7, 8));
+        assert_eq!(
+            db::get_ceremonies(&pool, "emmys").await.unwrap()[0].prediction_count,
+            8
+        );
+    }
+
+    #[test]
+    fn creative_arts_results_do_not_close_main_ceremony_predictions() {
+        let mut main = parse_wikitext(include_str!("fixtures/emmys_78.wikitext")).unwrap();
+        let supplement =
+            parse_wikitext(include_str!("fixtures/emmys_78_creative_arts.wikitext")).unwrap();
+        merge_emmy_categories(&mut main, supplement);
+        assert!(!main.has_winners);
+        assert!(main
+            .categories
+            .iter()
+            .find(|c| c.name == "Outstanding Directing for a Limited or Anthology Series or Movie")
+            .unwrap()
+            .nominees
+            .iter()
+            .any(|n| n.is_winner == Some(true)));
+        assert!(main
+            .categories
+            .iter()
+            .find(|c| c.name == "Outstanding Comedy Series")
+            .unwrap()
+            .nominees
+            .iter()
+            .all(|n| n.is_winner.is_none()));
+    }
+
+    #[tokio::test]
     #[ignore = "hits the live Wikipedia API"]
     async fn incremental_sync_populates_db() {
         let pool = mem_pool().await;
         let summary = sync(&pool, false).await;
         println!(
             "sync: ceremonies={} categories={} nominees={} winners={} errors={:?}",
-            summary.ceremonies, summary.categories, summary.nominees, summary.winners, summary.errors
+            summary.ceremonies,
+            summary.categories,
+            summary.nominees,
+            summary.winners,
+            summary.errors
         );
         assert!(summary.ceremonies >= 2, "expected recent ceremonies");
-        assert!(summary.winners > 0, "recent past ceremonies should have winners");
+        assert!(
+            summary.winners > 0,
+            "recent past ceremonies should have winners"
+        );
 
         let oscars = db::get_ceremonies(&pool, "oscars").await.unwrap();
         assert!(!oscars.is_empty(), "oscars ceremonies stored");
-        let past = oscars.iter().find(|c| c.status == "past").expect("a past oscar");
+        let past = oscars
+            .iter()
+            .find(|c| c.status == "past")
+            .expect("a past oscar");
         let detail = db::get_ceremony_detail(&pool, past.id).await.unwrap();
-        assert!(!detail.categories.is_empty(), "past ceremony has categories");
+        assert!(
+            !detail.categories.is_empty(),
+            "past ceremony has categories"
+        );
 
         // Date-aware status: a ceremony is only predictable ("nominated") when its
         // nominations are out and the ceremony is still in the future.
@@ -224,7 +420,13 @@ mod it_tests {
         let open = |cs: &[db::CeremonySummary]| {
             cs.iter()
                 .filter(|c| c.status != "past")
-                .map(|c| format!("{} ({})", c.name, c.ceremony_date.clone().unwrap_or_default()))
+                .map(|c| {
+                    format!(
+                        "{} ({})",
+                        c.name,
+                        c.ceremony_date.clone().unwrap_or_default()
+                    )
+                })
                 .collect::<Vec<_>>()
         };
         println!("predictable oscars: {:?}", open(&oscars));

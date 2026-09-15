@@ -13,6 +13,7 @@ export interface CeremonySummary {
   ceremony_date: string | null;
   nominations_date: string | null;
   status: string; // "past" | "nominated" | "upcoming"
+  prediction_count: number;
 }
 
 export interface NomineeRow {
@@ -90,7 +91,7 @@ async function loadLastSync() {
 export async function setAwardType(t: AwardType) {
   if (awardType === t) return;
   awardType = t;
-  selectedCeremony = null;
+  clearSelectedCeremony();
   await loadCeremonies();
 }
 
@@ -111,6 +112,7 @@ export async function loadCeremonies() {
 
 export async function selectCeremony(id: number) {
   loading = true;
+  clearSelectedCeremony();
   try {
     selectedCeremony = await invoke<CeremonyDetail>("get_ceremony_detail", {
       ceremonyId: id,
@@ -162,6 +164,7 @@ export async function setPrediction(categoryId: number, nomineeId: number) {
     await invoke("set_award_prediction", { categoryId, nomineeId });
     predictions = { ...predictions, [categoryId]: nomineeId };
     if (selectedCeremony) await loadResults(selectedCeremony.id);
+    await loadCeremonies();
   } catch (e) {
     logger.error("[awards] set prediction failed", e);
   }
@@ -174,6 +177,7 @@ export async function clearPrediction(categoryId: number) {
     delete next[categoryId];
     predictions = next;
     if (selectedCeremony) await loadResults(selectedCeremony.id);
+    await loadCeremonies();
   } catch (e) {
     logger.error("[awards] clear prediction failed", e);
   }

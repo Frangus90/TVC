@@ -1,22 +1,25 @@
 //! Pure prediction scoring — no DB, no Tauri — so it is trivially unit-tested.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// Score the user's picks against revealed winners.
 ///
 /// * `picks`   — `(category_id, predicted_nominee_id)` pairs, one per category.
-/// * `winners` — `category_id -> winning_nominee_id`, only for categories whose
+/// * `winners` — `category_id -> winning_nominee_ids`, only for categories whose
 ///   winner has been announced.
 ///
 /// Only categories with a known winner are scored (an undecided category can't be
 /// right or wrong yet). Returns `(correct, scored_total)`.
-pub fn score_predictions(picks: &[(i64, i64)], winners: &HashMap<i64, i64>) -> (u32, u32) {
+pub fn score_predictions(picks: &[(i64, i64)], winners: &HashMap<i64, HashSet<i64>>) -> (u32, u32) {
     let mut correct = 0;
     let mut total = 0;
     for (category_id, predicted) in picks {
         if let Some(winner) = winners.get(category_id) {
+            if winner.is_empty() {
+                continue;
+            }
             total += 1;
-            if predicted == winner {
+            if winner.contains(predicted) {
                 correct += 1;
             }
         }
@@ -28,8 +31,20 @@ pub fn score_predictions(picks: &[(i64, i64)], winners: &HashMap<i64, i64>) -> (
 mod tests {
     use super::*;
 
-    fn winners(pairs: &[(i64, i64)]) -> HashMap<i64, i64> {
-        pairs.iter().copied().collect()
+    fn winners(pairs: &[(i64, i64)]) -> HashMap<i64, HashSet<i64>> {
+        let mut result: HashMap<i64, HashSet<i64>> = HashMap::new();
+        for (category, nominee) in pairs {
+            result.entry(*category).or_default().insert(*nominee);
+        }
+        result
+    }
+
+    #[test]
+    fn either_tied_winner_is_correct() {
+        let w = winners(&[(1, 10), (1, 11)]);
+        assert_eq!(score_predictions(&[(1, 10)], &w), (1, 1));
+        assert_eq!(score_predictions(&[(1, 11)], &w), (1, 1));
+        assert_eq!(score_predictions(&[(1, 12)], &w), (0, 1));
     }
 
     #[test]

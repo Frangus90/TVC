@@ -7,6 +7,17 @@
 
 use serde::{Deserialize, Serialize};
 
+// These categories were on the main nominations page, but moved to the
+// Creative Arts ceremony in 2026. Keep them in TVC's existing prediction slate.
+pub const MOVED_EMMY_CATEGORIES: &[&str] = &[
+    "Outstanding Variety Special (Live)",
+    "Outstanding Supporting Actor in a Limited or Anthology Series or Movie",
+    "Outstanding Supporting Actress in a Limited or Anthology Series or Movie",
+    "Outstanding Directing for a Limited or Anthology Series or Movie",
+    "Outstanding Writing for a Limited or Anthology Series or Movie",
+    "Outstanding Writing for a Variety Series",
+];
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum AwardType {
@@ -99,6 +110,9 @@ mod tests {
     #[test]
     fn page_titles_match_wikipedia() {
         assert_eq!(AwardType::Oscars.page_title(97), "97th Academy Awards");
-        assert_eq!(AwardType::Emmys.page_title(77), "77th Primetime Emmy Awards");
+        assert_eq!(
+            AwardType::Emmys.page_title(77),
+            "77th Primetime Emmy Awards"
+        );
     }
 }
