@@ -2,7 +2,7 @@
 
 All notable changes to TVC will be documented in this file.
 
-## [0.14.4] - Unreleased
+## [0.14.4] - 15.09.2026
 
 ### Awards Predictions
 
