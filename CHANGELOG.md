@@ -2,7 +2,7 @@
 
 All notable changes to TVC will be documented in this file.
 
-## [0.14.5] - Unreleased
+## [0.14.5] - 16.09.2026
 
 ### TMDB Sync
 
