@@ -864,25 +864,44 @@ pub async fn get_tv_season(
 }
 
 /// Fan-out all seasons (including season 0 / specials) and return a flat,
-/// sorted list of episodes. Failures on individual seasons are skipped so a
-/// single 404 doesn't blow up the whole fetch.
+/// sorted list of episodes. A failed season aborts the refresh so saved episodes
+/// cannot be replaced by partial data.
 pub async fn get_tv_episodes(
     tv_id: i64,
 ) -> Result<Vec<TvEpisode>, Box<dyn std::error::Error + Send + Sync>> {
     let details = get_tv_details(tv_id).await?;
-    let seasons = details.seasons.unwrap_or_default();
+    let seasons = details
+        .seasons
+        .ok_or("TMDB did not return the season list")?;
+    collect_tv_episodes(seasons, |number| get_tv_season(tv_id, number)).await
+}
 
+async fn collect_tv_episodes<F, Fut>(
+    seasons: Vec<TvSeasonSummary>,
+    mut fetch: F,
+) -> Result<Vec<TvEpisode>, Box<dyn std::error::Error + Send + Sync>>
+where
+    F: FnMut(i32) -> Fut,
+    Fut: std::future::Future<
+        Output = Result<TvSeasonDetails, Box<dyn std::error::Error + Send + Sync>>,
+    >,
+{
     let mut all_episodes: Vec<TvEpisode> = Vec::new();
     for summary in seasons {
-        match get_tv_season(tv_id, summary.season_number).await {
-            Ok(season) => all_episodes.extend(season.episodes),
-            Err(e) => {
-                eprintln!(
-                    "tmdb: failed to fetch season {} of tv {}: {}",
-                    summary.season_number, tv_id, e
-                );
-            }
+        let season = fetch(summary.season_number).await.map_err(|e| {
+            format!(
+                "Season {} could not be downloaded: {}",
+                summary.season_number, e
+            )
+        })?;
+        if season.episodes.len() < summary.episode_count.unwrap_or(0).max(0) as usize {
+            return Err(format!(
+                "Season {} returned an incomplete episode list",
+                summary.season_number
+            )
+            .into());
         }
+        all_episodes.extend(season.episodes);
     }
 
     all_episodes.sort_by(|a, b| {
@@ -962,11 +981,67 @@ pub async fn invalidate_tv_show_cache(id: i64) {
     cache.tv_season_cache.invalidate_all();
 }
 
-/// Clear every TV-related cache. Used before bulk resync operations.
-pub async fn clear_all_tv_caches() {
-    let cache = get_cache();
-    cache.tv_search_cache.invalidate_all();
-    cache.tv_details_cache.invalidate_all();
-    cache.tv_season_cache.invalidate_all();
-    cache.tv_credits_cache.invalidate_all();
+/// Explicit refreshes must bypass the metadata cache.
+pub async fn invalidate_movie_cache(id: i64) {
+    get_cache().movie_cache.invalidate(&id).await;
+}
+
+#[cfg(test)]
+mod sync_tests {
+    use super::*;
+    use serde_json::json;
+
+    fn summary(number: i32) -> TvSeasonSummary {
+        serde_json::from_value(json!({"id": number, "season_number": number, "episode_count": 1}))
+            .unwrap()
+    }
+
+    fn season(number: i32) -> TvSeasonDetails {
+        serde_json::from_value(json!({"id": number, "season_number": number,
+            "episodes": [{"id": number * 10, "season_number": number, "episode_number": 1}]}))
+        .unwrap()
+    }
+
+    #[tokio::test]
+    async fn failed_season_never_returns_partial_episodes() {
+        let result = collect_tv_episodes(vec![summary(1), summary(2)], |number| async move {
+            if number == 2 {
+                Err("network timeout".into())
+            } else {
+                Ok(season(number))
+            }
+        })
+        .await;
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Season 2 could not be downloaded"));
+    }
+
+    #[tokio::test]
+    async fn truncated_season_is_rejected_and_complete_seasons_are_sorted() {
+        let result = collect_tv_episodes(vec![summary(1)], |number| async move {
+            let mut value = season(number);
+            value.episodes.clear();
+            Ok(value)
+        })
+        .await;
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("incomplete episode list"));
+        let complete = collect_tv_episodes(
+            vec![summary(2), summary(0), summary(1)],
+            |number| async move { Ok(season(number)) },
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            complete
+                .iter()
+                .map(|ep| ep.season_number)
+                .collect::<Vec<_>>(),
+            vec![0, 1, 2]
+        );
+    }
 }

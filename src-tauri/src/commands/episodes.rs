@@ -152,10 +152,24 @@ pub async fn sync_show_episodes(app: AppHandle, show_id: i64) -> Result<(), Stri
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    let preserved = snapshot_episode_state(&pool, show_id).await?;
+    apply_show_refresh(&pool, &show_details, episodes).await
+}
 
-    let mut tx = pool.begin().await
+async fn apply_show_refresh(
+    pool: &sqlx::SqlitePool,
+    show_details: &tmdb::TvShowDetails,
+    episodes: Vec<tmdb::TvEpisode>,
+) -> Result<(), String> {
+    let show_id = show_details.id;
+    let mut tx = pool
+        .begin()
+        .await
         .map_err(|e| format!("Failed to begin transaction: {}", e))?;
+
+    let preserved = snapshot_episode_state(&mut tx, show_id).await?;
+    if episodes.is_empty() && !preserved.is_empty() {
+        return Err("TMDB returned no episodes; the saved episodes were kept".into());
+    }
 
     if let Err(e) = sqlx::query(
         r#"
@@ -199,6 +213,10 @@ pub async fn sync_show_episodes(app: AppHandle, show_id: i64) -> Result<(), Stri
     }
 
     for ep in episodes {
+        let scheduled_date = match preserved.get(&(ep.season_number, ep.episode_number)) {
+            Some(state) => state.scheduled_date.clone(),
+            None => ep.air_date.clone(),
+        };
         let state = preserved
             .get(&(ep.season_number, ep.episode_number))
             .cloned()
@@ -221,7 +239,7 @@ pub async fn sync_show_episodes(app: AppHandle, show_id: i64) -> Result<(), Stri
         .bind(ep.air_date.as_ref())
         .bind(ep.runtime)
         .bind(ep.image_url())
-        .bind(state.scheduled_date.or_else(|| ep.air_date.clone()))
+        .bind(scheduled_date)
         .bind(if state.watched { 1 } else { 0 })
         .bind(state.watched_at)
         .bind(state.rating)
@@ -234,14 +252,15 @@ pub async fn sync_show_episodes(app: AppHandle, show_id: i64) -> Result<(), Stri
         }
     }
 
-    tx.commit().await
+    tx.commit()
+        .await
         .map_err(|e| format!("Failed to commit transaction: {}", e))?;
 
     Ok(())
 }
 
 async fn snapshot_episode_state(
-    pool: &sqlx::SqlitePool,
+    connection: &mut sqlx::SqliteConnection,
     show_id: i64,
 ) -> Result<HashMap<(i32, i32), PreservedEpisodeState>, String> {
     let rows = sqlx::query(
@@ -253,7 +272,7 @@ async fn snapshot_episode_state(
         "#,
     )
     .bind(show_id)
-    .fetch_all(pool)
+    .fetch_all(connection)
     .await
     .map_err(|e| format!("Failed to snapshot episode state: {}", e))?;
 
@@ -277,47 +296,105 @@ async fn snapshot_episode_state(
     Ok(map)
 }
 
-async fn sync_show_episodes_ref(app: &AppHandle, show_id: i64) -> Result<(), String> {
-    sync_show_episodes(app.clone(), show_id).await
-}
+#[cfg(test)]
+mod sync_tests {
+    use super::*;
+    use serde_json::json;
 
-/// Sync all tracked shows — refetches metadata + episodes from TMDB.
-/// Skips quarantined rows (they'd just error in the per-show call anyway).
-#[tauri::command]
-pub async fn sync_all_shows(app: AppHandle) -> Result<u32, String> {
-    tmdb::clear_all_tv_caches().await;
-
-    let pool = connection::get_pool(&app).await
-        .map_err(|e| format!("Database error: {}", e))?;
-
-    let show_ids: Vec<i64> = sqlx::query_scalar(
-        "SELECT id FROM shows WHERE id > 0 AND unmigrated = 0",
-    )
-    .fetch_all(&pool)
-    .await
-    .map_err(|e| format!("Failed to get shows: {}", e))?;
-
-    let mut synced = 0u32;
-    let mut errors: Vec<String> = Vec::new();
-
-    for show_id in show_ids {
-        match sync_show_episodes_ref(&app, show_id).await {
-            Ok(_) => synced += 1,
-            Err(e) => {
-                let error_msg = format!("Show {}: {}", show_id, e);
-                eprintln!("Failed to sync show {}: {}", show_id, e);
-                errors.push(error_msg);
-            }
+    async fn database() -> sqlx::SqlitePool {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        for migration in [
+            include_str!("../../migrations/001_initial.sql"),
+            include_str!("../../migrations/002_add_indexes.sql"),
+            include_str!("../../migrations/004_add_episode_metadata.sql"),
+        ] {
+            sqlx::raw_sql(migration).execute(&pool).await.unwrap();
         }
-        // Gentle pace to stay well under TMDB's ~50 req/s ceiling.
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        sqlx::raw_sql("INSERT INTO shows (id, name) VALUES (1, 'Original');
+            INSERT INTO episodes (id, show_id, season_number, episode_number, watched, watched_at, scheduled_date, rating, tags)
+            VALUES (10, 1, 1, 1, 1, '2026-09-15T20:00:00Z', '2026-09-14', 8.5, '[\"favorite\"]'),
+                   (11, 1, 1, 2, 0, NULL, NULL, NULL, NULL);")
+            .execute(&pool).await.unwrap();
+        pool
     }
 
-    if !errors.is_empty() {
-        eprintln!("[sync_all_shows] {} shows failed to sync: {:?}", errors.len(), errors);
+    fn details() -> tmdb::TvShowDetails {
+        serde_json::from_value(json!({"id": 1, "name": "Updated"})).unwrap()
     }
 
-    Ok(synced)
+    fn episode(id: i64, number: i32) -> tmdb::TvEpisode {
+        serde_json::from_value(json!({"id": id, "season_number": 1, "episode_number": number, "air_date": "2026-09-16"})).unwrap()
+    }
+
+    #[tokio::test]
+    async fn refresh_preserves_user_state_when_provider_ids_change() {
+        let pool = database().await;
+        apply_show_refresh(
+            &pool,
+            &details(),
+            vec![episode(100, 1), episode(101, 2), episode(102, 3)],
+        )
+        .await
+        .unwrap();
+        let row = sqlx::query("SELECT * FROM episodes WHERE id = 100")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(row.get::<i32, _>("watched"), 1);
+        assert_eq!(row.get::<String, _>("watched_at"), "2026-09-15T20:00:00Z");
+        assert_eq!(row.get::<String, _>("scheduled_date"), "2026-09-14");
+        assert_eq!(row.get::<f64, _>("rating"), 8.5);
+        assert_eq!(row.get::<String, _>("tags"), "[\"favorite\"]");
+        let dates: Vec<Option<String>> =
+            sqlx::query_scalar("SELECT scheduled_date FROM episodes ORDER BY episode_number")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert_eq!(
+            dates,
+            vec![Some("2026-09-14".into()), None, Some("2026-09-16".into())]
+        );
+        let name: String = sqlx::query_scalar("SELECT name FROM shows WHERE id = 1")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(name, "Updated");
+    }
+
+    #[tokio::test]
+    async fn empty_response_and_write_failure_leave_saved_library_unchanged() {
+        let pool = database().await;
+        assert!(apply_show_refresh(&pool, &details(), vec![])
+            .await
+            .unwrap_err()
+            .contains("saved episodes were kept"));
+        // Duplicate IDs fail after deleting the old rows and inserting the first new row.
+        // The transaction must restore both the original metadata and watched episodes.
+        assert!(
+            apply_show_refresh(&pool, &details(), vec![episode(100, 1), episode(100, 2)])
+                .await
+                .is_err()
+        );
+        let ids: Vec<i64> = sqlx::query_scalar("SELECT id FROM episodes ORDER BY id")
+            .fetch_all(&pool)
+            .await
+            .unwrap();
+        assert_eq!(ids, vec![10, 11]);
+        let name: String = sqlx::query_scalar("SELECT name FROM shows WHERE id = 1")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(name, "Original");
+        let watched: i32 = sqlx::query_scalar("SELECT watched FROM episodes WHERE id = 10")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(watched, 1);
+    }
 }
 
 #[tauri::command]

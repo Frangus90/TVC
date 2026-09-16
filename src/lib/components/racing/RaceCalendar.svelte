@@ -23,7 +23,7 @@
     type RacingEvent,
   } from "../../stores/racing.svelte";
   import { openSettings } from "../../stores/settings.svelte";
-  import { formatDate } from "../../utils/dateFormat";
+  import { formatDate, formatLongDate } from "../../utils/dateFormat";
 
   // Day detail state
   let dayDetailOpen = $state(false);
@@ -267,7 +267,7 @@
     <div class="p-5 border-b border-border flex items-center justify-between">
       <div>
         <h3 class="font-semibold text-lg text-text">
-          {format(dayDetailDate, "EEEE, MMMM d, yyyy")}
+          {formatLongDate(dayDetailDate)}
         </h3>
         <p class="text-sm text-text-muted">{dayDetailEvents.length} session{dayDetailEvents.length !== 1 ? 's' : ''}</p>
       </div>

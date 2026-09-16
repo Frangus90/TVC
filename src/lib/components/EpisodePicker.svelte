@@ -12,6 +12,7 @@
     type ShowEpisode,
   } from "../stores/shows.svelte";
   import { getThemeSettings } from "../stores/theme.svelte";
+  import { formatDate } from "../utils/dateFormat";
 
   // Local UI state
   let searchQuery = $state("");
@@ -222,7 +223,7 @@
       <div>
         <h2 class="font-semibold text-text">Schedule Episodes</h2>
         <p class="text-sm text-text-muted">
-          {show?.name} - {date}
+          {show?.name} - {date ? formatDate(date) : ""}
         </p>
       </div>
       <button
@@ -443,11 +444,11 @@
                         {/if}
                         {#if episode.scheduled_date}
                           <span class="text-xs text-premiere bg-premiere/10 px-2 py-0.5 rounded">
-                            {episode.scheduled_date}
+                            {formatDate(episode.scheduled_date)}
                           </span>
                         {:else if episode.aired}
                           <span class="text-xs text-text-muted">
-                            {episode.aired}
+                            {formatDate(episode.aired)}
                           </span>
                         {:else}
                           <span class="text-xs text-text-muted italic">TBA</span>
@@ -505,7 +506,7 @@
         <p class="text-xs text-text-muted line-clamp-3">{previewEpisode.overview}</p>
       {/if}
       {#if previewEpisode.aired}
-        <p class="text-xs text-text-muted mt-2">Aired: {previewEpisode.aired}</p>
+        <p class="text-xs text-text-muted mt-2">Aired: {formatDate(previewEpisode.aired)}</p>
       {/if}
     </div>
   {/if}

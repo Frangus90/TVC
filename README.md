@@ -34,6 +34,7 @@ A modern desktop application for tracking TV shows and movies, scheduling episod
 - **Auto-Updates**: Automatic update checks with in-app update notifications
 - **System Tray**: Minimize to system tray (Windows, macOS, Linux)
 - **Smart Search**: Auto-search as you type with result count and relevance sorting
+- **European Dates & Times**: Dates use `DD.MM.YYYY` and times use the 24-hour clock (`HH:mm`), in your computer's local timezone
 
 ### Media Information
 
@@ -91,6 +92,17 @@ npm run tauri build
 ```
 
 The built application will be in `src-tauri/target/release/`.
+
+### Date and Time Display
+
+Use the shared helpers in `src/lib/utils/dateFormat.ts` for all user-facing dates and times, including image exports:
+
+- Full dates: `DD.MM.YYYY`, with leading zeros (e.g. `09.01.2026`).
+- Times: `HH:mm`, using the 24-hour clock (e.g. `17:05`). Combined: `09.01.2026 17:05`.
+- Use the computer's local timezone, regardless of its regional date format. Date-only values retain their calendar date; UTC timestamps are converted to local time.
+- Relative labels (`Today`, `Tomorrow`, `3 hours ago`) and compact calendar headings can remain contextual.
+
+Do not use locale-dependent `toLocaleString()` or `toLocaleDateString()` for date/time display. Keep database values, API payloads, grouping keys, and sortable filenames in their existing ISO formats; format them only when displaying them.
 
 ## Project Structure
 

@@ -34,6 +34,7 @@
   import { isTierSearchModalOpen } from "./lib/stores/tiers.svelte";
   import NotificationPopupContainer from "./lib/components/notifications/NotificationPopupContainer.svelte";
   import MigrationProgress from "./lib/components/MigrationProgress.svelte";
+  import { setupLibrarySyncListener } from "./lib/stores/librarySync";
   import { setupMigrationListener } from "./lib/stores/migration.svelte";
   import { logger } from "./lib/utils/logger";
   import ErrorBoundary from "./lib/components/common/ErrorBoundary.svelte";
@@ -220,6 +221,7 @@
     });
     const unlistenNotifications = setupNotificationListener();
     const unlistenMigration = setupMigrationListener();
+    const unlistenLibrarySync = setupLibrarySyncListener();
 
     // Listen for Plex scrobble events to refresh calendar
     let unlistenScrobble: UnlistenFn | undefined;
@@ -246,6 +248,7 @@
       unlistenScrobble?.();
       unlistenNotifications();
       unlistenMigration();
+      unlistenLibrarySync();
     };
   });
 

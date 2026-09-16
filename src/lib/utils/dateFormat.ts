@@ -2,9 +2,10 @@ import { format, parseISO, isToday, isTomorrow } from "date-fns";
 
 /**
  * App-wide date/time formatting defaults:
- * - 24-hour clock
+ * - 24-hour clock (HH:mm), independent of the operating system's locale
  * - PC's local timezone
- * - Date format D.M.YYYY (e.g. 29.01.2026)
+ * - Date format DD.MM.YYYY (e.g. 09.01.2026)
+ * Use these helpers for display; keep storage and API values in ISO format.
  */
 
 const DB_UTC_REGEX = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
@@ -34,7 +35,7 @@ export function parseDateTime(value: Date | string): Date {
 }
 
 /**
- * Format as date only: D.M.YYYY (e.g. 29.01.2026). Uses local timezone.
+ * Format as date only: DD.MM.YYYY (e.g. 09.01.2026). Uses local timezone.
  */
 export function formatDate(value: Date | string): string {
   const d = toDate(value);
@@ -43,7 +44,7 @@ export function formatDate(value: Date | string): string {
 }
 
 /**
- * Format as date and time: D.M.YYYY HH:mm, 24-hour, local timezone.
+ * Format as date and time: DD.MM.YYYY HH:mm, 24-hour, local timezone.
  */
 export function formatDateTime(value: Date | string): string {
   const d = toDate(value);
@@ -70,7 +71,7 @@ export function formatLongDate(value: Date | string): string {
 }
 
 /**
- * For list headers: "Today", "Tomorrow", or D.M.YYYY. Uses local timezone.
+ * For list headers: "Today", "Tomorrow", or DD.MM.YYYY. Uses local timezone.
  */
 export function formatDateHeader(value: Date | string): string {
   const d = toDate(value);
@@ -81,7 +82,7 @@ export function formatDateHeader(value: Date | string): string {
 }
 
 /**
- * Calendar week range: "d.M. - d.M.yyyy" (e.g. 29.01. - 04.02.2026). Uses local timezone.
+ * Calendar week range: "DD.MM - DD.MM.YYYY" (e.g. 29.01 - 04.02.2026). Uses local timezone.
  */
 export function formatWeekRange(start: Date | string, end: Date | string): string {
   const s = toDate(start);

@@ -12,6 +12,7 @@
   } from "../stores/migration.svelte";
   import { config } from "../config";
   import { logger } from "../utils/logger";
+  import { formatDate } from "../utils/dateFormat";
 
   interface Props {
     open: boolean;
@@ -135,7 +136,7 @@
             <p class="text-xs text-text-muted">
               Legacy TVDB id: {show.legacy_tvdb_id ?? "unknown"}
               {#if show.first_aired}
-                &middot; First aired: {show.first_aired}
+                &middot; First aired: {formatDate(show.first_aired)}
               {/if}
             </p>
 
@@ -173,7 +174,7 @@
                     <div class="flex-1 min-w-0">
                       <p class="text-sm text-text truncate">{r.name}</p>
                       <p class="text-xs text-text-muted truncate">
-                        {r.first_air_date ?? "Unknown date"}
+                        {r.first_air_date ? formatDate(r.first_air_date) : "Unknown date"}
                         &middot; TMDB id {r.id}
                       </p>
                     </div>

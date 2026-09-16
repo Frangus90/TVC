@@ -1,6 +1,7 @@
 <script lang="ts">
   import { fade, scale } from "svelte/transition";
   import { X, Database, Copy, RefreshCw, AlertTriangle, Check, CloudDownload, Download, Upload, ChevronDown, HelpCircle } from "lucide-svelte";
+  import SyncTab from "./data/SyncTab.svelte";
   import ArchiveManager from "./ArchiveManager.svelte";
   import UnmigratedShowsResolver from "./UnmigratedShowsResolver.svelte";
   import {
@@ -31,25 +32,8 @@
   } from "../stores/dataManagement.svelte";
   import { openConfirmDialog } from "../stores/confirmDialog.svelte";
   import { simulateDummyUpdate } from "../stores/updates.svelte";
-  import {
-    refreshCalendar,
-    loadTrackedShows,
-    loadArchivedShows,
-    type TrackedShow,
-    type Episode,
-  } from "../stores/shows.svelte";
-  import {
-    refreshMoviesCalendar,
-    loadTrackedMovies,
-    loadArchivedMovies,
-    type TrackedMovie,
-  } from "../stores/movies.svelte";
-  import {
-    isShowDetailOpen,
-    getCurrentShow,
-    openShowDetail,
-  } from "../stores/showDetail.svelte";
-  import { loadTierListShows, loadTierListMovies } from "../stores/tiers.svelte";
+  import type { TrackedShow, Episode } from "../stores/shows.svelte";
+  import type { TrackedMovie } from "../stores/movies.svelte";
 
   let cleanupMessage = $state<string | null>(null);
   let dummyUpdateVersion = $state("0.8.0");
@@ -65,7 +49,6 @@
 - **Smoother Dialogs**: Confirmation dialogs now match the app's design and look much nicer
 - **Faster Search**: Search now starts automatically as you type, so you don't need to press Enter. You'll also see how many results were found
 - **Loading Indicators**: When the app is loading your shows and movies, you'll see helpful loading animations instead of blank screens`);
-  let syncingAll = $state(false);
   let exporting = $state(false);
   let importing = $state(false);
   let orphanedExpanded = $state(false);
@@ -177,61 +160,6 @@
       setTimeout(() => (cleanupMessage = null), 5000);
     } finally {
       importing = false;
-    }
-  }
-
-  async function handleSyncAll() {
-    syncingAll = true;
-    try {
-      const [showsSynced, moviesSynced] = await Promise.all([
-        invoke<number>("sync_all_shows"),
-        invoke<number>("sync_all_movies"),
-      ]);
-
-      // Reload the cached frontend stores so refreshed names/posters/overviews
-      // surface in the sidebar, calendar, and tier list without a restart. The
-      // sync mutated shows/movies/episodes rows in place; without these reloads
-      // the UI keeps showing the pre-sync (e.g. Japanese) titles.
-      await Promise.all([
-        loadTrackedShows(),
-        loadArchivedShows(),
-        loadTrackedMovies(),
-        loadArchivedMovies(),
-        loadTierListShows(),
-        loadTierListMovies(),
-        refreshCalendar(),
-        refreshMoviesCalendar(),
-      ]);
-
-      // If the show detail modal is open, re-fetch it so the modal contents
-      // (title, overview, episode names) update too. Guard against the user
-      // closing it during the awaits above.
-      if (isShowDetailOpen()) {
-        const current = getCurrentShow();
-        if (current) {
-          await openShowDetail(current.id);
-        }
-      }
-
-      const parts: string[] = [];
-      if (showsSynced > 0) {
-        parts.push(`${showsSynced} show${showsSynced !== 1 ? "s" : ""} from TMDB`);
-      }
-      if (moviesSynced > 0) {
-        parts.push(`${moviesSynced} movie${moviesSynced !== 1 ? "s" : ""} from TMDB`);
-      }
-      
-      if (parts.length > 0) {
-        cleanupMessage = `Synced ${parts.join(" and ")}`;
-      } else {
-        cleanupMessage = "No shows or movies to sync";
-      }
-      setTimeout(() => (cleanupMessage = null), 3000);
-    } catch (err) {
-      cleanupMessage = `Sync failed: ${err}`;
-      setTimeout(() => (cleanupMessage = null), 5000);
-    } finally {
-      syncingAll = false;
     }
   }
 
@@ -353,6 +281,15 @@
       </button>
       <button
         type="button"
+        onclick={() => setActiveTab("sync")}
+        class="px-4 py-3 text-sm font-medium transition-colors {activeTab === 'sync'
+          ? 'text-accent border-b-2 border-accent'
+          : 'text-text-muted hover:text-text'}"
+      >
+        Sync
+      </button>
+      <button
+        type="button"
         onclick={() => setActiveTab("duplicates")}
         class="px-4 py-3 text-sm font-medium transition-colors {activeTab === 'duplicates'
           ? 'text-accent border-b-2 border-accent'
@@ -382,7 +319,9 @@
 
     <!-- Content -->
     <div class="flex-1 overflow-auto p-4">
-      {#if loading}
+      {#if activeTab === "sync"}
+        <SyncTab />
+      {:else if loading}
         <div class="flex items-center justify-center py-12">
           <RefreshCw class="w-6 h-6 text-accent animate-spin" />
         </div>
@@ -781,32 +720,6 @@
                   class="px-3 py-1.5 text-sm bg-accent/20 hover:bg-accent/30 text-accent rounded transition-colors"
                 >
                   Optimize
-                </button>
-              </div>
-            </div>
-
-            <!-- Sync All -->
-            <div class="bg-background rounded-lg p-4 border border-accent/30">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                  <CloudDownload class="w-5 h-5 text-accent" />
-                  <div>
-                    <h3 class="font-medium">Sync All</h3>
-                    <p class="text-sm text-text-muted">Refresh all show and movie data from TMDB</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onclick={handleSyncAll}
-                  disabled={syncingAll}
-                  class="px-3 py-1.5 text-sm bg-accent/20 hover:bg-accent/30 text-accent rounded transition-colors flex items-center gap-2 disabled:opacity-50"
-                >
-                  {#if syncingAll}
-                    <RefreshCw class="w-4 h-4 animate-spin" />
-                    Syncing...
-                  {:else}
-                    Sync All
-                  {/if}
                 </button>
               </div>
             </div>

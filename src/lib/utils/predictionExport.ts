@@ -8,6 +8,7 @@ import type { CeremonyDetail } from "../stores/awards.svelte";
 import { showInfo, showSuccess, showError } from "../stores/toast.svelte";
 import { logger } from "./logger";
 import { predictionOutcome } from "./awardPredictions";
+import { formatDate } from "./dateFormat";
 
 interface Pick {
   category: string;
@@ -67,7 +68,7 @@ export async function exportPredictionsAsImage(
         ceremonyName: ceremony.name,
         picks,
         appVersion,
-        date: new Date().toISOString().slice(0, 10),
+        date: formatDate(new Date()),
       },
     });
 

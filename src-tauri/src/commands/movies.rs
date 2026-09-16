@@ -370,13 +370,11 @@ pub async fn unarchive_movie(app: AppHandle, id: i64) -> Result<(), String> {
     Ok(())
 }
 
-/// Helper function to sync a single movie (takes reference to avoid cloning)
-async fn sync_movie_ref(app: &AppHandle, id: i64) -> Result<(), String> {
-    sync_movie(app.clone(), id).await
-}
-
+/// Fetch fresh TMDB metadata while preserving the movie's user data.
 #[tauri::command]
 pub async fn sync_movie(app: AppHandle, id: i64) -> Result<(), String> {
+    tmdb::invalidate_movie_cache(id).await;
+
     // Get updated movie details from TMDB
     let (movie_details, release_dates) = tmdb::get_movie_with_release_dates(id, "US")
         .await
@@ -425,41 +423,6 @@ pub async fn sync_movie(app: AppHandle, id: i64) -> Result<(), String> {
     .map_err(|e| format!("Failed to sync movie: {}", e))?;
 
     Ok(())
-}
-
-/// Sync all tracked movies - fetches fresh data from TMDB for all movies
-#[tauri::command]
-pub async fn sync_all_movies(app: AppHandle) -> Result<u32, String> {
-    let pool = connection::get_pool(&app).await
-        .map_err(|e| format!("Database error: {}", e))?;
-
-    // Get all tracked movie IDs
-    let movie_ids: Vec<i64> = sqlx::query_scalar("SELECT id FROM movies")
-        .fetch_all(&pool)
-        .await
-        .map_err(|e| format!("Failed to get movies: {}", e))?;
-
-    let mut synced = 0u32;
-    let mut errors: Vec<String> = Vec::new();
-
-    // Use reference to app to avoid cloning in loop
-    for movie_id in movie_ids {
-        match sync_movie_ref(&app, movie_id).await {
-            Ok(_) => synced += 1,
-            Err(e) => {
-                let error_msg = format!("Movie {}: {}", movie_id, e);
-                eprintln!("Failed to sync movie {}: {}", movie_id, e);
-                errors.push(error_msg);
-            }
-        }
-    }
-
-    // Log errors if any occurred (for debugging - return value remains compatible)
-    if !errors.is_empty() {
-        eprintln!("[sync_all_movies] {} movies failed to sync: {:?}", errors.len(), errors);
-    }
-
-    Ok(synced)
 }
 
 #[tauri::command]

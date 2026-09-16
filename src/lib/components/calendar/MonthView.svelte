@@ -305,7 +305,7 @@
   
   <div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-surface rounded-xl border border-border shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col">
     <div class="p-5 pb-0">
-      <h3 class="font-semibold text-lg mb-4">Schedule for {showPickerDate}</h3>
+      <h3 class="font-semibold text-lg mb-4">Schedule for {formatDate(showPickerDate)}</h3>
 
       <!-- Tabs -->
       <div class="flex border-b border-border mb-4">
@@ -384,7 +384,7 @@
                   <div class="flex-1">
                     <span class="font-medium">{movie.title}</span>
                     {#if movie.scheduled_date}
-                      <p class="text-xs text-text-muted">Currently scheduled: {movie.scheduled_date}</p>
+                      <p class="text-xs text-text-muted">Currently scheduled: {formatDate(movie.scheduled_date)}</p>
                     {/if}
                   </div>
                 </button>

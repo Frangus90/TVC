@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Tier, TierListShow, TierListMovie } from "../../stores/tiers.svelte";
+  import { formatDate } from "../../utils/dateFormat";
 
   interface Props {
     mode: "shows" | "movies";
@@ -10,7 +11,7 @@
 
   let { mode, tiers, items, appVersion }: Props = $props();
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = formatDate(new Date());
   const heading = $derived(mode === "shows" ? "Shows" : "Movies");
 
   function itemTitle(item: TierListShow | TierListMovie): string {

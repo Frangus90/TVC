@@ -2,6 +2,27 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.14.5] - Unreleased
+
+### TMDB Sync
+
+- **Dedicated Sync tab**: Sync All now lives under Data Management → Sync, with separate controls for TV shows and movies, live progress, and saved results from the latest run for each library.
+- **Failures and retries**: See which titles failed and why, along with synced and skipped counts, and retry only the failed titles. Interrupted runs are identified after reopening the app.
+- **Automatic syncing**: Set TV shows and movies independently to Off, Every day, Every week, or Every month. Schedules default to Off, run while TVC is open (including in the tray), and catch up after reopening.
+- Bulk sync includes archived and tier-list titles, skips manual entries and unresolved legacy shows, and prevents overlapping bulk runs.
+
+### Sync Reliability
+
+- Failed or incomplete TV season downloads now stop the refresh before replacing saved episodes, protecting watch history, ratings, tags, and schedules from partial responses.
+- Episodes you explicitly unscheduled stay unscheduled when refreshed.
+- Movie refresh now fetches fresh TMDB metadata instead of reusing cached details.
+
+### Dates and Times
+
+- Standardized remaining date and time displays to **DD.MM.YYYY** and the **24-hour clock (HH:mm)**, using the computer's local timezone regardless of regional formatting settings.
+- Updated Sync timestamps, award dates, scheduling dialogs, show matching, racing day details, and prediction/tier-list image exports. Documented the convention for future changes.
+
+
 ## [0.14.4] - 15.09.2026
 
 ### Awards Predictions

@@ -44,7 +44,7 @@
   },
   "plugins": {
     "sql": {
-      "preload": ["sqlite:tvc.db"]
+      "preload": []
     },
     "updater": {
       "endpoints": [

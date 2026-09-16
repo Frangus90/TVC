@@ -3,6 +3,7 @@
   import { Award, Trophy, RefreshCw, ChevronLeft, ChevronDown, Check, Download } from "lucide-svelte";
   import { exportPredictionsAsImage } from "../../utils/predictionExport";
   import { predictionOutcome } from "../../utils/awardPredictions";
+  import { formatDate } from "../../utils/dateFormat";
   import {
     getAwardType,
     setAwardType,
@@ -96,15 +97,6 @@
     if (detail) exportPredictionsAsImage(detail, getPredictionsMap());
   }
 
-  function fmtDate(iso: string): string {
-    const d = new Date(iso + "T00:00:00");
-    if (isNaN(d.getTime())) return iso;
-    return d.toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  }
 </script>
 
 <div class="max-w-4xl mx-auto">
@@ -187,7 +179,7 @@
           {isOpen
             ? "Nominations open — tap a nominee to pick the winner"
             : showPicks ? "Your prediction results" : "Winners & nominees"}{#if detail.ceremony_date}
-            · Ceremony {fmtDate(detail.ceremony_date)}{/if}
+            · Ceremony {formatDate(detail.ceremony_date)}{/if}
         </p>
       </div>
       <div class="flex items-center gap-4 flex-shrink-0">
@@ -326,12 +318,12 @@
           <div class="font-medium text-lg">{upcomingCeremony.name}</div>
           {#if upcomingCeremony.nominations_date}
             <div class="text-sm text-text-muted">
-              Nominations expected {fmtDate(upcomingCeremony.nominations_date)}
+              Nominations expected {formatDate(upcomingCeremony.nominations_date)}
             </div>
           {/if}
           {#if upcomingCeremony.ceremony_date}
             <div class="text-sm text-text-muted">
-              Ceremony {fmtDate(upcomingCeremony.ceremony_date)}
+              Ceremony {formatDate(upcomingCeremony.ceremony_date)}
             </div>
           {/if}
           <div class="text-xs text-text-muted mt-2">
@@ -346,7 +338,7 @@
           <div class="font-medium text-lg">{upcomingCeremony.name}</div>
           {#if upcomingCeremony.ceremony_date}
             <div class="text-sm text-text-muted">
-              Ceremony {fmtDate(upcomingCeremony.ceremony_date)}
+              Ceremony {formatDate(upcomingCeremony.ceremony_date)}
             </div>
           {/if}
           <div class="text-sm text-accent mt-1">Make your picks →</div>

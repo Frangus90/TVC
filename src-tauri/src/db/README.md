@@ -21,7 +21,7 @@ TVC uses **two separate database connection mechanisms**:
 ### tauri-plugin-sql
 
 - Used for specific Tauri plugin features that require direct SQL access.
-- Configured in `tauri.conf.json` with preload: `["sqlite:tvc.db"]`
+- SQL preload is selected in `lib.rs` using `db::sql_plugin_config()`: `tvc_dev.db` in debug builds and `tvc.db` in release builds. The static preload list in `tauri.conf.json` is empty.
 - This creates a separate connection mechanism that doesn't share the sqlx pool.
 
 ## Best Practices

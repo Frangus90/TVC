@@ -3,6 +3,7 @@ mod awards;
 mod commands;
 mod db;
 mod error;
+mod library_sync;
 mod notifications;
 mod plex;
 mod racing;
@@ -37,6 +38,13 @@ const MIGRATION_018: &str = include_str!("../migrations/018_awards_nominations_d
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let mut context = tauri::generate_context!();
+    // SQL preload and Rust connections must target the same build-specific database.
+    context
+        .config_mut()
+        .plugins
+        .0
+        .insert("sql".into(), db::sql_plugin_config());
     // CRITICAL: Repair migration checksums BEFORE SQL plugin initializes
     // This ensures old databases work with new versions even if migration files changed
     repair_migration_checksums(&[
@@ -211,7 +219,6 @@ pub fn run() {
             commands::shows::dev_force_rerun_migration,
             // Episode commands
             commands::episodes::sync_show_episodes,
-            commands::episodes::sync_all_shows,
             commands::episodes::mark_episode_watched,
             commands::episodes::mark_season_watched,
             commands::episodes::mark_show_watched,
@@ -233,7 +240,9 @@ pub fn run() {
             commands::movies::archive_movie,
             commands::movies::unarchive_movie,
             commands::movies::sync_movie,
-            commands::movies::sync_all_movies,
+            library_sync::get_library_sync_status,
+            library_sync::set_library_sync_schedule,
+            library_sync::run_library_sync,
             commands::movies::get_movies_for_range,
             // Statistics commands
             commands::statistics::get_watch_statistics,
@@ -380,6 +389,9 @@ pub fn run() {
                 db::tvdb_remap::run_migration_if_needed(app_handle_migration).await;
             });
 
+            let app_handle_sync = app.handle().clone();
+            tauri::async_runtime::spawn(library_sync::start_scheduler(app_handle_sync));
+
             // Start Plex scrobbler if enabled
             let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
@@ -407,6 +419,6 @@ pub fn run() {
                 api.prevent_close();
             }
         })
-        .run(tauri::generate_context!())
+        .run(context)
         .expect("error while running tauri application");
 }
