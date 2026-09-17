@@ -64,6 +64,12 @@ Download the latest installer from [Releases](https://github.com/Frangus90/TVC/r
 
 ## Development
 
+Debug builds use the separate `com.tvc.app.dev` identity, a **TVC — Development** window title, and `tvc_dev.db`. They can run beside the release app. On the first launch after this change, TVC copies an existing **development** database into the new development profile using a consistent SQLite snapshot; it never overwrites an existing new profile. The release database is never used as a source.
+
+Run `npm run check` before releasing. It checks Svelte templates and TypeScript, runs frontend regressions and offline Rust tests against disposable databases, and builds the frontend. The release script runs this command before changing versions or Git state. After installing new Rust dependencies, run `cargo fetch --locked --manifest-path src-tauri/Cargo.toml` once before using the offline checks.
+
+Newly synced episodes follow their current air date unless you set a custom date. Clearing an episode's custom schedule restores its air date. Older saved schedules are retained because an automatic date and an intentional override cannot reliably be distinguished; use **Use air dates** in the day view to reset those you want to follow TMDB.
+
 ### Prerequisites
 
 - Node.js 18+ (recommended: latest LTS)
@@ -103,6 +109,23 @@ Use the shared helpers in `src/lib/utils/dateFormat.ts` for all user-facing date
 - Relative labels (`Today`, `Tomorrow`, `3 hours ago`) and compact calendar headings can remain contextual.
 
 Do not use locale-dependent `toLocaleString()` or `toLocaleDateString()` for date/time display. Keep database values, API payloads, grouping keys, and sortable filenames in their existing ISO formats; format them only when displaying them.
+
+### Backup and Restore
+
+Data Management → Export saves a versioned JSON backup. Format **3.0** includes:
+
+- Shows, episodes, and movies, including watch dates, custom schedules, ratings, notes, tags, archived status, and tier placement/order.
+- Custom tiers.
+- Awards, categories, nominees, results, and saved predictions, including original titles, source keys, Wikipedia page names, and pick timestamps.
+- Plex title corrections, scrobble logs, and change history (including historical references to removed titles).
+
+Exports read all included tables from one database snapshot. Import shows counts and scope before confirmation, validates supported versions and relationships, and rolls back the replacement if a record fails. Import cannot run alongside a bulk TMDB sync. Restart TVC after a successful import to reload all restored state.
+
+**Excluded:** app preferences, integration configuration/credentials, Sonarr/Radarr import links, racing data/preferences, notifications, and cached cast/crew. Existing preferences, credentials, racing data, and notifications stay unchanged on import. Cached cast/crew and import links are cleared; metadata refresh and integration import rebuild them. Sync reports are cleared, and enabled sync schedules start their next interval from the restore time.
+
+Older **1.0** (TVDB, including files without a version) and **2.0** (TMDB) library backups remain supported. They keep existing awards/predictions, but cannot restore Plex title corrections, scrobble logs, or change history; import explicitly warns that these library-related records will be cleared. Export a new backup before replacing a library if you need to preserve them. Legacy TVDB imports still perform provider remapping and a separate metadata refresh; unmatched shows and episodes are reported.
+
+Backup files contain viewing history and personal notes in plain text. Integration credentials are not included.
 
 ## Project Structure
 

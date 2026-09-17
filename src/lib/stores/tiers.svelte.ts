@@ -1,3 +1,4 @@
+import { showError } from "./toast.svelte";
 import { invoke } from "@tauri-apps/api/core";
 import { logger } from "../utils/logger";
 
@@ -90,6 +91,7 @@ export async function loadTiers(): Promise<void> {
     tiers = await invoke<Tier[]>("get_tiers");
   } catch (error) {
     logger.error("Failed to load tiers", error);
+    showError("Failed to load tiers" + ": " + String(error));
   } finally {
     tiersLoading = false;
   }
@@ -100,6 +102,7 @@ export async function loadTierPreset(): Promise<void> {
     tierPreset = await invoke<string>("get_tier_preset");
   } catch (error) {
     logger.error("Failed to load tier preset", error);
+    showError("Failed to load tier preset" + ": " + String(error));
   }
 }
 
@@ -108,6 +111,7 @@ export async function loadTierListShows(): Promise<void> {
     tierListShows = await invoke<TierListShow[]>("get_tier_list_shows");
   } catch (error) {
     logger.error("Failed to load tier list shows", error);
+    showError("Failed to load tier list shows" + ": " + String(error));
   }
 }
 
@@ -116,6 +120,7 @@ export async function loadTierListMovies(): Promise<void> {
     tierListMovies = await invoke<TierListMovie[]>("get_tier_list_movies");
   } catch (error) {
     logger.error("Failed to load tier list movies", error);
+    showError("Failed to load tier list movies" + ": " + String(error));
   }
 }
 
@@ -126,6 +131,7 @@ export async function createTier(name: string, color: string): Promise<Tier | nu
     return tier;
   } catch (error) {
     logger.error("Failed to create tier", error);
+    showError("Failed to create tier" + ": " + String(error));
     return null;
   }
 }
@@ -134,7 +140,7 @@ export async function updateTierInfo(
   id: number,
   name?: string,
   color?: string
-): Promise<void> {
+): Promise<boolean> {
   try {
     await invoke("update_tier", {
       id,
@@ -142,8 +148,11 @@ export async function updateTierInfo(
       color: color ?? null,
     });
     await loadTiers();
+    return true;
   } catch (error) {
     logger.error("Failed to update tier", error);
+    showError("Failed to update tier" + ": " + String(error));
+    return false;
   }
 }
 
@@ -156,6 +165,7 @@ export async function deleteTier(id: number): Promise<DeleteTierResult | null> {
     return result;
   } catch (error) {
     logger.error("Failed to delete tier", error);
+    showError("Failed to delete tier" + ": " + String(error));
     return null;
   }
 }
@@ -166,18 +176,22 @@ export async function reorderTiers(tierIds: number[]): Promise<void> {
     await loadTiers();
   } catch (error) {
     logger.error("Failed to reorder tiers", error);
+    showError("Failed to reorder tiers" + ": " + String(error));
   }
 }
 
-export async function applyPreset(preset: string): Promise<void> {
+export async function applyPreset(preset: string): Promise<boolean> {
   try {
     await invoke("apply_tier_preset", { preset });
     tierPreset = preset;
     await loadTiers();
     await loadTierListShows();
     await loadTierListMovies();
+    return true;
   } catch (error) {
     logger.error("Failed to apply tier preset", error);
+    showError("Failed to apply tier preset" + ": " + String(error));
+    return false;
   }
 }
 
@@ -196,6 +210,7 @@ export async function updateShowTier(
     }
   } catch (error) {
     logger.error("Failed to update show tier", error);
+    showError("Failed to update show tier" + ": " + String(error));
   }
 }
 
@@ -212,6 +227,7 @@ export async function updateMovieTier(
     }
   } catch (error) {
     logger.error("Failed to update movie tier", error);
+    showError("Failed to update movie tier" + ": " + String(error));
   }
 }
 
@@ -227,6 +243,7 @@ export async function setTierShowPositions(
     await loadTierListShows();
   } catch (error) {
     logger.error("Failed to set tier show positions", error);
+    showError("Failed to set tier show positions" + ": " + String(error));
     throw error;
   }
 }
@@ -240,6 +257,7 @@ export async function setTierMoviePositions(
     await loadTierListMovies();
   } catch (error) {
     logger.error("Failed to set tier movie positions", error);
+    showError("Failed to set tier movie positions" + ": " + String(error));
     throw error;
   }
 }
@@ -257,6 +275,7 @@ export async function addShowTierOnly(
     await loadTierListShows();
   } catch (error) {
     logger.error("Failed to add show to tier list", error);
+    showError("Failed to add show to tier list" + ": " + String(error));
     throw error;
   }
 }
@@ -270,6 +289,7 @@ export async function addMovieTierOnly(
     await loadTierListMovies();
   } catch (error) {
     logger.error("Failed to add movie to tier list", error);
+    showError("Failed to add movie to tier list" + ": " + String(error));
     throw error;
   }
 }
@@ -283,6 +303,7 @@ export async function removeShowFromTierList(id: number): Promise<void> {
     await loadTierListShows();
   } catch (error) {
     logger.error("Failed to remove show from tier list", error);
+    showError("Failed to remove show from tier list" + ": " + String(error));
     throw error;
   }
 }
@@ -293,6 +314,7 @@ export async function removeMovieFromTierList(id: number): Promise<void> {
     await loadTierListMovies();
   } catch (error) {
     logger.error("Failed to remove movie from tier list", error);
+    showError("Failed to remove movie from tier list" + ": " + String(error));
     throw error;
   }
 }
@@ -312,6 +334,7 @@ export async function addManualShow(
     return id;
   } catch (error) {
     logger.error("Failed to add manual show", error);
+    showError("Failed to add manual show" + ": " + String(error));
     throw error;
   }
 }
@@ -331,6 +354,7 @@ export async function addManualMovie(
     return id;
   } catch (error) {
     logger.error("Failed to add manual movie", error);
+    showError("Failed to add manual movie" + ": " + String(error));
     throw error;
   }
 }
@@ -344,6 +368,7 @@ export async function promoteShowToTracked(id: number): Promise<void> {
     await loadTrackedShows();
   } catch (error) {
     logger.error("Failed to promote show to tracked", error);
+    showError("Failed to promote show to tracked" + ": " + String(error));
   }
 }
 
@@ -355,6 +380,7 @@ export async function promoteMovieToTracked(id: number): Promise<void> {
     await loadTrackedMovies();
   } catch (error) {
     logger.error("Failed to promote movie to tracked", error);
+    showError("Failed to promote movie to tracked" + ": " + String(error));
   }
 }
 
@@ -366,6 +392,7 @@ export async function demoteShowToTierOnly(id: number): Promise<void> {
     await loadTrackedShows();
   } catch (error) {
     logger.error("Failed to demote show to tier only", error);
+    showError("Failed to demote show to tier only" + ": " + String(error));
   }
 }
 
@@ -377,5 +404,6 @@ export async function demoteMovieToTierOnly(id: number): Promise<void> {
     await loadTrackedMovies();
   } catch (error) {
     logger.error("Failed to demote movie to tier only", error);
+    showError("Failed to demote movie to tier only" + ": " + String(error));
   }
 }

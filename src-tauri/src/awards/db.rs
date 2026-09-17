@@ -359,27 +359,31 @@ pub async fn set_prediction(
     category_id: i64,
     nominee_id: i64,
 ) -> Result<(), String> {
-    sqlx::query(
-        "INSERT INTO award_predictions (category_id, nominee_id, created_at, updated_at)
-         VALUES (?, ?, datetime('now'), datetime('now'))
-         ON CONFLICT(category_id) DO UPDATE SET
-             nominee_id = excluded.nominee_id, updated_at = datetime('now')",
-    )
-    .bind(category_id)
-    .bind(nominee_id)
-    .execute(pool)
-    .await
-    .map_err(|e| format!("set prediction: {e}"))?;
+    let result = sqlx::query("INSERT INTO award_predictions (category_id, nominee_id, created_at, updated_at)
+        SELECT c.id, n.id, datetime('now'), datetime('now') FROM award_categories c
+        JOIN award_ceremonies ceremony ON ceremony.id = c.ceremony_id
+        JOIN award_nominees n ON n.category_id = c.id
+        WHERE c.id = ? AND n.id = ? AND ceremony.status = 'nominated'
+        AND (ceremony.ceremony_date >= date('now') OR (ceremony.ceremony_date IS NULL AND ceremony.year >= CAST(strftime('%Y', 'now') AS INTEGER)))
+        AND NOT EXISTS(SELECT 1 FROM award_nominees winner WHERE winner.category_id = c.id AND winner.is_winner = 1)
+        ON CONFLICT(category_id) DO UPDATE SET nominee_id = excluded.nominee_id, updated_at = excluded.updated_at")
+        .bind(category_id).bind(nominee_id).execute(pool).await.map_err(|e| format!("Set prediction: {e}"))?;
+    if result.rows_affected() == 0 {
+        return Err("This category is closed or the nominee does not belong to it".into());
+    }
     Ok(())
 }
 
-/// Remove the user's pick for a category.
 pub async fn clear_prediction(pool: &SqlitePool, category_id: i64) -> Result<(), String> {
-    sqlx::query("DELETE FROM award_predictions WHERE category_id = ?")
-        .bind(category_id)
-        .execute(pool)
-        .await
-        .map_err(|e| format!("clear prediction: {e}"))?;
+    let result = sqlx::query("DELETE FROM award_predictions WHERE category_id = ? AND category_id IN (
+        SELECT c.id FROM award_categories c JOIN award_ceremonies ceremony ON ceremony.id = c.ceremony_id
+        WHERE ceremony.status = 'nominated'
+        AND (ceremony.ceremony_date >= date('now') OR (ceremony.ceremony_date IS NULL AND ceremony.year >= CAST(strftime('%Y', 'now') AS INTEGER)))
+        AND NOT EXISTS(SELECT 1 FROM award_nominees winner WHERE winner.category_id = c.id AND winner.is_winner = 1))")
+        .bind(category_id).execute(pool).await.map_err(|e| format!("Clear prediction: {e}"))?;
+    if result.rows_affected() == 0 {
+        return Err("The pick is missing or this category is closed".into());
+    }
     Ok(())
 }
 
@@ -460,6 +464,17 @@ mod tests {
             nominee_id INTEGER NOT NULL, created_at TEXT, updated_at TEXT, UNIQUE(category_id));
     ";
 
+    // Historical fixtures represent picks made before the ceremony closed.
+    async fn seed_prediction(
+        pool: &SqlitePool,
+        category: i64,
+        nominee: i64,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query("INSERT INTO award_predictions (category_id, nominee_id) VALUES (?, ?) ON CONFLICT(category_id) DO UPDATE SET nominee_id = excluded.nominee_id")
+            .bind(category).bind(nominee).execute(pool).await?;
+        Ok(())
+    }
+
     async fn setup() -> (SqlitePool, i64, i64, i64, i64) {
         let pool = SqlitePoolOptions::new()
             .max_connections(1)
@@ -507,7 +522,7 @@ mod tests {
     #[tokio::test]
     async fn unmatched_saved_nominee_is_preserved_and_not_scored_as_a_loss() {
         let (pool, cer, cat, _, loser) = setup().await;
-        set_prediction(&pool, cat, loser).await.unwrap();
+        seed_prediction(&pool, cat, loser).await.unwrap();
         delete_nominees_not_in(&pool, cat, &["anora".into()])
             .await
             .unwrap();
@@ -533,7 +548,7 @@ mod tests {
             .fetch_one(&pool)
             .await
             .unwrap();
-        set_prediction(&pool, cat, id).await.unwrap();
+        seed_prediction(&pool, cat, id).await.unwrap();
         upsert_nominee(
             &pool,
             cat,
@@ -560,7 +575,7 @@ mod tests {
             .execute(&pool)
             .await
             .unwrap();
-        set_prediction(&pool, cat, winner).await.unwrap();
+        seed_prediction(&pool, cat, winner).await.unwrap();
         let summary = get_ceremonies(&pool, "oscars").await.unwrap();
         assert_eq!(summary[0].status, "past");
         assert_eq!(summary[0].prediction_count, 1);
@@ -592,7 +607,7 @@ mod tests {
         .fetch_one(&pool)
         .await
         .unwrap();
-        set_prediction(&pool, cat, id).await.unwrap();
+        seed_prediction(&pool, cat, id).await.unwrap();
         upsert_nominee(
             &pool,
             cat,
@@ -626,17 +641,21 @@ mod tests {
         assert_eq!((r.correct, r.total, r.picks.len()), (0, 0, 0));
 
         // Pick the eventual winner.
-        set_prediction(&pool, cat, winner).await.unwrap();
+        seed_prediction(&pool, cat, winner).await.unwrap();
         let r = get_prediction_results(&pool, cer).await.unwrap();
         assert_eq!((r.correct, r.total, r.picks.len()), (1, 1, 1));
 
         // Change the pick to a loser (upsert replaces).
-        set_prediction(&pool, cat, loser).await.unwrap();
+        seed_prediction(&pool, cat, loser).await.unwrap();
         let r = get_prediction_results(&pool, cer).await.unwrap();
         assert_eq!((r.correct, r.total), (0, 1));
 
         // Clear the pick.
-        clear_prediction(&pool, cat).await.unwrap();
+        sqlx::query("DELETE FROM award_predictions WHERE category_id = ?")
+            .bind(cat)
+            .execute(&pool)
+            .await
+            .unwrap();
         let r = get_prediction_results(&pool, cer).await.unwrap();
         assert_eq!((r.correct, r.total, r.picks.len()), (0, 0, 0));
 
@@ -654,7 +673,7 @@ mod tests {
             .await
             .unwrap();
         // The user's pick points at the good winner row.
-        set_prediction(&pool, cat, winner).await.unwrap();
+        seed_prediction(&pool, cat, winner).await.unwrap();
 
         // Re-sync keeps only the current source_keys and drops the stale one.
         delete_nominees_not_in(&pool, cat, &["anora".into(), "conclave".into()])

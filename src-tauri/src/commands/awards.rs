@@ -9,11 +9,15 @@ use crate::db::connection;
 /// of history; otherwise only the newest ceremonies are refreshed. This is the
 /// "Refresh" button endpoint.
 #[tauri::command]
-pub async fn sync_awards(app: AppHandle, full: Option<bool>) -> Result<sync::SyncSummary, String> {
+pub async fn sync_awards(
+    app: AppHandle,
+    full: Option<bool>,
+    retry_failed: Option<bool>,
+) -> Result<sync::SyncSummary, String> {
     let pool = connection::get_pool(&app)
         .await
         .map_err(|e| format!("Database error: {e}"))?;
-    Ok(sync::sync(&pool, full.unwrap_or(false)).await)
+    Ok(sync::sync_selected(&pool, full.unwrap_or(false), retry_failed.unwrap_or(false)).await)
 }
 
 /// List stored ceremonies for an award type ("oscars" | "emmys"), newest first.

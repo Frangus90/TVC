@@ -3,7 +3,7 @@
 //! ceremony is recorded and skipped while the rest proceed.
 
 use chrono::{DateTime, Datelike, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use tauri::AppHandle;
 
@@ -20,8 +20,12 @@ const AWARDS: [AwardType; 2] = [AwardType::Oscars, AwardType::Emmys];
 
 /// Result of a sync, returned to the UI for a toast. Counts are of rows
 /// *processed* this run (past ceremonies are re-processed but rarely change).
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct SyncSummary {
+    #[serde(default)]
+    pub attempted_at: String,
+    #[serde(default)]
+    pub failed_ceremonies: Vec<(String, i32)>,
     pub ceremonies: u32,
     pub categories: u32,
     pub nominees: u32,
@@ -32,8 +36,23 @@ pub struct SyncSummary {
 /// Run a sync. `full` = re-pull 20 years of history per award; otherwise just the
 /// newest few ceremonies (past ones are immutable) plus a probe for the next one.
 pub async fn sync(pool: &SqlitePool, full: bool) -> SyncSummary {
+    sync_selected(pool, full, false).await
+}
+
+pub async fn sync_selected(pool: &SqlitePool, full: bool, retry_failed: bool) -> SyncSummary {
+    static SYNC: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+    let _lock = SYNC.lock().await;
+    let previous: Option<SyncSummary> = db::get_setting(pool, "awards_sync_report")
+        .await
+        .and_then(|value| serde_json::from_str(&value).ok());
+    let targets = previous
+        .map(|report| report.failed_ceremonies)
+        .unwrap_or_default();
     let source = WikipediaAwardSource::new();
-    let mut summary = SyncSummary::default();
+    let mut summary = SyncSummary {
+        attempted_at: Utc::now().to_rfc3339(),
+        ..Default::default()
+    };
     let year = Utc::now().year();
 
     for award in AWARDS {
@@ -41,18 +60,30 @@ pub async fn sync(pool: &SqlitePool, full: bool) -> SyncSummary {
         // Full: 20 years of history. Otherwise: the last 5 years. Both probe one
         // edition ahead so a just-announced ceremony is picked up.
         let span = if full { FULL_YEARS } else { RECENT_YEARS };
-        let editions: Vec<i32> = ((base - (span - 1))..=(base + 1)).rev().collect();
+        let editions: Vec<i32> = if retry_failed {
+            targets
+                .iter()
+                .filter(|(kind, _)| kind == award.as_str())
+                .map(|(_, edition)| *edition)
+                .collect()
+        } else {
+            ((base - (span - 1))..=(base + 1)).rev().collect()
+        };
 
         for edition in editions {
             if edition < 1 {
                 continue;
             }
             let title = award.page_title(edition);
+            let errors_before = summary.errors.len();
             match source.fetch_wikitext(&title).await {
                 Ok(None) => {} // page not created yet — skip silently
-                Err(e) => summary.errors.push(e),
+                Err(e) => summary.errors.push(format!("{title}: {e}")),
                 Ok(Some(wikitext)) => match parse_wikitext(&wikitext) {
-                    None => {} // no "Winners and nominees" section — skip
+                    None if edition <= base => summary
+                        .errors
+                        .push(format!("{title}: no categories could be parsed")),
+                    None => {}
                     Some(mut parsed) => {
                         if award == AwardType::Emmys && edition >= 78 {
                             let supplement_title =
@@ -67,7 +98,7 @@ pub async fn sync(pool: &SqlitePool, full: bool) -> SyncSummary {
                                     )),
                                 },
                                 Ok(None) => {} // Future page may not exist yet.
-                                Err(e) => summary.errors.push(e),
+                                Err(e) => summary.errors.push(format!("{title}: {e}")),
                             }
                         }
                         if let Err(e) =
@@ -78,13 +109,37 @@ pub async fn sync(pool: &SqlitePool, full: bool) -> SyncSummary {
                     }
                 },
             }
+            if summary.errors.len() > errors_before {
+                summary
+                    .failed_ceremonies
+                    .push((award.as_str().into(), edition));
+            }
             // Be polite to the MediaWiki API.
             tokio::time::sleep(std::time::Duration::from_millis(150)).await;
         }
     }
 
-    let _ = db::set_setting(pool, LAST_SYNC_KEY, &Utc::now().to_rfc3339()).await;
+    save_summary(pool, &mut summary, retry_failed).await;
     summary
+}
+
+async fn save_summary(pool: &SqlitePool, summary: &mut SyncSummary, retry_failed: bool) {
+    if let Err(error) = db::set_setting(pool, "awards_last_attempt", &summary.attempted_at).await {
+        summary.errors.push(error);
+    }
+    if !retry_failed && summary.errors.is_empty() && summary.ceremonies > 0 {
+        if let Err(error) = db::set_setting(pool, LAST_SYNC_KEY, &Utc::now().to_rfc3339()).await {
+            summary.errors.push(error);
+        }
+    }
+    match serde_json::to_string(summary) {
+        Ok(report) => {
+            if let Err(error) = db::set_setting(pool, "awards_sync_report", &report).await {
+                summary.errors.push(error);
+            }
+        }
+        Err(error) => summary.errors.push(error.to_string()),
+    }
 }
 
 fn merge_emmy_categories(main: &mut ParsedCeremony, supplement: ParsedCeremony) {
@@ -192,7 +247,7 @@ pub async fn auto_sync_on_startup(app: AppHandle) {
         Err(_) => return,
     };
     let have = db::count_ceremonies(&pool).await;
-    let recently_synced = db::get_setting(&pool, LAST_SYNC_KEY)
+    let recently_synced = db::get_setting(&pool, "awards_last_attempt")
         .await
         .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
         .map(|t| {
@@ -243,6 +298,51 @@ mod it_tests {
             sqlx::query(stmt).execute(&pool).await.unwrap();
         }
         pool
+    }
+
+    #[tokio::test]
+    async fn failed_or_partial_retries_do_not_advance_complete_sync_time() {
+        let pool = mem_pool().await;
+        let previous_success = "2026-01-01T12:00:00Z";
+        db::set_setting(&pool, LAST_SYNC_KEY, previous_success)
+            .await
+            .unwrap();
+        let mut failed = SyncSummary {
+            attempted_at: "2026-09-17T12:00:00Z".into(),
+            ceremonies: 1,
+            errors: vec!["78th Primetime Emmy Awards: timeout".into()],
+            failed_ceremonies: vec![("emmys".into(), 78)],
+            ..Default::default()
+        };
+        save_summary(&pool, &mut failed, false).await;
+        assert_eq!(
+            db::get_setting(&pool, LAST_SYNC_KEY).await.as_deref(),
+            Some(previous_success)
+        );
+        assert_eq!(
+            db::get_setting(&pool, "awards_last_attempt")
+                .await
+                .as_deref(),
+            Some(failed.attempted_at.as_str())
+        );
+        let saved: SyncSummary =
+            serde_json::from_str(&db::get_setting(&pool, "awards_sync_report").await.unwrap())
+                .unwrap();
+        assert_eq!(saved.failed_ceremonies, vec![("emmys".into(), 78)]);
+        assert_eq!(saved.errors, failed.errors);
+
+        failed.errors.clear();
+        failed.failed_ceremonies.clear();
+        save_summary(&pool, &mut failed, true).await;
+        assert_eq!(
+            db::get_setting(&pool, LAST_SYNC_KEY).await.as_deref(),
+            Some(previous_success)
+        );
+        save_summary(&pool, &mut failed, false).await;
+        assert_ne!(
+            db::get_setting(&pool, LAST_SYNC_KEY).await.as_deref(),
+            Some(previous_success)
+        );
     }
 
     #[tokio::test]
@@ -312,7 +412,13 @@ mod it_tests {
                 .iter()
                 .find(|n| n.title.starts_with(title))
                 .unwrap();
-            db::set_prediction(&pool, cat.id, nom.id).await.unwrap();
+            // Seed a historical pick made before the fixture ceremony closed.
+            sqlx::query("INSERT INTO award_predictions (category_id, nominee_id) VALUES (?, ?)")
+                .bind(cat.id)
+                .bind(nom.id)
+                .execute(&pool)
+                .await
+                .unwrap();
             saved.push((cat.id, nom.id, won));
         }
         // Simulate the pre-fix source key of a saved variety-writing prediction.

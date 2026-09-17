@@ -24,7 +24,7 @@
   import { initWhatsNew } from "./lib/stores/whatsNew.svelte";
   import { getSidebarTab } from "./lib/stores/sidebar.svelte";
   import { navItemById } from "./lib/config/navItems";
-  import { showSuccess } from "./lib/stores/toast.svelte";
+  import { showSuccess, showError } from "./lib/stores/toast.svelte";
   import {
     setupNotificationListener,
     loadNotificationSettings,
@@ -186,6 +186,12 @@
 
   // Check for updates on app start and listen for Plex scrobble events
   onMount(() => {
+    const rejected = (event: PromiseRejectionEvent) => {
+      logger.error("Async operation failed", event.reason);
+      showError(`Operation failed: ${String(event.reason)}`);
+      event.preventDefault();
+    };
+    window.addEventListener("unhandledrejection", rejected);
     logger.debug("[TVC] App mounted, will check for updates in 2s...");
     if (!import.meta.env.DEV) {
       setTimeout(() => {
@@ -243,6 +249,7 @@
     });
 
     return () => {
+      window.removeEventListener("unhandledrejection", rejected);
       stopClock();
       unsubDayChange();
       unlistenScrobble?.();

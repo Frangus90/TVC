@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { showError } from "../stores/toast.svelte";
   import { fade, scale } from "svelte/transition";
   import { X, Search, Plus, Loader2, Film, Star, Check } from "lucide-svelte";
   import {
@@ -86,6 +87,8 @@
     try {
       await addMovie(movie);
       addedIds = new Set(addedIds).add(movie.id);
+    } catch (error) {
+      showError(`Could not add title: ${error}`);
     } finally {
       const next = new Set(addingIds);
       next.delete(movie.id);

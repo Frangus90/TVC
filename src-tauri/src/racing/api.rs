@@ -6,7 +6,9 @@ use super::models::RacingEvent;
 
 /// Fetch an ICS calendar file from a URL
 pub async fn fetch_ics(url: &str) -> Result<String, String> {
-    let response = reqwest::get(url)
+    let response = crate::http_client::client()
+        .get(url)
+        .send()
         .await
         .map_err(|e| format!("Failed to fetch ICS from {}: {}", url, e))?;
 
@@ -25,7 +27,12 @@ pub async fn fetch_ics(url: &str) -> Result<String, String> {
 }
 
 /// Parse an ICS calendar string into racing events
-pub fn parse_ics(ics_text: &str, series_slug: &str) -> Vec<RacingEvent> {
+pub fn parse_ics(ics_text: &str, series_slug: &str) -> Result<Vec<RacingEvent>, String> {
+    if !ics_text.trim_start().starts_with("BEGIN:VCALENDAR")
+        || !ics_text.trim_end().ends_with("END:VCALENDAR")
+    {
+        return Err("The feed is not a complete iCalendar document; saved events were kept".into());
+    }
     let reader = BufReader::new(ics_text.as_bytes());
     let parser = IcalParser::new(reader);
 
@@ -34,7 +41,7 @@ pub fn parse_ics(ics_text: &str, series_slug: &str) -> Vec<RacingEvent> {
     for calendar_result in parser {
         let calendar: IcalCalendar = match calendar_result {
             Ok(cal) => cal,
-            Err(_) => continue,
+            Err(error) => return Err(format!("Invalid calendar: {error}")),
         };
 
         for vevent in calendar.events {
@@ -67,22 +74,26 @@ pub fn parse_ics(ics_text: &str, series_slug: &str) -> Vec<RacingEvent> {
 
             let summary_str = match summary {
                 Some(s) => s,
-                None => continue,
+                None => return Err("Calendar event is missing SUMMARY".into()),
             };
 
             let start_raw = match dtstart {
                 Some(s) => s,
-                None => continue,
+                None => return Err("Calendar event is missing DTSTART".into()),
             };
 
-            let uid_str = uid.unwrap_or_else(|| format!("{}_{}", series_slug, start_raw));
+            let uid_str = uid
+                .filter(|value| !value.trim().is_empty())
+                .ok_or("Calendar event is missing UID")?;
 
             // Parse the summary to extract event title and session name
             let (event_title, session_name) = parse_summary(&summary_str);
 
             // Convert ICS datetime to ISO 8601 UTC
-            let start_time = ics_datetime_to_iso(&start_raw, dtstart_tzid.as_deref());
-            let end_time = dtend.map(|d| ics_datetime_to_iso(&d, dtend_tzid.as_deref()));
+            let start_time = event_time_to_utc(&start_raw, dtstart_tzid.as_deref())?;
+            let end_time = dtend
+                .map(|d| event_time_to_utc(&d, dtend_tzid.as_deref()))
+                .transpose()?;
 
             events.push(RacingEvent {
                 id: 0, // Will be set by database
@@ -99,7 +110,14 @@ pub fn parse_ics(ics_text: &str, series_slug: &str) -> Vec<RacingEvent> {
         }
     }
 
-    events
+    if events.is_empty() {
+        return Err("The feed contains no events; saved events were kept".into());
+    }
+    let mut uids = std::collections::HashSet::new();
+    if events.iter().any(|event| !uids.insert(&event.uid)) {
+        return Err("Duplicate event UID in feed".into());
+    }
+    Ok(events)
 }
 
 /// Parse a SUMMARY field into (event_title, session_name)
@@ -182,10 +200,24 @@ fn is_session_name(s: &str) -> bool {
 
     matches!(
         stripped,
-        "fp1" | "fp2" | "fp3" | "practice 1" | "practice 2" | "practice 3"
-            | "qualifying" | "q1" | "q2" | "race" | "sprint"
-            | "sprint qualifying" | "sprint shootout"
-            | "warm up" | "wup" | "pr" | "spr" | "rac"
+        "fp1"
+            | "fp2"
+            | "fp3"
+            | "practice 1"
+            | "practice 2"
+            | "practice 3"
+            | "qualifying"
+            | "q1"
+            | "q2"
+            | "race"
+            | "sprint"
+            | "sprint qualifying"
+            | "sprint shootout"
+            | "warm up"
+            | "wup"
+            | "pr"
+            | "spr"
+            | "rac"
     )
 }
 
@@ -241,6 +273,9 @@ fn parse_utc_offset_minutes(tzid: &str) -> Option<i32> {
         return None;
     };
 
+    if !rest.chars().all(|c| c.is_ascii_digit() || c == ':') {
+        return None;
+    }
     // Remove colons: "05:30" → "0530"
     let digits: String = rest.chars().filter(|c| c.is_ascii_digit()).collect();
 
@@ -254,139 +289,56 @@ fn parse_utc_offset_minutes(tzid: &str) -> Option<i32> {
         _ => return None,
     };
 
+    if hours > 23 || minutes > 59 {
+        return None;
+    }
     Some(sign * (hours * 60 + minutes))
 }
 
-/// Convert ICS datetime format to ISO 8601, always normalizing to UTC
-///
-/// Handles:
-/// - "20260329T050000Z" → "2026-03-29T05:00:00Z"
-/// - "20260329T050000" with TZID "UTC+0700" → converted to UTC with Z suffix
-/// - "20260329T050000" without TZID → "2026-03-29T05:00:00" (kept as-is)
-/// - "20260329" → "2026-03-29"
-fn ics_datetime_to_iso(dt: &str, tzid: Option<&str>) -> String {
-    let clean = dt.trim();
-
-    // Full datetime: 20260329T050000Z or 20260329T050000
-    if clean.len() >= 15 && clean.contains('T') {
-        let date_part = &clean[..8];
-        let time_part = &clean[9..15];
-
-        // Already UTC
-        if clean.ends_with('Z') {
-            return format!(
-                "{}-{}-{}T{}:{}:{}Z",
-                &date_part[..4],
-                &date_part[4..6],
-                &date_part[6..8],
-                &time_part[..2],
-                &time_part[2..4],
-                &time_part[4..6],
-            );
-        }
-
-        // Has TZID — convert to UTC
-        if let Some(tz) = tzid {
-            if let Some(offset_minutes) = parse_utc_offset_minutes(tz) {
-                return apply_utc_offset(date_part, time_part, offset_minutes);
-            }
-        }
-
-        // No timezone info — keep as-is (floating time)
-        return format!(
-            "{}-{}-{}T{}:{}:{}",
-            &date_part[..4],
-            &date_part[4..6],
-            &date_part[6..8],
-            &time_part[..2],
-            &time_part[2..4],
-            &time_part[4..6],
-        );
+/// Resolve UTC, numeric offsets, IANA zones, and floating local times to one UTC format.
+fn event_time_to_utc(value: &str, tzid: Option<&str>) -> Result<String, String> {
+    use chrono::{NaiveDate, NaiveDateTime, TimeZone, Utc};
+    let raw = value.trim();
+    if !raw.is_ascii() || !matches!(raw.len(), 8 | 15 | 16) {
+        return Err("Invalid calendar date".into());
     }
-
-    // Date only: 20260329
-    if clean.len() == 8 && clean.chars().all(|c| c.is_ascii_digit()) {
-        return format!("{}-{}-{}", &clean[..4], &clean[4..6], &clean[6..8]);
+    let naive = if raw.len() == 8 {
+        NaiveDate::parse_from_str(raw, "%Y%m%d")
+            .ok()
+            .and_then(|d| d.and_hms_opt(0, 0, 0))
+    } else {
+        NaiveDateTime::parse_from_str(raw.trim_end_matches('Z'), "%Y%m%dT%H%M%S").ok()
     }
-
-    // Fallback: return as-is
-    clean.to_string()
+    .ok_or_else(|| format!("Invalid calendar date: {raw}"))?;
+    let utc = if raw.ends_with('Z') {
+        Some(naive.and_utc())
+    } else if let Some(zone) = tzid {
+        let zone = zone.trim_matches('"');
+        if let Some(minutes) = parse_utc_offset_minutes(zone) {
+            chrono::FixedOffset::east_opt(minutes * 60)
+                .and_then(|tz| tz.from_local_datetime(&naive).single())
+                .map(|date| date.with_timezone(&Utc))
+        } else {
+            let tz: chrono_tz::Tz = zone
+                .parse()
+                .map_err(|_| format!("Unknown calendar timezone: {zone}"))?;
+            tz.from_local_datetime(&naive)
+                .single()
+                .map(|date| date.with_timezone(&Utc))
+        }
+    } else {
+        chrono::Local
+            .from_local_datetime(&naive)
+            .single()
+            .map(|date| date.with_timezone(&Utc))
+    }
+    .ok_or("Ambiguous or nonexistent local calendar time; the feed must specify a UTC offset")?;
+    Ok(utc.format("%Y-%m-%dT%H:%M:%SZ").to_string())
 }
 
-/// Apply a UTC offset (in minutes) to a date+time and return an ISO 8601 UTC string
-fn apply_utc_offset(date_part: &str, time_part: &str, offset_minutes: i32) -> String {
-    let year: i32 = date_part[..4].parse().unwrap_or(2026);
-    let month: u32 = date_part[4..6].parse().unwrap_or(1);
-    let day: u32 = date_part[6..8].parse().unwrap_or(1);
-    let hour: i32 = time_part[..2].parse().unwrap_or(0);
-    let min: i32 = time_part[2..4].parse().unwrap_or(0);
-    let sec: i32 = time_part[4..6].parse().unwrap_or(0);
-
-    // Convert to total minutes from midnight, subtract offset to get UTC
-    let total_minutes = hour * 60 + min - offset_minutes;
-    let mut utc_day = day as i32;
-    let mut utc_hour = total_minutes / 60;
-    let mut utc_min = total_minutes % 60;
-
-    // Handle negative minutes
-    if utc_min < 0 {
-        utc_min += 60;
-        utc_hour -= 1;
-    }
-
-    // Handle day rollover
-    if utc_hour < 0 {
-        utc_hour += 24;
-        utc_day -= 1;
-    } else if utc_hour >= 24 {
-        utc_hour -= 24;
-        utc_day += 1;
-    }
-
-    // Handle month boundaries
-    let days_in_month = match month {
-        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
-        4 | 6 | 9 | 11 => 30,
-        2 => {
-            if (year % 4 == 0 && year % 100 != 0) || year % 400 == 0 {
-                29
-            } else {
-                28
-            }
-        }
-        _ => 30,
-    };
-
-    let (final_year, final_month, final_day) = if utc_day < 1 {
-        // Rolled back to previous month
-        let prev_month = if month == 1 { 12 } else { month - 1 };
-        let prev_year = if month == 1 { year - 1 } else { year };
-        let prev_days = match prev_month {
-            1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
-            4 | 6 | 9 | 11 => 30,
-            2 => {
-                if (prev_year % 4 == 0 && prev_year % 100 != 0) || prev_year % 400 == 0 {
-                    29
-                } else {
-                    28
-                }
-            }
-            _ => 30,
-        };
-        (prev_year, prev_month, prev_days as i32 + utc_day)
-    } else if utc_day > days_in_month as i32 {
-        // Rolled forward to next month
-        let next_month = if month == 12 { 1 } else { month + 1 };
-        let next_year = if month == 12 { year + 1 } else { year };
-        (next_year, next_month, utc_day - days_in_month as i32)
-    } else {
-        (year, month, utc_day)
-    };
-
-    format!(
-        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
-        final_year, final_month, final_day, utc_hour, utc_min, sec
-    )
+#[cfg(test)]
+fn ics_datetime_to_iso(value: &str, zone: Option<&str>) -> String {
+    event_time_to_utc(value, zone).unwrap()
 }
 
 #[cfg(test)]
@@ -446,17 +398,36 @@ mod tests {
 
     #[test]
     fn test_ics_datetime_full_utc() {
-        assert_eq!(ics_datetime_to_iso("20260329T050000Z", None), "2026-03-29T05:00:00Z");
+        assert_eq!(
+            ics_datetime_to_iso("20260329T050000Z", None),
+            "2026-03-29T05:00:00Z"
+        );
     }
 
     #[test]
     fn test_ics_datetime_no_tz() {
-        assert_eq!(ics_datetime_to_iso("20260329T050000", None), "2026-03-29T05:00:00");
+        use chrono::TimeZone;
+        let expected = chrono::Local
+            .with_ymd_and_hms(2026, 3, 29, 5, 0, 0)
+            .unwrap()
+            .with_timezone(&chrono::Utc);
+        assert_eq!(
+            ics_datetime_to_iso("20260329T050000", None),
+            expected.format("%Y-%m-%dT%H:%M:%SZ").to_string()
+        );
     }
 
     #[test]
     fn test_ics_datetime_date_only() {
-        assert_eq!(ics_datetime_to_iso("20260329", None), "2026-03-29");
+        use chrono::TimeZone;
+        let expected = chrono::Local
+            .with_ymd_and_hms(2026, 3, 29, 0, 0, 0)
+            .unwrap()
+            .with_timezone(&chrono::Utc);
+        assert_eq!(
+            ics_datetime_to_iso("20260329", None),
+            expected.format("%Y-%m-%dT%H:%M:%SZ").to_string()
+        );
     }
 
     #[test]
@@ -502,5 +473,18 @@ mod tests {
         assert_eq!(parse_utc_offset_minutes("UTC+0000"), Some(0));
         assert_eq!(parse_utc_offset_minutes("UTC"), Some(0));
         assert_eq!(parse_utc_offset_minutes("+05:30"), Some(330));
+    }
+    #[test]
+    fn iana_zones_follow_dst_and_reject_ambiguous_wall_times() {
+        assert_eq!(
+            event_time_to_utc("20260117T120000", Some("Europe/Oslo")).unwrap(),
+            "2026-01-17T11:00:00Z"
+        );
+        assert_eq!(
+            event_time_to_utc("20260917T120000", Some("Europe/Oslo")).unwrap(),
+            "2026-09-17T10:00:00Z"
+        );
+        assert!(event_time_to_utc("20260329T023000", Some("Europe/Oslo")).is_err());
+        assert!(event_time_to_utc("20261025T023000", Some("Europe/Oslo")).is_err());
     }
 }

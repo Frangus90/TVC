@@ -15,6 +15,16 @@ function Write-Success { param($msg) Write-Host $msg -ForegroundColor Green }
 function Write-Err { param($msg) Write-Host $msg -ForegroundColor Red }
 function Write-Info { param($msg) Write-Host $msg -ForegroundColor Yellow }
 
+# Validate before committing, changing versions, building installers, or publishing.
+Write-Step "Running local release checks (disposable test databases only)..."
+Push-Location $ProjectRoot
+try {
+    node scripts/check.mjs
+    if ($LASTEXITCODE -ne 0) { throw "Checks failed. Release stopped before any version or Git changes." }
+} finally {
+    Pop-Location
+}
+
 # Step 0: Pre-commit any pending working-tree changes before starting the release
 Write-Step "Checking working tree for pending changes..."
 

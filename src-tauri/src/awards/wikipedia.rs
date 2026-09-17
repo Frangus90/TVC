@@ -21,7 +21,7 @@ pub struct WikipediaAwardSource {
 impl WikipediaAwardSource {
     pub fn new() -> Self {
         Self {
-            client: reqwest::Client::new(),
+            client: crate::http_client::client().clone(),
         }
     }
 
@@ -43,7 +43,9 @@ impl WikipediaAwardSource {
             ])
             .send()
             .await
-            .map_err(|e| format!("Wikipedia request failed for '{title}': {e}"))?;
+            .map_err(|e| format!("Wikipedia request failed for '{title}': {e}"))?
+            .error_for_status()
+            .map_err(|e| format!("Wikipedia returned an error for '{title}': {e}"))?;
 
         let json: serde_json::Value = resp
             .json()

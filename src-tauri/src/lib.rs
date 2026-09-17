@@ -1,19 +1,23 @@
 mod arr;
+#[cfg(test)]
+mod audit_tests;
 mod awards;
 mod commands;
 mod db;
 mod error;
+mod http_client;
 mod library_sync;
 mod notifications;
 mod plex;
 mod racing;
 mod tmdb;
+mod watch_history;
 
-use db::migration_repair::{repair_migration_checksums, MigrationDef};
 use db::get_db_connection_string;
-use tauri::Manager;
+use db::migration_repair::{repair_migration_checksums, MigrationDef};
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::Manager;
 use tauri_plugin_sql::{Migration, MigrationKind};
 
 // Migration SQL content - embedded at compile time
@@ -36,36 +40,103 @@ const MIGRATION_016: &str = include_str!("../migrations/016_racing_session_feeds
 const MIGRATION_017: &str = include_str!("../migrations/017_add_awards.sql");
 const MIGRATION_018: &str = include_str!("../migrations/018_awards_nominations_date.sql");
 
+const MIGRATION_019: &str = include_str!("../migrations/019_import_deletion.sql");
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    #[cfg(debug_assertions)]
+    db::dev_profile::prepare().expect("Could not prepare the development profile");
     let mut context = tauri::generate_context!();
+    context.config_mut().identifier = db::app_identifier().into();
+    if cfg!(debug_assertions) {
+        for window in &mut context.config_mut().app.windows {
+            window.title = "TVC — Development".into();
+        }
+    }
     // SQL preload and Rust connections must target the same build-specific database.
     context
         .config_mut()
         .plugins
         .0
         .insert("sql".into(), db::sql_plugin_config());
-    // CRITICAL: Repair migration checksums BEFORE SQL plugin initializes
-    // This ensures old databases work with new versions even if migration files changed
+    // Normalize only known-equivalent LF/CRLF checksums before SQLx validates migrations.
     repair_migration_checksums(&[
-        MigrationDef { version: 1, sql: MIGRATION_001 },
-        MigrationDef { version: 2, sql: MIGRATION_002 },
-        MigrationDef { version: 3, sql: MIGRATION_003 },
-        MigrationDef { version: 4, sql: MIGRATION_004 },
-        MigrationDef { version: 5, sql: MIGRATION_005 },
-        MigrationDef { version: 6, sql: MIGRATION_006 },
-        MigrationDef { version: 7, sql: MIGRATION_007 },
-        MigrationDef { version: 8, sql: MIGRATION_008 },
-        MigrationDef { version: 9, sql: MIGRATION_009 },
-        MigrationDef { version: 10, sql: MIGRATION_010 },
-        MigrationDef { version: 11, sql: MIGRATION_011 },
-        MigrationDef { version: 12, sql: MIGRATION_012 },
-        MigrationDef { version: 13, sql: MIGRATION_013 },
-        MigrationDef { version: 14, sql: MIGRATION_014 },
-        MigrationDef { version: 15, sql: MIGRATION_015 },
-        MigrationDef { version: 16, sql: MIGRATION_016 },
-        MigrationDef { version: 17, sql: MIGRATION_017 },
-        MigrationDef { version: 18, sql: MIGRATION_018 },
+        MigrationDef {
+            version: 1,
+            sql: MIGRATION_001,
+        },
+        MigrationDef {
+            version: 2,
+            sql: MIGRATION_002,
+        },
+        MigrationDef {
+            version: 3,
+            sql: MIGRATION_003,
+        },
+        MigrationDef {
+            version: 4,
+            sql: MIGRATION_004,
+        },
+        MigrationDef {
+            version: 5,
+            sql: MIGRATION_005,
+        },
+        MigrationDef {
+            version: 6,
+            sql: MIGRATION_006,
+        },
+        MigrationDef {
+            version: 7,
+            sql: MIGRATION_007,
+        },
+        MigrationDef {
+            version: 8,
+            sql: MIGRATION_008,
+        },
+        MigrationDef {
+            version: 9,
+            sql: MIGRATION_009,
+        },
+        MigrationDef {
+            version: 10,
+            sql: MIGRATION_010,
+        },
+        MigrationDef {
+            version: 11,
+            sql: MIGRATION_011,
+        },
+        MigrationDef {
+            version: 12,
+            sql: MIGRATION_012,
+        },
+        MigrationDef {
+            version: 13,
+            sql: MIGRATION_013,
+        },
+        MigrationDef {
+            version: 14,
+            sql: MIGRATION_014,
+        },
+        MigrationDef {
+            version: 15,
+            sql: MIGRATION_015,
+        },
+        MigrationDef {
+            version: 16,
+            sql: MIGRATION_016,
+        },
+        MigrationDef {
+            version: 17,
+            sql: MIGRATION_017,
+        },
+        MigrationDef {
+            version: 18,
+            sql: MIGRATION_018,
+        },
+        MigrationDef {
+            version: 19,
+            sql: MIGRATION_019,
+        },
     ]);
 
     let migrations = vec![
@@ -175,6 +246,12 @@ pub fn run() {
             version: 18,
             description: "add awards nominations date",
             sql: MIGRATION_018,
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 19,
+            description: "allow imported title deletion",
+            sql: MIGRATION_019,
             kind: MigrationKind::Up,
         },
     ];
@@ -349,7 +426,8 @@ pub fn run() {
             let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show_item, &quit_item])?;
 
-            let icon = app.default_window_icon()
+            let icon = app
+                .default_window_icon()
                 .ok_or_else(|| "Failed to get default window icon")?;
             let _tray = TrayIconBuilder::with_id("main")
                 .icon(icon.clone())

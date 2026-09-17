@@ -1,9 +1,9 @@
+use crate::db::connection;
+use crate::tmdb;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row};
 use std::collections::HashMap;
 use tauri::AppHandle;
-use crate::db::connection;
-use crate::tmdb;
 
 /// User-controlled per-episode state. Preserved across re-syncs by keying on
 /// (season, episode) — TMDB episode IDs can change when the show is updated.
@@ -39,40 +39,17 @@ pub async fn mark_episode_watched(
     watched: bool,
 ) -> Result<(), String> {
     crate::commands::validation::validate_id(episode_id)?;
-    
-    let pool = connection::get_pool(&app).await
+
+    let pool = connection::get_pool(&app)
+        .await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    // Use parameterized query instead of format! for safety
-    if watched {
-        sqlx::query(
-            r#"
-            UPDATE episodes
-            SET watched = ?, watched_at = datetime('now')
-            WHERE id = ?
-            "#,
-        )
-        .bind(1)
-        .bind(episode_id)
-        .execute(&pool)
-        .await
-        .map_err(|e| format!("Failed to mark episode watched: {}", e))?;
-    } else {
-        sqlx::query(
-            r#"
-            UPDATE episodes
-            SET watched = ?, watched_at = NULL
-            WHERE id = ?
-            "#,
-        )
-        .bind(0)
-        .bind(episode_id)
-        .execute(&pool)
-        .await
-        .map_err(|e| format!("Failed to mark episode watched: {}", e))?;
-    }
-
-    Ok(())
+    crate::watch_history::episodes(
+        &pool,
+        crate::watch_history::Episodes::One(episode_id),
+        watched,
+    )
+    .await
 }
 
 #[tauri::command]
@@ -81,9 +58,23 @@ pub async fn get_episodes_for_range(
     start_date: String,
     end_date: String,
 ) -> Result<Vec<Episode>, String> {
-    let pool = connection::get_pool(&app).await
+    let pool = connection::get_pool(&app)
+        .await
         .map_err(|e| format!("Database error: {}", e))?;
 
+    episodes_for_range(&pool, &start_date, &end_date).await
+}
+
+pub(crate) async fn episodes_for_range(
+    pool: &sqlx::SqlitePool,
+    start_date: &str,
+    end_date: &str,
+) -> Result<Vec<Episode>, String> {
+    super::validation::validate_date(start_date)?;
+    super::validation::validate_date(end_date)?;
+    if start_date > end_date {
+        return Err("Start date must not follow end date".into());
+    }
     let rows = sqlx::query(
         r#"
         SELECT
@@ -100,18 +91,16 @@ pub async fn get_episodes_for_range(
             s.poster_url
         FROM episodes e
         JOIN shows s ON e.show_id = s.id
-        WHERE s.tier_only = 0
-          AND ((e.aired >= ? AND e.aired <= ?)
-           OR (e.scheduled_date >= ? AND e.scheduled_date <= ?))
+        WHERE s.tier_only = 0 AND COALESCE(s.archived, 0) = 0
+          AND COALESCE(e.scheduled_date, e.aired) >= ?
+          AND COALESCE(e.scheduled_date, e.aired) <= ?
         ORDER BY COALESCE(e.scheduled_date, e.aired), s.name
         LIMIT 10000
         "#,
     )
     .bind(&start_date)
     .bind(&end_date)
-    .bind(&start_date)
-    .bind(&end_date)
-    .fetch_all(&pool)
+    .fetch_all(pool)
     .await
     .map_err(|e| format!("Failed to get episodes for range: {}", e))?;
 
@@ -149,7 +138,8 @@ pub async fn sync_show_episodes(app: AppHandle, show_id: i64) -> Result<(), Stri
         .await
         .map_err(|e| format!("Failed to fetch episodes: {}", e))?;
 
-    let pool = connection::get_pool(&app).await
+    let pool = connection::get_pool(&app)
+        .await
         .map_err(|e| format!("Database error: {}", e))?;
 
     apply_show_refresh(&pool, &show_details, episodes).await
@@ -200,10 +190,9 @@ async fn apply_show_refresh(
         return Err(format!("Failed to update show: {}", e));
     }
 
-    // Drop existing episodes — TMDB episode IDs are not stable across re-syncs.
-    // change_history rows for the gone IDs are cascaded by FK; user state is
-    // restored below by (season, episode) lookup.
-    if let Err(e) = sqlx::query("DELETE FROM episodes WHERE show_id = ?")
+    // Remove disposable cached rows, retaining unmatched episodes with personal state.
+    // Returned episodes are replaced by season/episode below, even if provider IDs change.
+    if let Err(e) = sqlx::query("DELETE FROM episodes WHERE show_id = ? AND COALESCE(watched,0) = 0 AND watched_at IS NULL AND scheduled_date IS NULL AND rating IS NULL AND COALESCE(tags, '') IN ('', '[]')")
         .bind(show_id)
         .execute(&mut *tx)
         .await
@@ -212,10 +201,23 @@ async fn apply_show_refresh(
         return Err(format!("Failed to clear old episodes: {}", e));
     }
 
+    let mut keys = std::collections::HashSet::new();
     for ep in episodes {
+        if !keys.insert((ep.season_number, ep.episode_number)) {
+            return Err("TMDB returned a duplicate season/episode; saved data was kept".into());
+        }
+        sqlx::query(
+            "DELETE FROM episodes WHERE show_id = ? AND season_number = ? AND episode_number = ?",
+        )
+        .bind(show_id)
+        .bind(ep.season_number)
+        .bind(ep.episode_number)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| format!("Could not replace episode: {e}"))?;
         let scheduled_date = match preserved.get(&(ep.season_number, ep.episode_number)) {
             Some(state) => state.scheduled_date.clone(),
-            None => ep.air_date.clone(),
+            None => None,
         };
         let state = preserved
             .get(&(ep.season_number, ep.episode_number))
@@ -354,15 +356,27 @@ mod sync_tests {
                 .fetch_all(&pool)
                 .await
                 .unwrap();
-        assert_eq!(
-            dates,
-            vec![Some("2026-09-14".into()), None, Some("2026-09-16".into())]
-        );
+        assert_eq!(dates, vec![Some("2026-09-14".into()), None, None]);
         let name: String = sqlx::query_scalar("SELECT name FROM shows WHERE id = 1")
             .fetch_one(&pool)
             .await
             .unwrap();
         assert_eq!(name, "Updated");
+    }
+
+    #[tokio::test]
+    async fn provider_removed_episode_with_personal_state_survives_refresh() {
+        let pool = database().await;
+        apply_show_refresh(&pool, &details(), vec![episode(101, 2)])
+            .await
+            .unwrap();
+        let row =
+            sqlx::query("SELECT watched_at, scheduled_date, rating FROM episodes WHERE id=10")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(row.get::<String, _>("watched_at"), "2026-09-15T20:00:00Z");
+        assert_eq!(row.get::<f64, _>("rating"), 8.5);
     }
 
     #[tokio::test]
@@ -398,15 +412,12 @@ mod sync_tests {
 }
 
 #[tauri::command]
-pub async fn schedule_episode(
-    app: AppHandle,
-    episode_id: i64,
-    date: String,
-) -> Result<(), String> {
+pub async fn schedule_episode(app: AppHandle, episode_id: i64, date: String) -> Result<(), String> {
     crate::commands::validation::validate_id(episode_id)?;
     crate::commands::validation::validate_date(&date)?;
-    
-    let pool = connection::get_pool(&app).await
+
+    let pool = connection::get_pool(&app)
+        .await
         .map_err(|e| format!("Database error: {}", e))?;
 
     sqlx::query("UPDATE episodes SET scheduled_date = ? WHERE id = ?")
@@ -421,8 +432,9 @@ pub async fn schedule_episode(
 #[tauri::command]
 pub async fn unschedule_episode(app: AppHandle, episode_id: i64) -> Result<(), String> {
     crate::commands::validation::validate_id(episode_id)?;
-    
-    let pool = connection::get_pool(&app).await
+
+    let pool = connection::get_pool(&app)
+        .await
         .map_err(|e| format!("Database error: {}", e))?;
 
     sqlx::query("UPDATE episodes SET scheduled_date = NULL WHERE id = ?")
@@ -442,85 +454,31 @@ pub async fn mark_season_watched(
     watched: bool,
 ) -> Result<(), String> {
     crate::commands::validation::validate_id(show_id)?;
-    
-    let pool = connection::get_pool(&app).await
+
+    let pool = connection::get_pool(&app)
+        .await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    // Use parameterized query instead of format! for safety
-    if watched {
-        sqlx::query(
-            r#"
-            UPDATE episodes
-            SET watched = ?, watched_at = datetime('now')
-            WHERE show_id = ? AND season_number = ?
-            "#,
-        )
-        .bind(1)
-        .bind(show_id)
-        .bind(season_number)
-        .execute(&pool)
-        .await
-        .map_err(|e| format!("Failed to mark season watched: {}", e))?;
-    } else {
-        sqlx::query(
-            r#"
-            UPDATE episodes
-            SET watched = ?, watched_at = NULL
-            WHERE show_id = ? AND season_number = ?
-            "#,
-        )
-        .bind(0)
-        .bind(show_id)
-        .bind(season_number)
-        .execute(&pool)
-        .await
-        .map_err(|e| format!("Failed to mark season watched: {}", e))?;
-    }
-
-    Ok(())
+    crate::watch_history::episodes(
+        &pool,
+        crate::watch_history::Episodes::Season(show_id, season_number),
+        watched,
+    )
+    .await
 }
 
 #[tauri::command]
-pub async fn mark_show_watched(
-    app: AppHandle,
-    show_id: i64,
-    watched: bool,
-) -> Result<(), String> {
+pub async fn mark_show_watched(app: AppHandle, show_id: i64, watched: bool) -> Result<(), String> {
     crate::commands::validation::validate_id(show_id)?;
-    
-    let pool = connection::get_pool(&app).await
+
+    let pool = connection::get_pool(&app)
+        .await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    // Use parameterized query instead of format! for safety
-    if watched {
-        sqlx::query(
-            r#"
-            UPDATE episodes
-            SET watched = ?, watched_at = datetime('now')
-            WHERE show_id = ?
-            "#,
-        )
-        .bind(1)
-        .bind(show_id)
-        .execute(&pool)
-        .await
-        .map_err(|e| format!("Failed to mark show watched: {}", e))?;
-    } else {
-        sqlx::query(
-            r#"
-            UPDATE episodes
-            SET watched = ?, watched_at = NULL
-            WHERE show_id = ?
-            "#,
-        )
-        .bind(0)
-        .bind(show_id)
-        .execute(&pool)
-        .await
-        .map_err(|e| format!("Failed to mark show watched: {}", e))?;
-    }
-
-    Ok(())
+    crate::watch_history::episodes(
+        &pool,
+        crate::watch_history::Episodes::Show(show_id),
+        watched,
+    )
+    .await
 }
-
-

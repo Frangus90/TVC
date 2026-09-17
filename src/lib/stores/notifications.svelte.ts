@@ -1,3 +1,4 @@
+import { showError } from "./toast.svelte";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { logger } from "../utils/logger";
@@ -123,6 +124,7 @@ export async function updateNotificationSettings(
     settings = updated;
   } catch (e) {
     logger.error("[Notifications] Failed to update settings", e);
+    showError(`Could not save notification settings: ${e}`);
   }
 }
 

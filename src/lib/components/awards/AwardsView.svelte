@@ -3,7 +3,7 @@
   import { Award, Trophy, RefreshCw, ChevronLeft, ChevronDown, Check, Download } from "lucide-svelte";
   import { exportPredictionsAsImage } from "../../utils/predictionExport";
   import { predictionOutcome } from "../../utils/awardPredictions";
-  import { formatDate } from "../../utils/dateFormat";
+  import { formatDate, formatDateTime } from "../../utils/dateFormat";
   import {
     getAwardType,
     setAwardType,
@@ -19,6 +19,7 @@
     getPredictionsMap,
     getScore,
     getLastSync,
+    getAwardsSyncReport,
     setPrediction,
     clearPrediction,
     type AwardType,
@@ -60,9 +61,9 @@
     await setAwardType(t);
   }
 
-  async function doRefresh(full: boolean) {
+  async function doRefresh(full: boolean, retryFailed = false) {
     try {
-      const s = await refreshAwards(full);
+      const s = await refreshAwards(full, retryFailed);
       if (s.errors.length > 0) {
         showError(`Synced with ${s.errors.length} issue(s); some ceremonies were skipped.`);
       } else {
@@ -100,6 +101,21 @@
 </script>
 
 <div class="max-w-4xl mx-auto">
+  {#if getAwardsSyncReport()}
+    {@const report = getAwardsSyncReport()!}
+    <div class="mb-4 text-sm text-text-muted">
+      <p>Last attempt: {formatDateTime(report.attempted_at)}</p>
+      {#if report.errors.length}
+        <details class="text-red-400">
+          <summary>{report.errors.length} sync issues</summary>
+          <ul>{#each report.errors as error}<li>{error}</li>{/each}</ul>
+        </details>
+        {#if report.failed_ceremonies?.length}
+          <button class="underline" disabled={isSyncing()} onclick={() => doRefresh(false, true)}>Retry failed ceremonies</button>
+        {/if}
+      {/if}
+    </div>
+  {/if}
   <!-- Award toggle + refresh -->
   <div class="flex items-center justify-between mb-4">
     <div class="flex bg-background rounded-lg p-1">
@@ -116,7 +132,7 @@
     </div>
     <div class="flex items-center gap-3">
       {#if getLastSync()}
-        <span class="text-xs text-text-muted">Updated {relativeTime(getLastSync()!)}</span>
+        <span class="text-xs text-text-muted">Last complete sync {relativeTime(getLastSync()!)}</span>
       {/if}
       <div class="relative flex">
         <button

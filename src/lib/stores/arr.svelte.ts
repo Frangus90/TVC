@@ -1,3 +1,4 @@
+let libraryRequest = 0;
 import { invoke } from "@tauri-apps/api/core";
 import { logger } from "../utils/logger";
 import { loadTrackedShows } from "./shows.svelte";
@@ -232,6 +233,8 @@ export function clearSonarrFilters() {
 }
 
 export function setSelectedServer(server: ArrServer | null) {
+  libraryRequest++;
+  loading = false;
   selectedServer = server;
   libraryItems = [];
   selectedItems = new Set();
@@ -277,7 +280,7 @@ export async function loadServers() {
 
   try {
     const result = await invoke<ArrServer[]>("get_arr_servers");
-    logger.debug("[Arr] Loaded servers:", result);
+    logger.debug("[Arr] Loaded server count:", result.length);
     servers = result;
   } catch (err) {
     logger.error("[Arr] Failed to load servers:", err);
@@ -317,7 +320,7 @@ export async function addServer(request: ArrServerRequest): Promise<void> {
   error = null;
 
   try {
-    logger.debug("[Arr] Adding server:", request);
+    logger.debug("[Arr] Adding server:", { name: request.name, type: request.type });
     const id = await invoke<number>("add_arr_server", { server: request });
     logger.debug("[Arr] Server added with id:", id);
     successMessage = `${request.name} added successfully`;
@@ -371,27 +374,23 @@ export async function deleteServer(id: number): Promise<void> {
 }
 
 export async function loadLibrary(server: ArrServer): Promise<void> {
-  loading = true;
-  error = null;
-  libraryItems = [];
-
+  const request = ++libraryRequest;
+  loading = true; error = null; libraryItems = [];
   try {
-    if (server.type === "sonarr") {
-      libraryItems = await invoke<LibraryItem[]>("get_sonarr_library", { serverId: server.id });
-    } else {
-      libraryItems = await invoke<LibraryItem[]>("get_radarr_library", { serverId: server.id });
-    }
+    const items = await invoke<LibraryItem[]>(server.type === "sonarr" ? "get_sonarr_library" : "get_radarr_library", { serverId: server.id });
+    if (request === libraryRequest) libraryItems = items;
   } catch (err) {
-    logger.error("Failed to load library:", err);
-    error = err instanceof Error ? err.message : String(err);
+    if (request === libraryRequest) error = String(err);
   } finally {
-    loading = false;
+    if (request === libraryRequest) loading = false;
   }
 }
 
 export async function importSelected(): Promise<void> {
   if (!selectedServer || selectedItems.size === 0) return;
 
+  const server = selectedServer;
+  const requestGeneration = libraryRequest;
   importing = true;
   error = null;
   importResult = null;
@@ -410,25 +409,30 @@ export async function importSelected(): Promise<void> {
     }
 
     const request: ImportRequest = {
-      server_id: selectedServer.id,
+      server_id: server.id,
       items,
     };
 
-    if (selectedServer.type === "sonarr") {
-      importResult = await invoke<ImportResult>("import_from_sonarr", { request });
+    if (server.type === "sonarr") {
+      const result = await invoke<ImportResult>("import_from_sonarr", { request });
+      if (requestGeneration === libraryRequest) importResult = result;
       // Refresh sidebar shows
       await loadTrackedShows();
     } else {
-      importResult = await invoke<ImportResult>("import_from_radarr", { request });
+      const result = await invoke<ImportResult>("import_from_radarr", { request });
+      if (requestGeneration === libraryRequest) importResult = result;
       // Refresh sidebar movies
       await loadTrackedMovies();
     }
 
     // Clear selection and refresh library
-    selectedItems = new Set();
-    await loadLibrary(selectedServer);
+    if (requestGeneration === libraryRequest) {
+      selectedItems = new Set();
+      await loadLibrary(server);
+    }
   } catch (err) {
     logger.error("Import failed:", err);
+    if (requestGeneration !== libraryRequest) return;
     error = err instanceof Error ? err.message : String(err);
   } finally {
     importing = false;

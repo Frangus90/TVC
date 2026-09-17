@@ -3,6 +3,7 @@
   import {
     getRacingSeries,
     getRacingConfig,
+    getRacingRefreshReport,
     toggleSeries,
     updateSeriesColor,
     updateSeriesNotification,
@@ -16,6 +17,8 @@
     testNotification,
     type RacingSeries,
   } from "../../stores/racing.svelte";
+
+  import { formatDateTime } from "../../utils/dateFormat";
 
   const isDev = import.meta.env.DEV;
 
@@ -107,6 +110,18 @@
 </script>
 
 <div class="space-y-6">
+  {#if getRacingRefreshReport()}
+    {@const report = getRacingRefreshReport()!}
+    <div class="text-sm text-text-muted space-y-2">
+      <p>Last attempt: {formatDateTime(report.attempted_at)} — {report.succeeded} series refreshed.</p>
+      <p>Last complete success: {getRacingConfig()?.last_refreshed ? formatDateTime(getRacingConfig()!.last_refreshed!) : "Never"}</p>
+      {#each report.failures as failure}
+        <div class="text-red-400">{failure.name}: {failure.error}
+          <button class="underline ml-2" onclick={() => refreshSingleSeries(failure.slug)}>Retry</button>
+        </div>
+      {/each}
+    </div>
+  {/if}
   <!-- Global settings -->
   <div class="space-y-3">
     <h3 class="text-sm font-semibold text-text-muted uppercase tracking-wider">Global Settings</h3>

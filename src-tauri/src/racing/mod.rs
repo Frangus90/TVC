@@ -148,13 +148,19 @@ pub async fn get_events_for_range(
     start: &str,
     end: &str,
 ) -> Result<Vec<RacingEvent>, String> {
+    let start_time =
+        chrono::DateTime::parse_from_rfc3339(start).map_err(|_| "Invalid range start")?;
+    let end_time = chrono::DateTime::parse_from_rfc3339(end).map_err(|_| "Invalid range end")?;
+    if start_time >= end_time {
+        return Err("Range end must follow start".into());
+    }
     let rows = sqlx::query(
         r#"
         SELECT e.id, e.series_slug, e.uid, e.event_title, e.session_name, e.circuit,
                e.start_time, e.end_time, e.description, e.notified
         FROM racing_events e
         JOIN racing_series s ON e.series_slug = s.slug
-        WHERE s.enabled = 1 AND e.start_time >= ? AND e.start_time <= ?
+        WHERE s.enabled = 1 AND julianday(e.start_time) >= julianday(?) AND julianday(e.start_time) < julianday(?)
         ORDER BY e.start_time
         "#,
     )
@@ -178,41 +184,43 @@ pub async fn mark_notified(pool: &Pool<Sqlite>, event_id: i64) -> Result<(), Str
     Ok(())
 }
 
-/// Delete all events for a series (before re-import)
-pub async fn delete_events_for_series(pool: &Pool<Sqlite>, slug: &str) -> Result<(), String> {
-    sqlx::query("DELETE FROM racing_events WHERE series_slug = ?")
-        .bind(slug)
-        .execute(pool)
-        .await
-        .map_err(|e| format!("Failed to delete events: {}", e))?;
-
-    Ok(())
-}
-
-/// Insert events (using INSERT OR REPLACE for upsert by unique constraint)
-pub async fn upsert_events(pool: &Pool<Sqlite>, events: &[RacingEvent]) -> Result<(), String> {
-    for event in events {
-        sqlx::query(
-            r#"
-            INSERT OR REPLACE INTO racing_events
-                (series_slug, uid, event_title, session_name, circuit, start_time, end_time, description, notified, fetched_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, datetime('now'))
-            "#,
-        )
-        .bind(&event.series_slug)
-        .bind(&event.uid)
-        .bind(&event.event_title)
-        .bind(&event.session_name)
-        .bind(&event.circuit)
-        .bind(&event.start_time)
-        .bind(&event.end_time)
-        .bind(&event.description)
-        .execute(pool)
-        .await
-        .map_err(|e| format!("Failed to upsert event: {}", e))?;
+/// Replace a validated feed atomically; retain identities and notification state for unchanged times.
+pub(crate) async fn replace_events(
+    pool: &Pool<Sqlite>,
+    slug: &str,
+    events: &[RacingEvent],
+) -> Result<(), String> {
+    if events.is_empty() || events.iter().any(|event| event.series_slug != slug) {
+        return Err("Refusing an empty or mixed-series feed".into());
     }
-
-    Ok(())
+    let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+    let old: Vec<(i64, String)> =
+        sqlx::query_as("SELECT id, uid FROM racing_events WHERE series_slug = ?")
+            .bind(slug)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+    for event in events {
+        sqlx::query("INSERT INTO racing_events (series_slug, uid, event_title, session_name, circuit, start_time, end_time, description, notified, fetched_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, datetime('now'))
+            ON CONFLICT(series_slug, uid) DO UPDATE SET
+            event_title = excluded.event_title, session_name = excluded.session_name, circuit = excluded.circuit,
+            notified = CASE WHEN racing_events.start_time = excluded.start_time THEN racing_events.notified ELSE 0 END,
+            start_time = excluded.start_time, end_time = excluded.end_time, description = excluded.description, fetched_at = excluded.fetched_at")
+            .bind(slug).bind(&event.uid).bind(&event.event_title).bind(&event.session_name).bind(&event.circuit)
+            .bind(&event.start_time).bind(&event.end_time).bind(&event.description)
+            .execute(&mut *tx).await.map_err(|e| format!("Failed to save feed: {e}"))?;
+    }
+    for (id, uid) in old {
+        if !events.iter().any(|event| event.uid == uid) {
+            sqlx::query("DELETE FROM racing_events WHERE id = ?")
+                .bind(id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+        }
+    }
+    tx.commit().await.map_err(|e| e.to_string())
 }
 
 /// Refresh data for a single series: fetch ICS, parse, store.
@@ -235,17 +243,19 @@ pub async fn refresh_series(pool: &Pool<Sqlite>, series: &RacingSeries) -> Resul
     for url in &urls {
         match api::fetch_ics(url).await {
             Ok(ics_text) => {
-                let events = api::parse_ics(&ics_text, &series.slug);
+                let events = match api::parse_ics(&ics_text, &series.slug) {
+                    Ok(events) => events,
+                    Err(error) => {
+                        last_err = error;
+                        continue;
+                    }
+                };
                 let count = events.len();
-                delete_events_for_series(pool, &series.slug).await?;
-                upsert_events(pool, &events).await?;
+                replace_events(pool, &series.slug, &events).await?;
                 return Ok(count);
             }
             Err(e) => {
-                eprintln!(
-                    "[Racing] {} fetch failed ({}): {}",
-                    series.name, url, e
-                );
+                eprintln!("[Racing] {} fetch failed ({}): {}", series.name, url, e);
                 last_err = e;
             }
         }
@@ -253,35 +263,49 @@ pub async fn refresh_series(pool: &Pool<Sqlite>, series: &RacingSeries) -> Resul
     Err(last_err)
 }
 
-/// Refresh all enabled series
-pub async fn refresh_all_enabled(pool: &Pool<Sqlite>) -> Result<usize, String> {
-    let series_list = get_enabled_series(pool).await?;
-    let mut total = 0;
+#[derive(serde::Serialize, serde::Deserialize, Default)]
+pub struct RefreshReport {
+    pub attempted_at: String,
+    pub events: usize,
+    pub succeeded: usize,
+    pub failures: Vec<RefreshFailure>,
+}
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct RefreshFailure {
+    pub slug: String,
+    pub name: String,
+    pub error: String,
+}
 
+pub async fn refresh_all_enabled(pool: &Pool<Sqlite>) -> Result<RefreshReport, String> {
+    let series_list = get_enabled_series(pool).await?;
+    let mut report = RefreshReport {
+        attempted_at: chrono::Utc::now().to_rfc3339(),
+        ..Default::default()
+    };
     for series in &series_list {
         match refresh_series(pool, series).await {
             Ok(count) => {
-                total += count;
+                report.events += count;
+                report.succeeded += 1;
             }
-            Err(e) => {
-                eprintln!(
-                    "[Racing] Failed to refresh {}: {}",
-                    series.name, e
-                );
-            }
+            Err(error) => report.failures.push(RefreshFailure {
+                slug: series.slug.clone(),
+                name: series.name.clone(),
+                error,
+            }),
         }
-
-        // Small delay between requests to be polite
-        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
     }
-
-    // Update last_refreshed timestamp
-    sqlx::query("UPDATE racing_config SET last_refreshed = datetime('now'), updated_at = datetime('now') WHERE id = 1")
+    if report.failures.is_empty() && report.succeeded > 0 {
+        sqlx::query("UPDATE racing_config SET last_refreshed = ?, updated_at = datetime('now') WHERE id = 1")
+            .bind(&report.attempted_at).execute(pool).await.map_err(|e| e.to_string())?;
+    }
+    sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES ('racing_refresh_report', ?)")
+        .bind(serde_json::to_string(&report).map_err(|e| e.to_string())?)
         .execute(pool)
         .await
-        .map_err(|e| format!("Failed to update refresh timestamp: {}", e))?;
-
-    Ok(total)
+        .map_err(|e| e.to_string())?;
+    Ok(report)
 }
 
 /// Auto-start notification scheduler on app launch
@@ -316,5 +340,30 @@ fn row_to_event(r: sqlx::sqlite::SqliteRow) -> RacingEvent {
         end_time: r.get("end_time"),
         description: r.get("description"),
         notified: r.get::<i32, _>("notified") == 1,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[tokio::test]
+    async fn all_failed_refreshes_keep_last_success_and_persist_named_errors() {
+        let pool = crate::audit_tests::database().await;
+        sqlx::raw_sql("UPDATE racing_series SET enabled=0; UPDATE racing_series SET enabled=1,custom_ics_url='invalid://fixture' WHERE slug='f1'; UPDATE racing_config SET last_refreshed='2026-01-01T12:00:00Z';")
+            .execute(&pool).await.unwrap();
+        let report = super::refresh_all_enabled(&pool).await.unwrap();
+        assert_eq!(report.succeeded, 0);
+        assert_eq!(report.failures.len(), 1);
+        assert_eq!(report.failures[0].slug, "f1");
+        assert_eq!(
+            super::get_config(&pool).await.last_refreshed.as_deref(),
+            Some("2026-01-01T12:00:00Z")
+        );
+        let saved: String =
+            sqlx::query_scalar("SELECT value FROM settings WHERE key='racing_refresh_report'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert!(saved.contains("Formula 1"));
+        assert!(saved.contains(&report.attempted_at));
     }
 }

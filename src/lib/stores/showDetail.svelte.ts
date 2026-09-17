@@ -1,3 +1,6 @@
+import { showError } from "./toast.svelte";
+let detailRequest = 0;
+let castRequest = 0;
 import { invoke } from "@tauri-apps/api/core";
 import { getDatabase } from "../utils/database";
 import { logger } from "../utils/logger";
@@ -73,6 +76,9 @@ export function isCastLoading() {
 }
 
 export async function openShowDetail(showId: number): Promise<void> {
+  const request = ++detailRequest;
+  castRequest++;
+  currentShow = null; showEpisodes = []; showCast = [];
   showDetailOpen = true;
   loading = true;
   error = null;
@@ -92,6 +98,7 @@ export async function openShowDetail(showId: number): Promise<void> {
        FROM shows WHERE id = $1`,
       [showId]
     );
+    if (request !== detailRequest) return;
     const shows = rows.map((r) => ({
       ...r,
       tier_only: r.tier_only === 1,
@@ -133,6 +140,7 @@ export async function openShowDetail(showId: number): Promise<void> {
       [showId]
     );
 
+    if (request !== detailRequest) return;
     showEpisodes = episodes.map((ep) => ({
       id: ep.id,
       show_id: ep.show_id,
@@ -147,14 +155,18 @@ export async function openShowDetail(showId: number): Promise<void> {
       poster_url: ep.poster_url,
     }));
   } catch (err) {
+    if (request !== detailRequest) return;
     logger.error("Failed to load show detail", err);
+    showError("Failed to load show detail" + ": " + String(err));
     error = err instanceof Error ? err.message : "Failed to load show details";
   } finally {
-    loading = false;
+    if (request === detailRequest) loading = false;
   }
 }
 
 export function closeShowDetail() {
+  detailRequest++; castRequest++;
+  loading = false; castLoading = false;
   showDetailOpen = false;
   currentShow = null;
   showEpisodes = [];
@@ -163,16 +175,20 @@ export function closeShowDetail() {
 }
 
 export async function fetchShowCast(showId: number): Promise<void> {
+  const request = ++castRequest;
   castLoading = true;
 
   try {
     const cast = await invoke<CastMember[]>("get_show_cast", { showId });
+    if (request !== castRequest) return;
     showCast = cast;
   } catch (err) {
+    if (request !== castRequest) return;
     logger.error("Failed to fetch show cast", err);
+    showError("Failed to fetch show cast" + ": " + String(err));
     // Don't set error state for cast - it's optional
   } finally {
-    castLoading = false;
+    if (request === castRequest) castLoading = false;
   }
 }
 
@@ -191,6 +207,7 @@ export async function updateShowRating(
     await loadTrackedShows();
   } catch (err) {
     logger.error("Failed to update show rating", err);
+    showError("Failed to update show rating" + ": " + String(err));
     error = err instanceof Error ? err.message : "Failed to update rating";
   }
 }
@@ -211,6 +228,7 @@ export async function markSeasonWatched(
     updateCalendarEpisodesWatched(showId, watched, seasonNumber);
   } catch (err) {
     logger.error("Failed to mark season watched", err);
+    showError("Failed to mark season watched" + ": " + String(err));
     error = err instanceof Error ? err.message : "Failed to mark season watched";
   }
 }
@@ -228,6 +246,7 @@ export async function markShowWatched(
     updateCalendarEpisodesWatched(showId, watched);
   } catch (err) {
     logger.error("Failed to mark show watched", err);
+    showError("Failed to mark show watched" + ": " + String(err));
     error = err instanceof Error ? err.message : "Failed to mark show watched";
   }
 }
@@ -247,6 +266,7 @@ export async function markEpisodeWatched(
     updateEpisodeWatched(episodeId, watched);
   } catch (err) {
     logger.error("Failed to mark episode watched", err);
+    showError("Failed to mark episode watched" + ": " + String(err));
     error = err instanceof Error ? err.message : "Failed to mark episode watched";
   }
 }

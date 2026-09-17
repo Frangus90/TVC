@@ -6,6 +6,7 @@
     closeWhatsNew,
     getAppVersion,
   } from "../stores/whatsNew.svelte";
+  import { inlineReleaseNotes } from "../utils/releaseNotes";
   import changelog from "../../../CHANGELOG.md?raw";
 
   let showOlderVersions = $state(false);
@@ -116,7 +117,7 @@
                 {#each section.items as item}
                   <li class="text-sm text-text-muted leading-relaxed flex gap-2">
                     <span class="text-accent mt-1 flex-shrink-0">&#8226;</span>
-                    <span>{@html item.replace(/\*\*(.+?)\*\*/g, '<span class="text-text font-medium">$1</span>')}</span>
+                    <span>{@html inlineReleaseNotes(item)}</span>
                   </li>
                 {/each}
               </ul>
@@ -154,7 +155,7 @@
                           {#each section.items as item}
                             <li class="text-xs text-text-muted leading-relaxed flex gap-2">
                               <span class="text-text-muted mt-0.5 flex-shrink-0">&#8226;</span>
-                              <span>{@html item.replace(/\*\*(.+?)\*\*/g, '<span class="text-text font-medium">$1</span>')}</span>
+                              <span>{@html inlineReleaseNotes(item)}</span>
                             </li>
                           {/each}
                         </ul>

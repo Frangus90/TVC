@@ -1,7 +1,7 @@
+use crate::db::connection;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use tauri::AppHandle;
-use crate::db::connection;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WatchStatistics {
@@ -45,44 +45,41 @@ pub struct WatchHistoryItem {
 
 #[tauri::command]
 pub async fn get_watch_statistics(app: AppHandle) -> Result<WatchStatistics, String> {
-    let pool = connection::get_pool(&app).await
+    let pool = connection::get_pool(&app)
+        .await
         .map_err(|e| format!("Database error: {}", e))?;
 
     // Get total watch time from episodes
-    let episode_time: i64 = sqlx::query(
-        r#"SELECT COALESCE(SUM(runtime), 0) as total FROM episodes WHERE watched = 1"#
-    )
-    .fetch_one(&pool)
-    .await
-    .map(|row| row.get("total"))
-    .unwrap_or(0);
+    let episode_time: i64 =
+        sqlx::query(r#"SELECT COALESCE(SUM(runtime), 0) as total FROM episodes WHERE watched = 1"#)
+            .fetch_one(&pool)
+            .await
+            .map(|row| row.get("total"))
+            .unwrap_or(0);
 
     // Get total watch time from movies
-    let movie_time: i64 = sqlx::query(
-        r#"SELECT COALESCE(SUM(runtime), 0) as total FROM movies WHERE watched = 1"#
-    )
-    .fetch_one(&pool)
-    .await
-    .map(|row| row.get("total"))
-    .unwrap_or(0);
+    let movie_time: i64 =
+        sqlx::query(r#"SELECT COALESCE(SUM(runtime), 0) as total FROM movies WHERE watched = 1"#)
+            .fetch_one(&pool)
+            .await
+            .map(|row| row.get("total"))
+            .unwrap_or(0);
 
     // Get episodes watched count
-    let episodes_watched: i64 = sqlx::query(
-        r#"SELECT COUNT(*) as count FROM episodes WHERE watched = 1"#
-    )
-    .fetch_one(&pool)
-    .await
-    .map(|row| row.get("count"))
-    .unwrap_or(0);
+    let episodes_watched: i64 =
+        sqlx::query(r#"SELECT COUNT(*) as count FROM episodes WHERE watched = 1"#)
+            .fetch_one(&pool)
+            .await
+            .map(|row| row.get("count"))
+            .unwrap_or(0);
 
     // Get movies watched count
-    let movies_watched: i64 = sqlx::query(
-        r#"SELECT COUNT(*) as count FROM movies WHERE watched = 1"#
-    )
-    .fetch_one(&pool)
-    .await
-    .map(|row| row.get("count"))
-    .unwrap_or(0);
+    let movies_watched: i64 =
+        sqlx::query(r#"SELECT COUNT(*) as count FROM movies WHERE watched = 1"#)
+            .fetch_one(&pool)
+            .await
+            .map(|row| row.get("count"))
+            .unwrap_or(0);
 
     // Get shows completed (all episodes watched)
     let shows_completed: i64 = sqlx::query(
@@ -93,7 +90,7 @@ pub async fn get_watch_statistics(app: AppHandle) -> Result<WatchStatistics, Str
             GROUP BY show_id
             HAVING COUNT(*) = SUM(watched)
         )
-        "#
+        "#,
     )
     .fetch_one(&pool)
     .await
@@ -109,7 +106,7 @@ pub async fn get_watch_statistics(app: AppHandle) -> Result<WatchStatistics, Str
             GROUP BY show_id
             HAVING SUM(watched) > 0 AND SUM(watched) < COUNT(*)
         )
-        "#
+        "#,
     )
     .fetch_one(&pool)
     .await
@@ -132,10 +129,24 @@ pub async fn get_episodes_watched_by_period(
     end_date: String,
     group_by: Option<String>,
 ) -> Result<Vec<PeriodStats>, String> {
-    let pool = connection::get_pool(&app).await
-        .map_err(|e| format!("Database error: {}", e))?;
+    let pool = connection::get_pool(&app)
+        .await
+        .map_err(|e| format!("Database error: {e}"))?;
+    period_stats(&pool, &start_date, &end_date, group_by.as_deref()).await
+}
 
-    let date_format = match group_by.as_deref() {
+pub(crate) async fn period_stats(
+    pool: &sqlx::SqlitePool,
+    start_date: &str,
+    end_date: &str,
+    group_by: Option<&str>,
+) -> Result<Vec<PeriodStats>, String> {
+    super::validation::validate_date(start_date)?;
+    super::validation::validate_date(end_date)?;
+    if start_date > end_date {
+        return Err("Start date must not follow end date".into());
+    }
+    let date_format = match group_by {
         Some("month") => "%Y-%m",
         Some("year") => "%Y",
         _ => "%Y-%m-%d", // day is default
@@ -146,26 +157,26 @@ pub async fn get_episodes_watched_by_period(
         r#"
         WITH episode_stats AS (
             SELECT
-                strftime('{}', watched_at) as period,
+                strftime('{}', watched_at, 'localtime') as period,
                 COUNT(*) as ep_count,
                 COALESCE(SUM(runtime), 0) as ep_runtime
             FROM episodes
             WHERE watched = 1
               AND watched_at IS NOT NULL
-              AND watched_at >= ?
-              AND watched_at <= ?
+              AND date(watched_at, 'localtime') >= ?
+              AND date(watched_at, 'localtime') <= ?
             GROUP BY period
         ),
         movie_stats AS (
             SELECT
-                strftime('{}', watched_at) as period,
+                strftime('{}', watched_at, 'localtime') as period,
                 COUNT(*) as mv_count,
                 COALESCE(SUM(runtime), 0) as mv_runtime
             FROM movies
             WHERE watched = 1
               AND watched_at IS NOT NULL
-              AND watched_at >= ?
-              AND watched_at <= ?
+              AND date(watched_at, 'localtime') >= ?
+              AND date(watched_at, 'localtime') <= ?
             GROUP BY period
         ),
         all_periods AS (
@@ -189,7 +200,7 @@ pub async fn get_episodes_watched_by_period(
     .bind(&end_date)
     .bind(&start_date)
     .bind(&end_date)
-    .fetch_all(&pool)
+    .fetch_all(pool)
     .await
     .map_err(|e| format!("Failed to get period stats: {}", e))?;
 
@@ -208,7 +219,8 @@ pub async fn get_episodes_watched_by_period(
 
 #[tauri::command]
 pub async fn get_completion_rates(app: AppHandle) -> Result<Vec<ShowCompletion>, String> {
-    let pool = connection::get_pool(&app).await
+    let pool = connection::get_pool(&app)
+        .await
         .map_err(|e| format!("Database error: {}", e))?;
 
     let rows = sqlx::query(
@@ -224,7 +236,7 @@ pub async fn get_completion_rates(app: AppHandle) -> Result<Vec<ShowCompletion>,
         WHERE s.archived = 0
         GROUP BY s.id
         ORDER BY s.name
-        "#
+        "#,
     )
     .fetch_all(&pool)
     .await
@@ -260,7 +272,8 @@ pub async fn get_watch_history(
     app: AppHandle,
     limit: Option<i32>,
 ) -> Result<Vec<WatchHistoryItem>, String> {
-    let pool = connection::get_pool(&app).await
+    let pool = connection::get_pool(&app)
+        .await
         .map_err(|e| format!("Database error: {}", e))?;
 
     let limit_val = limit.unwrap_or(50);
@@ -295,7 +308,7 @@ pub async fn get_watch_history(
         WHERE m.watched = 1 AND m.watched_at IS NOT NULL
         ORDER BY watched_at DESC
         LIMIT ?
-        "#
+        "#,
     )
     .bind(limit_val)
     .fetch_all(&pool)
@@ -307,7 +320,9 @@ pub async fn get_watch_history(
         .map(|row| WatchHistoryItem {
             item_type: row.get("item_type"),
             id: row.get("id"),
-            name: row.get::<Option<String>, _>("name").unwrap_or_else(|| "Unknown".to_string()),
+            name: row
+                .get::<Option<String>, _>("name")
+                .unwrap_or_else(|| "Unknown".to_string()),
             show_name: row.get("show_name"),
             season_number: row.get("season_number"),
             episode_number: row.get("episode_number"),

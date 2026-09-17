@@ -2,26 +2,58 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.14.6] - Unreleased
+
+### Backups and Saved Data
+
+- Backups now include more of your personal data, including award picks, Plex title corrections, and watch history. Before restoring, you can see what the backup contains and what it leaves out.
+- Backup files are checked before restoring to help protect your existing library from incomplete or damaged files.
+- Fixed problems removing imported titles and losing saved details when combining duplicate shows.
+- Episodes with watch history, ratings, tags, or planned dates are kept even if TMDB removes them.
+- Development and release versions now keep their data separate, so testing the app does not affect your regular library.
+
+### Calendar and Watch History
+
+- Marking something as watched again no longer changes the date you originally watched it. This also applies when marking several episodes at once or watching through Plex.
+- New episodes follow updated air dates while dates you chose yourself stay in place. Archived shows stay off the calendar.
+- Fixed missing racing sessions and incorrect statistics around day boundaries and clock changes.
+
+### Plex, Racing, and Awards
+
+- Fixed Plex errors with special characters in titles. When a title match is uncertain, TVC avoids marking the wrong item as watched.
+- A failed racing calendar update keeps your existing events, and reminders respect your latest settings.
+- Racing and Awards now show failed updates and let you retry them. You can see when an update was attempted and when one last finished successfully.
+- Requests that get stuck now time out and report an error.
+
+### Other Improvements
+
+- Search results and title details no longer jump back to an earlier selection when loading finishes out of order.
+- Clearer error messages when adding titles, saving picks, or making other changes fails.
+- Improved keyboard navigation in Settings and confirmation dialogs, and recovery when a page fails to display.
+- Removed notification options that did not yet do anything.
+- Improved startup reliability, added checks before releases, and included security fixes.
+
 ## [0.14.5] - 16.09.2026
 
-### TMDB Sync
+### A New Home for Syncing
 
-- **Dedicated Sync tab**: Sync All now lives under Data Management → Sync, with separate controls for TV shows and movies, live progress, and saved results from the latest run for each library.
-- **Failures and retries**: See which titles failed and why, along with synced and skipped counts, and retry only the failed titles. Interrupted runs are identified after reopening the app.
-- **Automatic syncing**: Set TV shows and movies independently to Off, Every day, Every week, or Every month. Schedules default to Off, run while TVC is open (including in the tray), and catch up after reopening.
-- Bulk sync includes archived and tier-list titles, skips manual entries and unresolved legacy shows, and prevents overlapping bulk runs.
+- Find **Sync All** under **Data Management → Sync**. Update your TV shows and movies together or separately, follow the progress, and see the results of the latest update.
+- If some titles fail to update, you can see which ones failed and retry just those titles. TVC also tells you if the previous update was interrupted.
+- Choose **Every day**, **Every week**, or **Every month** for automatic updates, with separate choices for shows and movies. Automatic updates start turned off.
+- Automatic updates run while TVC is open, including when minimized to the tray. If the app was closed when an update was due, it catches up after you reopen it.
+- Sync All also updates archived titles and titles in your tier lists. Manually added titles and older shows that still need matching to TMDB are skipped.
 
-### Sync Reliability
+### Safer Updates
 
-- Failed or incomplete TV season downloads now stop the refresh before replacing saved episodes, protecting watch history, ratings, tags, and schedules from partial responses.
-- Episodes you explicitly unscheduled stay unscheduled when refreshed.
-- Movie refresh now fetches fresh TMDB metadata instead of reusing cached details.
+- An incomplete download of a TV season no longer replaces your saved episodes, helping protect your watch history, ratings, tags, and planned dates.
+- Episodes you remove from the schedule stay unscheduled after an update.
+- Refreshing a movie now fetches its latest details instead of showing an older saved copy.
+- Prevented two full-library updates from running at the same time.
 
 ### Dates and Times
 
-- Standardized remaining date and time displays to **DD.MM.YYYY** and the **24-hour clock (HH:mm)**, using the computer's local timezone regardless of regional formatting settings.
-- Updated Sync timestamps, award dates, scheduling dialogs, show matching, racing day details, and prediction/tier-list image exports. Documented the convention for future changes.
-
+- Dates now consistently use **DD.MM.YYYY**, and times use the **24-hour clock**, such as **16.09.2026 20:30**.
+- This also applies to sync results, awards, scheduling, racing, and exported images. Times follow your computer's local timezone.
 
 ## [0.14.4] - 15.09.2026
 

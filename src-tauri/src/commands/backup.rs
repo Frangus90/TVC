@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
@@ -10,6 +10,11 @@ use tokio::sync::{Mutex, Semaphore};
 
 use crate::db::connection;
 use crate::tmdb;
+
+mod personal_data;
+use personal_data::PersonalData;
+#[cfg(test)]
+mod tests;
 
 /// Export data structure
 #[derive(Debug, Serialize, Deserialize)]
@@ -21,7 +26,9 @@ pub struct BackupData {
     pub episodes: Vec<EpisodeBackup>,
     pub movies: Vec<MovieBackup>,
     #[serde(default)]
-    pub tiers: Vec<TierBackup>,
+    pub tiers: Option<Vec<TierBackup>>,
+    /// Required for v3.0; absent from older library-only backups.
+    pub personal_data: Option<PersonalData>,
 }
 
 fn default_version() -> String {
@@ -84,6 +91,8 @@ pub struct EpisodeBackup {
     pub scheduled_date: Option<String>,
     pub rating: Option<f64>,
     pub tags: Option<String>,
+    #[serde(default)]
+    pub legacy_tvdb_id: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -130,6 +139,59 @@ pub struct ImportResult {
     pub remapped: u32,
     #[serde(default)]
     pub episodes_orphaned: u32,
+    pub predictions_imported: u32,
+    pub warnings: Vec<String>,
+}
+
+fn unique_ids(kind: &str, values: impl Iterator<Item = i64>) -> Result<HashSet<i64>, String> {
+    let mut ids = HashSet::new();
+    for id in values {
+        if !ids.insert(id) {
+            return Err(format!("Duplicate {kind} ID {id} in backup"));
+        }
+    }
+    Ok(ids)
+}
+
+impl BackupData {
+    fn validate(&self) -> Result<(), String> {
+        match self.version.as_str() {
+            "1.0" | "2.0" if self.personal_data.is_none() => {}
+            "3.0" if self.personal_data.is_some() => {}
+            "3.0" => return Err("Backup v3.0 is missing its personal data section".into()),
+            "1.0" | "2.0" => return Err("Personal data requires backup version 3.0".into()),
+            other => return Err(format!("Unsupported backup version: {other}")),
+        }
+        if self.version == "3.0" && self.tiers.is_none() {
+            return Err("Backup v3.0 is missing its tiers section".into());
+        }
+        let shows = unique_ids("show", self.shows.iter().map(|r| r.id))?;
+        unique_ids("episode", self.episodes.iter().map(|r| r.id))?;
+        unique_ids("movie", self.movies.iter().map(|r| r.id))?;
+        let tiers = unique_ids("tier", self.tiers.iter().flatten().map(|r| r.id))?;
+        for episode in &self.episodes {
+            if !shows.contains(&episode.show_id) {
+                return Err(format!(
+                    "Episode {} references missing show {}",
+                    episode.id, episode.show_id
+                ));
+            }
+        }
+        for tier_id in self
+            .shows
+            .iter()
+            .filter_map(|r| r.tier_id)
+            .chain(self.movies.iter().filter_map(|r| r.tier_id))
+        {
+            if !tiers.contains(&tier_id) {
+                return Err(format!("A title references missing tier {tier_id}"));
+            }
+        }
+        if let Some(personal) = &self.personal_data {
+            personal.validate()?;
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -160,17 +222,27 @@ struct FinishedEvent {
     per_show: Vec<PerShowResult>,
 }
 
-/// Export all user data to JSON (v2.0 format)
+/// Export the library and personal history to JSON (v3.0 format).
 #[tauri::command]
 pub async fn export_database(app: AppHandle) -> Result<BackupData, String> {
     let pool = connection::get_pool(&app)
         .await
         .map_err(|e| format!("Database error: {}", e))?;
 
+    export_from_pool(&pool).await
+}
+
+async fn export_from_pool(pool: &sqlx::SqlitePool) -> Result<BackupData, String> {
+    // A read transaction gives every table the same snapshot, even during sync.
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| format!("Failed to begin backup: {e}"))?;
+
     let tier_rows = sqlx::query(
         r#"SELECT id, position, name, color, created_at FROM tiers ORDER BY position DESC"#,
     )
-    .fetch_all(&pool)
+    .fetch_all(&mut *tx)
     .await
     .map_err(|e| format!("Failed to export tiers: {}", e))?;
 
@@ -191,9 +263,9 @@ pub async fn export_database(app: AppHandle) -> Result<BackupData, String> {
                   COALESCE(archived, 0) as archived, rating, tier_id,
                   COALESCE(tier_only, 0) as tier_only, rank_order,
                   legacy_tvdb_id, COALESCE(unmigrated, 0) as unmigrated
-           FROM shows"#,
+           FROM shows ORDER BY id"#,
     )
-    .fetch_all(&pool)
+    .fetch_all(&mut *tx)
     .await
     .map_err(|e| format!("Failed to export shows: {}", e))?;
 
@@ -235,10 +307,10 @@ pub async fn export_database(app: AppHandle) -> Result<BackupData, String> {
 
     let episode_rows = sqlx::query(
         r#"SELECT id, show_id, season_number, episode_number, name, overview, aired,
-                  runtime, image_url, watched, watched_at, scheduled_date, rating, tags
-           FROM episodes"#,
+                  runtime, image_url, watched, watched_at, scheduled_date, rating, tags, legacy_tvdb_id
+           FROM episodes ORDER BY id"#,
     )
-    .fetch_all(&pool)
+    .fetch_all(&mut *tx)
     .await
     .map_err(|e| format!("Failed to export episodes: {}", e))?;
 
@@ -259,6 +331,7 @@ pub async fn export_database(app: AppHandle) -> Result<BackupData, String> {
             scheduled_date: row.get("scheduled_date"),
             rating: row.get::<Option<f64>, _>("rating"),
             tags: row.get("tags"),
+            legacy_tvdb_id: row.get("legacy_tvdb_id"),
         })
         .collect();
 
@@ -268,9 +341,9 @@ pub async fn export_database(app: AppHandle) -> Result<BackupData, String> {
                   vote_average, scheduled_date, watched, watched_at, rating, notes, color,
                   tags, COALESCE(archived, 0) as archived, added_at, last_synced,
                   tier_id, COALESCE(tier_only, 0) as tier_only, rank_order
-           FROM movies"#,
+           FROM movies ORDER BY id"#,
     )
-    .fetch_all(&pool)
+    .fetch_all(&mut *tx)
     .await
     .map_err(|e| format!("Failed to export movies: {}", e))?;
 
@@ -306,18 +379,26 @@ pub async fn export_database(app: AppHandle) -> Result<BackupData, String> {
         })
         .collect();
 
+    let personal_data = PersonalData::export(&mut tx)
+        .await
+        .map_err(|e| format!("Failed to export predictions and history: {e}"))?;
+    tx.commit()
+        .await
+        .map_err(|e| format!("Failed to finish backup: {e}"))?;
+
     Ok(BackupData {
-        version: "2.0".to_string(),
+        version: "3.0".to_string(),
         exported_at: chrono::Utc::now().to_rfc3339(),
         shows,
         episodes,
         movies,
-        tiers,
+        tiers: Some(tiers),
+        personal_data: Some(personal_data),
     })
 }
 
 /// Import data from JSON backup (replaces existing data).
-/// v2.0 backups insert as-is. v1.0 (or unset) backups are treated as TVDB-keyed:
+/// v2.0/v3.0 backups insert as-is. v1.0 (or unset) backups are TVDB-keyed:
 ///   1. Pre-pass: TMDB `/find` to remap TVDB ids -> TMDB ids (silent).
 ///   2. Insert under new ids, carrying backup metadata as a placeholder.
 ///   3. Post-commit refresh pass: re-fetch details + episodes from TMDB in en-US
@@ -326,18 +407,19 @@ pub async fn export_database(app: AppHandle) -> Result<BackupData, String> {
 ///      live runner uses so the existing MigrationProgress modal lights up.
 #[tauri::command]
 pub async fn import_database(app: AppHandle, data: BackupData) -> Result<ImportResult, String> {
+    data.validate()?;
+    let _sync_guard = crate::library_sync::lock_for_restore()?;
     let pool = connection::get_pool(&app)
         .await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    let is_legacy = data.version != "2.0";
+    let is_legacy = data.version == "1.0";
 
     // Build a TVDB -> Option<TMDB> remap for legacy backups. Pre-pass uses the
     // same Semaphore/pacing/event names as the live migration runner so the
     // existing MigrationProgress overlay surfaces restore progress unchanged.
     let mut remap: HashMap<i64, Option<i64>> = HashMap::new();
     let mut errors: Vec<String> = Vec::new();
-    let mut per_show: Vec<PerShowResult> = Vec::new();
 
     if is_legacy {
         // Only positive ids are TVDB-keyed; manual tier-only entries use
@@ -393,255 +475,20 @@ pub async fn import_database(app: AppHandle, data: BackupData) -> Result<ImportR
         }
     }
 
-    let mut tx = pool
-        .begin()
-        .await
-        .map_err(|e| format!("Failed to begin transaction: {}", e))?;
-
-    sqlx::query("PRAGMA defer_foreign_keys = ON")
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| format!("Failed to defer foreign keys: {}", e))?;
-
-    // Clear auxiliary tables before the parents. cast_members/crew_members
-    // have ON DELETE CASCADE but sonarr_imports/radarr_imports do not — those
-    // would dangle and fail FK check at commit. change_history/title_mappings/
-    // plex_scrobble_log carry show/episode/movie ids without FK constraints,
-    // but the new shows reuse old TVDB ids as TMDB ids, so leaving stale rows
-    // would silently mis-attribute history. Wipe them too.
-    for stmt in [
-        "DELETE FROM cast_members",
-        "DELETE FROM crew_members",
-        "DELETE FROM sonarr_imports",
-        "DELETE FROM radarr_imports",
-        "DELETE FROM change_history",
-        "DELETE FROM title_mappings",
-        "DELETE FROM plex_scrobble_log",
-        "DELETE FROM episodes",
-        "DELETE FROM shows",
-        "DELETE FROM movies",
-        "DELETE FROM tiers",
-    ] {
-        if let Err(e) = sqlx::query(stmt).execute(&mut *tx).await {
-            let _ = tx.rollback().await;
-            return Err(format!("Failed to clear data ({}): {}", stmt, e));
-        }
-    }
-
-    // Tiers first — shows/movies reference them via tier_id FK.
-    for tier in &data.tiers {
-        if let Err(e) = sqlx::query(
-            r#"INSERT INTO tiers (id, position, name, color, created_at)
-               VALUES (?, ?, ?, ?, ?)"#,
-        )
-        .bind(tier.id)
-        .bind(tier.position)
-        .bind(&tier.name)
-        .bind(&tier.color)
-        .bind(&tier.created_at)
-        .execute(&mut *tx)
-        .await
-        {
-            let _ = tx.rollback().await;
-            return Err(format!("Failed to import tier {}: {}", tier.name, e));
-        }
-    }
-
-    // Insert shows. For legacy backups, route through remap; for v2.0 insert as-is.
-    // Track final ids assigned to each backup row so episodes can be rewritten.
-    let mut show_id_remap: HashMap<i64, i64> = HashMap::new();
-    let mut final_ids: HashSet<i64> = HashSet::new();
-    let mut quarantined: u32 = 0;
-    let mut remapped: u32 = 0;
-    let mut shows_imported: u32 = 0;
-    // Shows that need a TMDB metadata refresh after commit (v1.0 backups only).
-    // The backup stored TVDB-sourced fields (name/poster/overview/episode names)
-    // which may be in a non-English language for anime / regional content.
-    // remap_single_show re-fetches in en-US (with original-language fallback).
-    let mut to_refresh: Vec<(i64, String)> = Vec::new();
-
-    for show in &data.shows {
-        let (final_id, legacy_tvdb_id, unmigrated) = if !is_legacy {
-            (
-                show.id,
-                show.legacy_tvdb_id,
-                if show.unmigrated == 1 { 1 } else { 0 },
-            )
-        } else if show.id <= 0 {
-            // Manual tier-only entry — keep id as-is, not subject to remap.
-            (show.id, None, 0)
-        } else {
-            match remap.get(&show.id).copied().flatten() {
-                Some(new_id) if !final_ids.contains(&new_id) => (new_id, Some(show.id), 0),
-                Some(_collision) => {
-                    // Another backup show already claimed this TMDB id — quarantine
-                    // this one under its original TVDB id (also check collision).
-                    if final_ids.contains(&show.id) {
-                        errors.push(format!(
-                            "Skipped {}: TMDB collision and TVDB id already used",
-                            show.name
-                        ));
-                        continue;
-                    }
-                    (show.id, Some(show.id), 1)
-                }
-                None => {
-                    if final_ids.contains(&show.id) {
-                        errors.push(format!(
-                            "Skipped {}: duplicate TVDB id in backup",
-                            show.name
-                        ));
-                        continue;
-                    }
-                    (show.id, Some(show.id), 1)
-                }
-            }
-        };
-
-        if let Err(e) = sqlx::query(
-            r#"INSERT INTO shows (id, name, status, poster_url, first_aired, network,
-                                  overview, runtime, added_at, last_synced,
-                                  color, notes, tags, archived, rating, tier_id, tier_only, rank_order,
-                                  legacy_tvdb_id, unmigrated)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#,
-        )
-        .bind(final_id)
-        .bind(&show.name)
-        .bind(&show.status)
-        .bind(&show.poster_url)
-        .bind(&show.first_aired)
-        .bind(&show.network)
-        .bind(&show.overview)
-        .bind(show.runtime)
-        .bind(&show.added_at)
-        .bind(&show.last_synced)
-        .bind(&show.color)
-        .bind(&show.notes)
-        .bind(&show.tags)
-        .bind(show.archived)
-        .bind(show.rating)
-        .bind(show.tier_id)
-        .bind(show.tier_only)
-        .bind(show.rank_order)
-        .bind(legacy_tvdb_id)
-        .bind(unmigrated)
-        .execute(&mut *tx)
-        .await
-        {
-            errors.push(format!("Failed to import show {}: {}", show.name, e));
-            continue;
-        }
-
-        show_id_remap.insert(show.id, final_id);
-        final_ids.insert(final_id);
-        shows_imported += 1;
-        if unmigrated == 1 {
-            quarantined += 1;
-        } else if is_legacy && show.id > 0 && legacy_tvdb_id.is_some() {
-            // Successfully mapped via /find — queue for English refresh.
-            // (Includes the rare same-id case where TVDB id == TMDB id.)
-            if final_id != show.id {
-                remapped += 1;
-            }
-            per_show.push(PerShowResult {
-                name: show.name.clone(),
-                new_tmdb_id: final_id,
-                episodes_orphaned: 0,
-                merged_with: None,
-            });
-            to_refresh.push((final_id, show.name.clone()));
-        }
-    }
-
-    // Episodes — rewrite show_id through the remap. Skip orphaned episodes
-    // (parent show was dropped above).
-    let mut episodes_imported: u32 = 0;
-    let mut episodes_orphaned: u32 = 0;
-
-    for episode in &data.episodes {
-        let Some(&new_show_id) = show_id_remap.get(&episode.show_id) else {
-            episodes_orphaned += 1;
-            continue;
-        };
-
-        if let Err(e) = sqlx::query(
-            r#"INSERT INTO episodes (id, show_id, season_number, episode_number, name, overview,
-                                     aired, runtime, image_url, watched, watched_at, scheduled_date,
-                                     rating, tags)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#,
-        )
-        .bind(episode.id)
-        .bind(new_show_id)
-        .bind(episode.season_number)
-        .bind(episode.episode_number)
-        .bind(&episode.name)
-        .bind(&episode.overview)
-        .bind(&episode.aired)
-        .bind(episode.runtime)
-        .bind(&episode.image_url)
-        .bind(episode.watched)
-        .bind(&episode.watched_at)
-        .bind(&episode.scheduled_date)
-        .bind(episode.rating)
-        .bind(&episode.tags)
-        .execute(&mut *tx)
-        .await
-        {
-            errors.push(format!("Failed to import episode {}: {}", episode.id, e));
-            continue;
-        }
-        episodes_imported += 1;
-    }
-
-    // Movies are unaffected by the TVDB → TMDB transition.
-    let mut movies_imported: u32 = 0;
-    for movie in &data.movies {
-        if let Err(e) = sqlx::query(
-            r#"INSERT INTO movies (id, title, tagline, overview, poster_url, backdrop_url,
-                                   release_date, digital_release_date, physical_release_date,
-                                   runtime, status, genres, vote_average, scheduled_date, watched,
-                                   watched_at, rating, notes, color, tags, archived, added_at, last_synced,
-                                   tier_id, tier_only, rank_order)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#,
-        )
-        .bind(movie.id)
-        .bind(&movie.title)
-        .bind(&movie.tagline)
-        .bind(&movie.overview)
-        .bind(&movie.poster_url)
-        .bind(&movie.backdrop_url)
-        .bind(&movie.release_date)
-        .bind(&movie.digital_release_date)
-        .bind(&movie.physical_release_date)
-        .bind(movie.runtime)
-        .bind(&movie.status)
-        .bind(&movie.genres)
-        .bind(movie.vote_average)
-        .bind(&movie.scheduled_date)
-        .bind(movie.watched)
-        .bind(&movie.watched_at)
-        .bind(movie.rating)
-        .bind(&movie.notes)
-        .bind(&movie.color)
-        .bind(&movie.tags)
-        .bind(movie.archived)
-        .bind(&movie.added_at)
-        .bind(&movie.last_synced)
-        .bind(movie.tier_id)
-        .bind(movie.tier_only)
-        .bind(movie.rank_order)
-        .execute(&mut *tx)
-        .await
-        {
-            let _ = tx.rollback().await;
-            return Err(format!("Failed to import movie {}: {}", movie.title, e));
-        }
-        movies_imported += 1;
-    }
-
-    tx.commit()
-        .await
-        .map_err(|e| format!("Failed to commit transaction: {}", e))?;
+    let RestoredBackup {
+        result:
+            ImportResult {
+                shows_imported,
+                episodes_imported,
+                movies_imported,
+                mut quarantined,
+                mut remapped,
+                mut episodes_orphaned,
+                ..
+            },
+        to_refresh,
+        mut per_show,
+    } = replace_from_pool(&pool, &data, &remap).await?;
 
     if is_legacy {
         // Refresh pass: re-fetch metadata + episodes from TMDB in en-US for
@@ -683,8 +530,7 @@ pub async fn import_database(app: AppHandle, data: BackupData) -> Result<ImportR
                     tokio::time::sleep(Duration::from_millis(80)).await;
 
                     let entry: RefreshEntry =
-                        match crate::db::tvdb_remap::remap_single_show(&pool, new_id, new_id)
-                            .await
+                        match crate::db::tvdb_remap::remap_single_show(&pool, new_id, new_id).await
                         {
                             Ok(outcome) => (new_id, outcome.episodes_orphaned, None),
                             Err(e) => (new_id, 0, Some(e)),
@@ -780,5 +626,319 @@ pub async fn import_database(app: AppHandle, data: BackupData) -> Result<ImportR
         quarantined,
         remapped,
         episodes_orphaned,
+        predictions_imported: data
+            .personal_data
+            .as_ref()
+            .map_or(0, |p| p.predictions.len() as u32),
+        warnings: errors,
+    })
+}
+
+struct RestoredBackup {
+    result: ImportResult,
+    to_refresh: Vec<(i64, String)>,
+    per_show: Vec<PerShowResult>,
+}
+
+/// Replace the documented backup scope in one transaction. No network or app
+/// state is needed here, so regression tests exercise the production SQL path.
+async fn replace_from_pool(
+    pool: &sqlx::SqlitePool,
+    data: &BackupData,
+    remap: &HashMap<i64, Option<i64>>,
+) -> Result<RestoredBackup, String> {
+    data.validate()?;
+    let is_legacy = data.version == "1.0";
+    let mut per_show = Vec::new();
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| format!("Failed to begin transaction: {}", e))?;
+
+    sqlx::query("PRAGMA defer_foreign_keys = ON")
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| format!("Failed to defer foreign keys: {}", e))?;
+
+    // Clear auxiliary tables before the parents. cast_members/crew_members
+    // have ON DELETE CASCADE but sonarr_imports/radarr_imports do not — those
+    // would dangle and fail FK check at commit. change_history/title_mappings/
+    // plex_scrobble_log carry show/episode/movie ids without FK constraints,
+    // so leaving stale rows could misattribute history. v3 restores these
+    // records from the same snapshot; older backups explicitly omit them.
+    for stmt in [
+        "DELETE FROM cast_members",
+        "DELETE FROM crew_members",
+        "DELETE FROM sonarr_imports",
+        "DELETE FROM radarr_imports",
+        "DELETE FROM change_history",
+        "DELETE FROM title_mappings",
+        "DELETE FROM plex_scrobble_log",
+        "DELETE FROM episodes",
+        "DELETE FROM shows",
+        "DELETE FROM movies",
+        "DELETE FROM tiers",
+    ] {
+        if let Err(e) = sqlx::query(stmt).execute(&mut *tx).await {
+            let _ = tx.rollback().await;
+            return Err(format!("Failed to clear data ({}): {}", stmt, e));
+        }
+    }
+
+    // Tiers first — shows/movies reference them via tier_id FK.
+    for tier in data.tiers.iter().flatten() {
+        if let Err(e) = sqlx::query(
+            r#"INSERT INTO tiers (id, position, name, color, created_at)
+               VALUES (?, ?, ?, ?, ?)"#,
+        )
+        .bind(tier.id)
+        .bind(tier.position)
+        .bind(&tier.name)
+        .bind(&tier.color)
+        .bind(&tier.created_at)
+        .execute(&mut *tx)
+        .await
+        {
+            let _ = tx.rollback().await;
+            return Err(format!("Failed to import tier {}: {}", tier.name, e));
+        }
+    }
+
+    // Insert shows. For legacy backups, route through remap; otherwise insert as-is.
+    // Track final ids assigned to each backup row so episodes can be rewritten.
+    let mut show_id_remap: HashMap<i64, i64> = HashMap::new();
+    let mut final_ids: HashSet<i64> = HashSet::new();
+    let mut quarantined: u32 = 0;
+    let mut remapped: u32 = 0;
+    let mut shows_imported: u32 = 0;
+    // Shows that need a TMDB metadata refresh after commit (v1.0 backups only).
+    // The backup stored TVDB-sourced fields (name/poster/overview/episode names)
+    // which may be in a non-English language for anime / regional content.
+    // remap_single_show re-fetches in en-US (with original-language fallback).
+    let mut to_refresh: Vec<(i64, String)> = Vec::new();
+
+    for show in &data.shows {
+        let (final_id, legacy_tvdb_id, unmigrated) = if !is_legacy {
+            (
+                show.id,
+                show.legacy_tvdb_id,
+                if show.unmigrated == 1 { 1 } else { 0 },
+            )
+        } else if show.id <= 0 {
+            // Manual tier-only entry — keep id as-is, not subject to remap.
+            (show.id, None, 0)
+        } else {
+            match remap.get(&show.id).copied().flatten() {
+                Some(new_id) if !final_ids.contains(&new_id) => (new_id, Some(show.id), 0),
+                Some(_collision) => {
+                    // Another backup show already claimed this TMDB id — quarantine
+                    // this one under its original TVDB id (also check collision).
+                    if final_ids.contains(&show.id) {
+                        return Err(format!(
+                            "Cannot restore {}: TMDB collision and TVDB id already used",
+                            show.name
+                        ));
+                    }
+                    (show.id, Some(show.id), 1)
+                }
+                None => {
+                    if final_ids.contains(&show.id) {
+                        return Err(format!(
+                            "Cannot restore {}: TVDB id already used after remapping",
+                            show.name
+                        ));
+                    }
+                    (show.id, Some(show.id), 1)
+                }
+            }
+        };
+
+        if let Err(e) = sqlx::query(
+            r#"INSERT INTO shows (id, name, status, poster_url, first_aired, network,
+                                  overview, runtime, added_at, last_synced,
+                                  color, notes, tags, archived, rating, tier_id, tier_only, rank_order,
+                                  legacy_tvdb_id, unmigrated)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#,
+        )
+        .bind(final_id)
+        .bind(&show.name)
+        .bind(&show.status)
+        .bind(&show.poster_url)
+        .bind(&show.first_aired)
+        .bind(&show.network)
+        .bind(&show.overview)
+        .bind(show.runtime)
+        .bind(&show.added_at)
+        .bind(&show.last_synced)
+        .bind(&show.color)
+        .bind(&show.notes)
+        .bind(&show.tags)
+        .bind(show.archived)
+        .bind(show.rating)
+        .bind(show.tier_id)
+        .bind(show.tier_only)
+        .bind(show.rank_order)
+        .bind(legacy_tvdb_id)
+        .bind(unmigrated)
+        .execute(&mut *tx)
+        .await
+        {
+            return Err(format!("Failed to import show {}: {}", show.name, e));
+        }
+
+        show_id_remap.insert(show.id, final_id);
+        final_ids.insert(final_id);
+        shows_imported += 1;
+        if unmigrated == 1 {
+            quarantined += 1;
+        } else if is_legacy && show.id > 0 && legacy_tvdb_id.is_some() {
+            // Successfully mapped via /find — queue for English refresh.
+            // (Includes the rare same-id case where TVDB id == TMDB id.)
+            if final_id != show.id {
+                remapped += 1;
+            }
+            per_show.push(PerShowResult {
+                name: show.name.clone(),
+                new_tmdb_id: final_id,
+                episodes_orphaned: 0,
+                merged_with: None,
+            });
+            to_refresh.push((final_id, show.name.clone()));
+        }
+    }
+
+    // Episodes — rewrite show_id through the remap. No rows may be skipped.
+    let mut episodes_imported: u32 = 0;
+    let episodes_orphaned: u32 = 0;
+
+    for episode in &data.episodes {
+        let Some(&new_show_id) = show_id_remap.get(&episode.show_id) else {
+            return Err(format!(
+                "Episode {} has no restored parent show",
+                episode.id
+            ));
+        };
+
+        if let Err(e) = sqlx::query(
+            r#"INSERT INTO episodes (id, show_id, season_number, episode_number, name, overview,
+                                     aired, runtime, image_url, watched, watched_at, scheduled_date,
+                                     rating, tags, legacy_tvdb_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#,
+        )
+        .bind(episode.id)
+        .bind(new_show_id)
+        .bind(episode.season_number)
+        .bind(episode.episode_number)
+        .bind(&episode.name)
+        .bind(&episode.overview)
+        .bind(&episode.aired)
+        .bind(episode.runtime)
+        .bind(&episode.image_url)
+        .bind(episode.watched)
+        .bind(&episode.watched_at)
+        .bind(&episode.scheduled_date)
+        .bind(episode.rating)
+        .bind(&episode.tags)
+        .bind(episode.legacy_tvdb_id)
+        .execute(&mut *tx)
+        .await
+        {
+            return Err(format!("Failed to import episode {}: {}", episode.id, e));
+        }
+        episodes_imported += 1;
+    }
+
+    // Movies are unaffected by the TVDB → TMDB transition.
+    let mut movies_imported: u32 = 0;
+    for movie in &data.movies {
+        if let Err(e) = sqlx::query(
+            r#"INSERT INTO movies (id, title, tagline, overview, poster_url, backdrop_url,
+                                   release_date, digital_release_date, physical_release_date,
+                                   runtime, status, genres, vote_average, scheduled_date, watched,
+                                   watched_at, rating, notes, color, tags, archived, added_at, last_synced,
+                                   tier_id, tier_only, rank_order)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#,
+        )
+        .bind(movie.id)
+        .bind(&movie.title)
+        .bind(&movie.tagline)
+        .bind(&movie.overview)
+        .bind(&movie.poster_url)
+        .bind(&movie.backdrop_url)
+        .bind(&movie.release_date)
+        .bind(&movie.digital_release_date)
+        .bind(&movie.physical_release_date)
+        .bind(movie.runtime)
+        .bind(&movie.status)
+        .bind(&movie.genres)
+        .bind(movie.vote_average)
+        .bind(&movie.scheduled_date)
+        .bind(movie.watched)
+        .bind(&movie.watched_at)
+        .bind(movie.rating)
+        .bind(&movie.notes)
+        .bind(&movie.color)
+        .bind(&movie.tags)
+        .bind(movie.archived)
+        .bind(&movie.added_at)
+        .bind(&movie.last_synced)
+        .bind(movie.tier_id)
+        .bind(movie.tier_only)
+        .bind(movie.rank_order)
+        .execute(&mut *tx)
+        .await
+        {
+            let _ = tx.rollback().await;
+            return Err(format!("Failed to import movie {}: {}", movie.title, e));
+        }
+        movies_imported += 1;
+    }
+
+    if let Some(personal) = &data.personal_data {
+        personal
+            .restore(&mut tx)
+            .await
+            .map_err(|e| format!("Failed to restore predictions and history: {e}"))?;
+    }
+
+    let foreign_key_errors = sqlx::query("PRAGMA foreign_key_check")
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|e| format!("Failed to validate restored references: {e}"))?;
+    if !foreign_key_errors.is_empty() {
+        return Err("Restored data contains invalid references; no changes were saved".into());
+    }
+
+    // Reports belong to the old library. Keep schedule preferences, but discard
+    // their old title IDs and start the next interval from this restore.
+    sqlx::query("DELETE FROM settings WHERE key IN ('library_sync_shows_report', 'library_sync_movies_report', 'library_sync_shows_last_success', 'library_sync_movies_last_success')")
+        .execute(&mut *tx).await.map_err(|e| format!("Failed to clear stale sync reports: {e}"))?;
+    for kind in ["shows", "movies"] {
+        sqlx::query("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+            .bind(format!("library_sync_{kind}_last_full_attempt"))
+            .bind(serde_json::to_string(&chrono::Utc::now()).map_err(|e| e.to_string())?)
+            .execute(&mut *tx).await.map_err(|e| format!("Failed to reset sync schedule: {e}"))?;
+    }
+
+    tx.commit()
+        .await
+        .map_err(|e| format!("Failed to commit transaction: {}", e))?;
+
+    Ok(RestoredBackup {
+        result: ImportResult {
+            shows_imported,
+            episodes_imported,
+            movies_imported,
+            quarantined,
+            remapped,
+            episodes_orphaned,
+            predictions_imported: data
+                .personal_data
+                .as_ref()
+                .map_or(0, |p| p.predictions.len() as u32),
+            warnings: Vec::new(),
+        },
+        to_refresh,
+        per_show,
     })
 }

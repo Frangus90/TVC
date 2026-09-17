@@ -11,7 +11,7 @@ pub async fn match_episode(
 ) -> Option<MatchResult> {
     // First check title_mappings for a corrected match
     let mapped_show_id: Option<i64> = sqlx::query_scalar(
-        "SELECT tvc_id FROM title_mappings WHERE plex_title = ? AND media_type = 'show'"
+        "SELECT tvc_id FROM title_mappings WHERE plex_title = ? AND media_type = 'show'",
     )
     .bind(show_name)
     .fetch_optional(pool)
@@ -43,7 +43,12 @@ pub async fn match_episode(
             return Some(MatchResult {
                 entity_type: "episode".to_string(),
                 entity_id: episode_id,
-                method: if mapped_show_id.is_some() { "mapping" } else { "title" }.to_string(),
+                method: if mapped_show_id.is_some() {
+                    "mapping"
+                } else {
+                    "title"
+                }
+                .to_string(),
             });
         }
     }
@@ -56,10 +61,11 @@ pub async fn match_movie(
     pool: &Pool<Sqlite>,
     title: &str,
     year: Option<i32>,
+    tmdb_id: Option<i64>,
 ) -> Option<MatchResult> {
     // First check title_mappings
     let mapped_movie_id: Option<i64> = sqlx::query_scalar(
-        "SELECT tvc_id FROM title_mappings WHERE plex_title = ? AND media_type = 'movie'"
+        "SELECT t.tvc_id FROM title_mappings t JOIN movies m ON m.id = t.tvc_id WHERE t.plex_title = ? AND t.media_type = 'movie'"
     )
     .bind(title)
     .fetch_optional(pool)
@@ -72,6 +78,20 @@ pub async fn match_movie(
             entity_type: "movie".to_string(),
             entity_id: movie_id,
             method: "mapping".to_string(),
+        });
+    }
+
+    if let Some(id) = tmdb_id {
+        let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM movies WHERE id = ?)")
+            .bind(id)
+            .fetch_one(pool)
+            .await
+            .ok()?;
+        // A known provider identity must never fall back to a different movie.
+        return exists.then(|| MatchResult {
+            entity_type: "movie".into(),
+            entity_id: id,
+            method: "tmdb".into(),
         });
     }
 
@@ -89,104 +109,46 @@ pub async fn match_movie(
     None
 }
 
-/// Find a show by name (case-insensitive, fuzzy)
+/// Only a unique normalized title is safe. Substring matches can select remakes/spinoffs.
 async fn find_show_by_name(pool: &Pool<Sqlite>, name: &str) -> Option<i64> {
     let normalized = normalize_title(name);
-
-    // Try exact match first (case-insensitive)
-    let exact: Option<i64> = sqlx::query_scalar(
-        "SELECT id FROM shows WHERE LOWER(name) = LOWER(?)"
-    )
-    .bind(name)
-    .fetch_optional(pool)
-    .await
-    .ok()
-    .flatten();
-
-    if exact.is_some() {
-        return exact;
-    }
-
-    // Try normalized match
     let rows = sqlx::query("SELECT id, name FROM shows")
         .fetch_all(pool)
         .await
         .ok()?;
-
-    for row in rows {
-        let show_name: String = row.get("name");
-        if normalize_title(&show_name) == normalized {
-            return Some(row.get("id"));
-        }
+    let ids: Vec<i64> = rows
+        .iter()
+        .filter(|r| normalize_title(r.get("name")) == normalized)
+        .map(|r| r.get("id"))
+        .collect();
+    if ids.len() == 1 {
+        Some(ids[0])
+    } else {
+        None
     }
-
-    // Try partial match (show name contains Plex title or vice versa)
-    let lower_name = name.to_lowercase();
-    for row in sqlx::query("SELECT id, name FROM shows")
-        .fetch_all(pool)
-        .await
-        .ok()?
-    {
-        let show_name: String = row.get("name");
-        let lower_show = show_name.to_lowercase();
-
-        if lower_show.contains(&lower_name) || lower_name.contains(&lower_show) {
-            return Some(row.get("id"));
-        }
-    }
-
-    None
 }
 
-/// Find a movie by title and optionally year
 async fn find_movie_by_title(pool: &Pool<Sqlite>, title: &str, year: Option<i32>) -> Option<i64> {
     let normalized = normalize_title(title);
-
-    // Try exact match with year first
-    if let Some(year) = year {
-        let exact: Option<i64> = sqlx::query_scalar(
-            "SELECT id FROM movies WHERE LOWER(title) = LOWER(?) AND strftime('%Y', release_date) = ?"
-        )
-        .bind(title)
-        .bind(year.to_string())
-        .fetch_optional(pool)
-        .await
-        .ok()
-        .flatten();
-
-        if exact.is_some() {
-            return exact;
-        }
-    }
-
-    // Try exact title match without year
-    let exact: Option<i64> = sqlx::query_scalar(
-        "SELECT id FROM movies WHERE LOWER(title) = LOWER(?)"
+    let rows = sqlx::query(
+        "SELECT id, title, CAST(strftime('%Y', release_date) AS INTEGER) AS year FROM movies",
     )
-    .bind(title)
-    .fetch_optional(pool)
+    .fetch_all(pool)
     .await
-    .ok()
-    .flatten();
-
-    if exact.is_some() {
-        return exact;
+    .ok()?;
+    let ids: Vec<i64> = rows
+        .iter()
+        .filter(|r| {
+            normalize_title(r.get("title")) == normalized
+                && year.map_or(true, |y| r.get::<Option<i32>, _>("year") == Some(y))
+        })
+        .map(|r| r.get("id"))
+        .collect();
+    if ids.len() == 1 {
+        Some(ids[0])
+    } else {
+        None
     }
-
-    // Try normalized match
-    let rows = sqlx::query("SELECT id, title FROM movies")
-        .fetch_all(pool)
-        .await
-        .ok()?;
-
-    for row in rows {
-        let movie_title: String = row.get("title");
-        if normalize_title(&movie_title) == normalized {
-            return Some(row.get("id"));
-        }
-    }
-
-    None
 }
 
 /// Normalize a title for fuzzy matching
@@ -201,28 +163,11 @@ fn normalize_title(title: &str) -> String {
         .join(" ")
 }
 
-/// Mark an episode as watched
 pub async fn mark_episode_watched(pool: &Pool<Sqlite>, episode_id: i64) -> Result<(), String> {
-    sqlx::query(
-        "UPDATE episodes SET watched = 1, watched_at = datetime('now') WHERE id = ?"
-    )
-    .bind(episode_id)
-    .execute(pool)
-    .await
-    .map_err(|e| format!("Failed to mark episode watched: {}", e))?;
-
-    Ok(())
+    crate::watch_history::episodes(pool, crate::watch_history::Episodes::One(episode_id), true)
+        .await
 }
 
-/// Mark a movie as watched
 pub async fn mark_movie_watched(pool: &Pool<Sqlite>, movie_id: i64) -> Result<(), String> {
-    sqlx::query(
-        "UPDATE movies SET watched = 1, watched_at = datetime('now') WHERE id = ?"
-    )
-    .bind(movie_id)
-    .execute(pool)
-    .await
-    .map_err(|e| format!("Failed to mark movie watched: {}", e))?;
-
-    Ok(())
+    crate::watch_history::movie(pool, movie_id, true).await
 }

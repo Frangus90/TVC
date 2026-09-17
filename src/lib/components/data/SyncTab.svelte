@@ -121,6 +121,7 @@
         </select>
         {#if saving === library.kind}<span class="text-xs text-text-muted">Saving…</span>{/if}
       </div>
+      <p class="text-xs text-text-muted">Last complete success: {library.last_success_at ? formatDateTime(library.last_success_at) : "Never"}</p>
       {#if library.next_sync_at}
         <p class="text-xs text-text-muted">
           {#if library.running}Next scheduled sync is calculated from this run.

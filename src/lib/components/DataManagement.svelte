@@ -32,8 +32,7 @@
   } from "../stores/dataManagement.svelte";
   import { openConfirmDialog } from "../stores/confirmDialog.svelte";
   import { simulateDummyUpdate } from "../stores/updates.svelte";
-  import type { TrackedShow, Episode } from "../stores/shows.svelte";
-  import type { TrackedMovie } from "../stores/movies.svelte";
+  import { parseBackup, describeBackup, type BackupData } from "../utils/backup";
 
   let cleanupMessage = $state<string | null>(null);
   let dummyUpdateVersion = $state("0.8.0");
@@ -78,18 +77,14 @@
     }
   });
 
-  interface BackupData {
-    version: string;
-    exported_at: string;
-    shows: TrackedShow[];
-    episodes: Episode[];
-    movies: TrackedMovie[];
-  }
-
   interface ImportResult {
     shows_imported: number;
     episodes_imported: number;
     movies_imported: number;
+    predictions_imported: number;
+    quarantined: number;
+    episodes_orphaned: number;
+    warnings: string[];
   }
 
   async function handleExport() {
@@ -106,7 +101,7 @@
 
       if (filePath) {
         await writeTextFile(filePath, JSON.stringify(data, null, 2));
-        cleanupMessage = `Exported ${data.shows.length} shows, ${data.episodes.length} episodes, ${data.movies.length} movies`;
+        cleanupMessage = `Exported ${data.shows.length} shows, ${data.episodes.length} episodes, ${data.movies.length} movies, and ${data.personal_data?.predictions.length ?? 0} predictions, including tiers and history.`;
         setTimeout(() => (cleanupMessage = null), 5000);
       }
     } catch (err) {
@@ -118,46 +113,32 @@
   }
 
   async function handleImport() {
-    // Ask user to select file
-    const filePath = await open({
-      filters: [{ name: "JSON", extensions: ["json"] }],
-      multiple: false,
-    });
-
-    if (!filePath || typeof filePath !== "string") return;
-
-    // Confirm before proceeding
-    const confirmed = await openConfirmDialog({
-      title: "Import Backup",
-      message: "This will REPLACE all your current data with the backup. Are you sure?",
-      type: "danger",
-      confirmLabel: "Import",
-      cancelLabel: "Cancel",
-    });
-
-    if (!confirmed) {
-      return;
-    }
-
     importing = true;
     try {
-      // Read and parse the file
-      const content = await readTextFile(filePath);
-      const data = JSON.parse(content) as BackupData;
-
-      // Validate structure
-      if (!data.version || !data.shows || !data.episodes || !data.movies) {
-        throw new Error("Invalid backup file format");
-      }
+      const filePath = await open({
+        filters: [{ name: "JSON", extensions: ["json"] }],
+        multiple: false,
+      });
+      if (!filePath || typeof filePath !== "string") return;
+      const data = parseBackup(await readTextFile(filePath));
+      const confirmed = await openConfirmDialog({
+        title: "Import Backup",
+        message: describeBackup(data),
+        type: "danger",
+        confirmLabel: "Replace from backup",
+        cancelLabel: "Cancel",
+      });
+      if (!confirmed) return;
 
       // Import via backend
       const result = await invoke<ImportResult>("import_database", { data });
 
-      cleanupMessage = `Imported ${result.shows_imported} shows, ${result.episodes_imported} episodes, ${result.movies_imported} movies. Please restart the app.`;
-      setTimeout(() => (cleanupMessage = null), 10000);
+      cleanupMessage = `Imported ${result.shows_imported} shows, ${result.episodes_imported} episodes, ${result.movies_imported} movies, and ${result.predictions_imported} predictions. Please restart the app.`;
+      if (result.quarantined || result.episodes_orphaned || result.warnings.length) {
+        cleanupMessage += ` ${result.quarantined} shows need matching; ${result.episodes_orphaned} legacy episodes could not be matched. ${result.warnings.join(" ")}`;
+      }
     } catch (err) {
       cleanupMessage = `Import failed: ${err}`;
-      setTimeout(() => (cleanupMessage = null), 5000);
     } finally {
       importing = false;
     }
@@ -408,13 +389,15 @@
           <div class="mt-6 p-4 bg-background rounded-lg border border-border">
             <h3 class="text-sm font-medium text-text mb-3">Backup & Restore</h3>
             <p class="text-xs text-text-muted mb-4">
-              Export your data to a JSON file for backup, or import from a previous backup.
+              Back up your library, watch dates, schedules, ratings, notes, tiers, award predictions,
+              Plex title corrections, scrobble logs, and change history to JSON.
+              Settings, integration credentials, and racing data are excluded.
             </p>
             <div class="flex gap-3">
               <button
                 type="button"
                 onclick={handleExport}
-                disabled={exporting}
+                disabled={exporting || importing}
                 class="flex-1 px-3 py-2 text-sm bg-accent/20 hover:bg-accent/30 text-accent rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {#if exporting}
@@ -428,7 +411,7 @@
               <button
                 type="button"
                 onclick={handleImport}
-                disabled={importing}
+                disabled={importing || exporting}
                 class="flex-1 px-3 py-2 text-sm bg-surface-hover hover:bg-surface-hover/80 text-text rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {#if importing}

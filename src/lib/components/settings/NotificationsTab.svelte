@@ -47,8 +47,6 @@
   const categoryToggles = [
     { key: "racing_enabled", label: "Racing", description: "Race session reminders" },
     { key: "plex_enabled", label: "Plex", description: "Plex scrobble events" },
-    { key: "premiere_enabled", label: "Premieres", description: "Show & movie premieres" },
-    { key: "update_enabled", label: "Updates", description: "App update notifications" },
     { key: "system_enabled", label: "System", description: "System messages" },
   ] as const;
 

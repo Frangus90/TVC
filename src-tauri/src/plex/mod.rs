@@ -1,9 +1,9 @@
 mod handler;
-mod matcher;
+pub(crate) mod matcher;
 pub mod models;
 
 use axum::{routing::post, Router};
-use sqlx::{Pool, Sqlite, Row};
+use sqlx::{Pool, Row, Sqlite};
 use tauri::AppHandle;
 use tokio::sync::Mutex;
 

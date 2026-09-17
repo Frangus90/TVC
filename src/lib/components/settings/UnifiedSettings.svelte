@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { modalFocus } from "../../utils/modalFocus";
   import { fade, scale } from "svelte/transition";
   import { Palette, Bell, Flag, Play, Server, X, ListOrdered } from "lucide-svelte";
   import {
@@ -28,7 +29,7 @@
 {#if isSettingsOpen()}
   <!-- Backdrop -->
   <div
-    transition:fade={{ duration: 150 }}
+    in:fade={{ duration: 150 }}
     class="fixed inset-0 bg-black/60 z-50"
     onclick={closeSettings}
     role="button"
@@ -39,8 +40,9 @@
 
   <!-- Modal -->
   <div
-    transition:scale={{ duration: 200, start: 0.95, opacity: 0 }}
+    in:scale={{ duration: 200, start: 0.95, opacity: 0 }}
     class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[60] bg-surface rounded-xl border border-border shadow-2xl w-[1000px] max-w-[95vw] h-[85vh] max-h-[85vh] flex flex-col"
+    use:modalFocus={closeSettings}
     role="dialog"
     aria-modal="true"
     aria-labelledby="settings-modal-title"

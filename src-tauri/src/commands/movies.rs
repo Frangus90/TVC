@@ -1,8 +1,8 @@
+use crate::db::connection;
+use crate::tmdb;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row};
 use tauri::AppHandle;
-use crate::db::connection;
-use crate::tmdb;
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct TrackedMovie {
@@ -71,13 +71,14 @@ pub async fn search_movies(query: String) -> Result<Vec<MovieSearchResult>, Stri
 #[tauri::command]
 pub async fn add_movie(app: AppHandle, id: i64) -> Result<(), String> {
     crate::commands::validation::validate_id(id)?;
-    
+
     // Get movie details and release dates from TMDB
     let (movie_details, release_dates) = tmdb::get_movie_with_release_dates(id, "US")
         .await
         .map_err(|e| format!("Failed to fetch movie details: {}", e))?;
 
-    let pool = connection::get_pool(&app).await
+    let pool = connection::get_pool(&app)
+        .await
         .map_err(|e| format!("Database error: {}", e))?;
 
     let genres_json = movie_details.genres_string();
@@ -130,8 +131,9 @@ pub async fn add_movie(app: AppHandle, id: i64) -> Result<(), String> {
 #[tauri::command]
 pub async fn remove_movie(app: AppHandle, id: i64) -> Result<(), String> {
     crate::commands::validation::validate_id(id)?;
-    
-    let pool = connection::get_pool(&app).await
+
+    let pool = connection::get_pool(&app)
+        .await
         .map_err(|e| format!("Database error: {}", e))?;
 
     sqlx::query("DELETE FROM movies WHERE id = ?")
@@ -145,7 +147,8 @@ pub async fn remove_movie(app: AppHandle, id: i64) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn get_tracked_movies(app: AppHandle) -> Result<Vec<TrackedMovie>, String> {
-    let pool = connection::get_pool(&app).await
+    let pool = connection::get_pool(&app)
+        .await
         .map_err(|e| format!("Database error: {}", e))?;
 
     let rows = sqlx::query(
@@ -190,7 +193,8 @@ pub async fn get_tracked_movies(app: AppHandle) -> Result<Vec<TrackedMovie>, Str
 
 #[tauri::command]
 pub async fn get_archived_movies(app: AppHandle) -> Result<Vec<TrackedMovie>, String> {
-    let pool = connection::get_pool(&app).await
+    let pool = connection::get_pool(&app)
+        .await
         .map_err(|e| format!("Database error: {}", e))?;
 
     let rows = sqlx::query(
@@ -239,7 +243,8 @@ pub async fn update_movie_rating(
     id: i64,
     rating: Option<f64>,
 ) -> Result<(), String> {
-    let pool = connection::get_pool(&app).await
+    let pool = connection::get_pool(&app)
+        .await
         .map_err(|e| format!("Database error: {}", e))?;
 
     sqlx::query("UPDATE movies SET rating = ?, rank_order = NULL WHERE id = ?")
@@ -258,7 +263,8 @@ pub async fn reorder_movie_in_tier(
     id: i64,
     new_rank_order: i32,
 ) -> Result<(), String> {
-    let pool = connection::get_pool(&app).await
+    let pool = connection::get_pool(&app)
+        .await
         .map_err(|e| format!("Database error: {}", e))?;
 
     sqlx::query("UPDATE movies SET rank_order = ? WHERE id = ?")
@@ -272,44 +278,21 @@ pub async fn reorder_movie_in_tier(
 }
 
 #[tauri::command]
-pub async fn mark_movie_watched(
-    app: AppHandle,
-    id: i64,
-    watched: bool,
-) -> Result<(), String> {
-    let pool = connection::get_pool(&app).await
+pub async fn mark_movie_watched(app: AppHandle, id: i64, watched: bool) -> Result<(), String> {
+    let pool = connection::get_pool(&app)
+        .await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    // Use parameterized queries instead of format!() for safety
-    if watched {
-        sqlx::query(r#"UPDATE movies SET watched = ?, watched_at = datetime('now') WHERE id = ?"#)
-            .bind(1)
-            .bind(id)
-            .execute(&pool)
-            .await
-            .map_err(|e| format!("Failed to mark movie watched: {}", e))?;
-    } else {
-        sqlx::query(r#"UPDATE movies SET watched = ?, watched_at = NULL WHERE id = ?"#)
-            .bind(0)
-            .bind(id)
-            .execute(&pool)
-            .await
-            .map_err(|e| format!("Failed to mark movie watched: {}", e))?;
-    }
-
-    Ok(())
+    crate::watch_history::movie(&pool, id, watched).await
 }
 
 #[tauri::command]
-pub async fn schedule_movie(
-    app: AppHandle,
-    id: i64,
-    date: String,
-) -> Result<(), String> {
+pub async fn schedule_movie(app: AppHandle, id: i64, date: String) -> Result<(), String> {
     crate::commands::validation::validate_id(id)?;
     crate::commands::validation::validate_date(&date)?;
-    
-    let pool = connection::get_pool(&app).await
+
+    let pool = connection::get_pool(&app)
+        .await
         .map_err(|e| format!("Database error: {}", e))?;
 
     sqlx::query("UPDATE movies SET scheduled_date = ? WHERE id = ?")
@@ -325,8 +308,9 @@ pub async fn schedule_movie(
 #[tauri::command]
 pub async fn unschedule_movie(app: AppHandle, id: i64) -> Result<(), String> {
     crate::commands::validation::validate_id(id)?;
-    
-    let pool = connection::get_pool(&app).await
+
+    let pool = connection::get_pool(&app)
+        .await
         .map_err(|e| format!("Database error: {}", e))?;
 
     sqlx::query("UPDATE movies SET scheduled_date = NULL WHERE id = ?")
@@ -341,8 +325,9 @@ pub async fn unschedule_movie(app: AppHandle, id: i64) -> Result<(), String> {
 #[tauri::command]
 pub async fn archive_movie(app: AppHandle, id: i64) -> Result<(), String> {
     crate::commands::validation::validate_id(id)?;
-    
-    let pool = connection::get_pool(&app).await
+
+    let pool = connection::get_pool(&app)
+        .await
         .map_err(|e| format!("Database error: {}", e))?;
 
     sqlx::query("UPDATE movies SET archived = 1 WHERE id = ?")
@@ -357,8 +342,9 @@ pub async fn archive_movie(app: AppHandle, id: i64) -> Result<(), String> {
 #[tauri::command]
 pub async fn unarchive_movie(app: AppHandle, id: i64) -> Result<(), String> {
     crate::commands::validation::validate_id(id)?;
-    
-    let pool = connection::get_pool(&app).await
+
+    let pool = connection::get_pool(&app)
+        .await
         .map_err(|e| format!("Database error: {}", e))?;
 
     sqlx::query("UPDATE movies SET archived = 0 WHERE id = ?")
@@ -380,7 +366,8 @@ pub async fn sync_movie(app: AppHandle, id: i64) -> Result<(), String> {
         .await
         .map_err(|e| format!("Failed to fetch movie details: {}", e))?;
 
-    let pool = connection::get_pool(&app).await
+    let pool = connection::get_pool(&app)
+        .await
         .map_err(|e| format!("Database error: {}", e))?;
 
     let genres_json = movie_details.genres_string();
@@ -431,7 +418,8 @@ pub async fn get_movies_for_range(
     start_date: String,
     end_date: String,
 ) -> Result<Vec<CalendarMovie>, String> {
-    let pool = connection::get_pool(&app).await
+    let pool = connection::get_pool(&app)
+        .await
         .map_err(|e| format!("Database error: {}", e))?;
 
     // Get movies where scheduled_date falls in range (only manually scheduled movies appear on calendar)
@@ -470,7 +458,8 @@ pub async fn get_movies_for_range(
 
 #[tauri::command]
 pub async fn get_movie_details(app: AppHandle, id: i64) -> Result<MovieDetail, String> {
-    let pool = connection::get_pool(&app).await
+    let pool = connection::get_pool(&app)
+        .await
         .map_err(|e| format!("Database error: {}", e))?;
 
     let row = sqlx::query(

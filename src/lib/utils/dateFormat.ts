@@ -117,3 +117,11 @@ export function formatDateKey(value: Date | string): string {
   if (Number.isNaN(d.getTime())) return "";
   return format(d, "yyyy-MM-dd");
 }
+
+/** Inclusive local date range converted to an exclusive UTC end instant. */
+export function localDayRange(start: string, end: string): { start: string; end: string } {
+  const first = toDate(start);
+  const afterLast = toDate(end);
+  afterLast.setDate(afterLast.getDate() + 1);
+  return { start: first.toISOString(), end: afterLast.toISOString() };
+}

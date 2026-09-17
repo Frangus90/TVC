@@ -2,7 +2,10 @@ use tauri::AppHandle;
 use tauri_plugin_notification::NotificationExt;
 
 use crate::db::connection;
-use crate::racing::{self, models::{RacingConfig, RacingEvent, RacingSeries}};
+use crate::racing::{
+    self,
+    models::{RacingConfig, RacingEvent, RacingSeries},
+};
 
 #[tauri::command]
 pub async fn get_racing_series(app: AppHandle) -> Result<Vec<RacingSeries>, String> {
@@ -23,7 +26,9 @@ pub async fn toggle_racing_series(
         .await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    racing::toggle_series(&pool, &slug, enabled).await
+    racing::toggle_series(&pool, &slug, enabled).await?;
+    racing::scheduler::reschedule(app).await;
+    Ok(())
 }
 
 #[tauri::command]
@@ -50,7 +55,9 @@ pub async fn update_racing_series_notification(
         .await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    racing::update_series_notification(&pool, &slug, notify_enabled, notify_minutes).await
+    racing::update_series_notification(&pool, &slug, notify_enabled, notify_minutes).await?;
+    racing::scheduler::reschedule(app).await;
+    Ok(())
 }
 
 #[tauri::command]
@@ -80,7 +87,7 @@ pub async fn get_racing_events_for_range(
 }
 
 #[tauri::command]
-pub async fn refresh_racing_data(app: AppHandle) -> Result<usize, String> {
+pub async fn refresh_racing_data(app: AppHandle) -> Result<racing::RefreshReport, String> {
     let pool = connection::get_pool(&app)
         .await
         .map_err(|e| format!("Database error: {}", e))?;

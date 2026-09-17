@@ -129,10 +129,10 @@
     if (scheduledCount === 0) return;
 
     const confirmed = await openConfirmDialog({
-      title: "Unschedule Episodes",
-      message: `Are you sure you want to unschedule all ${scheduledCount} episode${scheduledCount !== 1 ? 's' : ''} for this day?`,
+      title: "Use Air Dates",
+      message: `Restore the air dates for all ${scheduledCount} episode${scheduledCount !== 1 ? 's' : ''} with custom dates on this day?`,
       type: "warning",
-      confirmLabel: "Unschedule",
+      confirmLabel: "Use air dates",
       cancelLabel: "Cancel",
     });
 
@@ -192,7 +192,7 @@
           <button
             onclick={handleClearAll}
             class="px-3 py-1.5 text-sm bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors flex items-center gap-2"
-            title="Unschedule all episodes for this day"
+            title="Restore air dates for episodes with custom schedules"
           >
             <Trash2 class="w-4 h-4" />
             Clear All

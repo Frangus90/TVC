@@ -58,7 +58,7 @@
   // Save tier edit
   async function saveEdit() {
     if (editingTierId === null || !editName.trim()) return;
-    await updateTierInfo(editingTierId, editName.trim(), editColor);
+    if (!await updateTierInfo(editingTierId, editName.trim(), editColor)) return;
     editingTierId = null;
   }
 
@@ -76,7 +76,7 @@
   // Create new tier
   async function handleCreateTier() {
     if (!newTierName.trim()) return;
-    await createTier(newTierName.trim(), newTierColor);
+    if (!await createTier(newTierName.trim(), newTierColor)) return;
     newTierName = "";
     newTierColor = "";
     showNewTierForm = false;
@@ -89,7 +89,7 @@
 
   async function confirmDelete() {
     if (pendingDeleteId === null) return;
-    await deleteTier(pendingDeleteId);
+    if (!await deleteTier(pendingDeleteId)) return;
     pendingDeleteId = null;
   }
 
@@ -101,7 +101,7 @@
 
   async function confirmPresetChange() {
     if (!pendingPreset) return;
-    await applyPreset(pendingPreset);
+    if (!await applyPreset(pendingPreset)) return;
     pendingPreset = null;
   }
 
@@ -111,7 +111,7 @@
   }
 
   async function confirmReset() {
-    await applyPreset("10-star");
+    if (!await applyPreset("10-star")) return;
     pendingReset = false;
   }
 

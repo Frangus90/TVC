@@ -1,3 +1,6 @@
+import { showError } from "./toast.svelte";
+let searchRequest = 0;
+let calendarRequest = 0;
 import { invoke } from "@tauri-apps/api/core";
 import { getDatabase } from "../utils/database";
 import { logger } from "../utils/logger";
@@ -188,12 +191,16 @@ export function openSearchModal() {
 }
 
 export function closeSearchModal() {
+  searchRequest++;
+  searchLoading = false;
   searchModalOpen = false;
   searchQuery = "";
   searchResults = [];
 }
 
 export function setSearchQuery(query: string) {
+  searchRequest++;
+  searchLoading = false;
   searchQuery = query;
 }
 
@@ -204,9 +211,11 @@ export function setSearchQuery(query: string) {
  * @param query - The search query string (will be validated)
  */
 export async function searchShows(query: string): Promise<void> {
+  const request = ++searchRequest;
   // Validate input
   const validation = validateSearchQuery(query);
   if (!validation.valid) {
+    searchLoading = false;
     searchResults = [];
     if (validation.error) {
       logger.warn("Invalid search query", { query, error: validation.error });
@@ -222,16 +231,19 @@ export async function searchShows(query: string): Promise<void> {
       () => invoke<SearchResult[]>("search_shows", { query })
     );
     // Sort by relevance
+    if (request !== searchRequest) return;
     searchResults = results.sort((a, b) => {
       const scoreA = scoreSearchResult(a, query);
       const scoreB = scoreSearchResult(b, query);
       return scoreB - scoreA;
     });
   } catch (error) {
+    if (request !== searchRequest) return;
     logger.error("Search error", error);
+    showError("Search error" + ": " + String(error));
     searchResults = [];
   } finally {
-    searchLoading = false;
+    if (request === searchRequest) searchLoading = false;
   }
 }
 
@@ -247,6 +259,7 @@ export async function loadTrackedShows(): Promise<void> {
     trackedShows = shows;
   } catch (error) {
     logger.error("Failed to load tracked shows", error);
+    showError("Failed to load tracked shows" + ": " + String(error));
     // Fallback to database if backend command fails
     try {
       const database = await getDb();
@@ -254,7 +267,7 @@ export async function loadTrackedShows(): Promise<void> {
         tier_only: number;
         unmigrated: number;
       })[]>(
-        "SELECT id, name, poster_url, status, color, notes, tags, rating, rank_order, tier_id, COALESCE(tier_only, 0) as tier_only, COALESCE(unmigrated, 0) as unmigrated FROM shows ORDER BY name"
+        "SELECT id, name, poster_url, status, color, notes, tags, rating, rank_order, tier_id, COALESCE(tier_only, 0) as tier_only, COALESCE(unmigrated, 0) as unmigrated FROM shows WHERE COALESCE(archived, 0) = 0 ORDER BY name"
       );
       trackedShows = rows.map((r) => ({
         ...r,
@@ -263,6 +276,7 @@ export async function loadTrackedShows(): Promise<void> {
       }));
     } catch (dbError) {
       logger.error("Database fallback also failed", dbError);
+      showError("Database fallback also failed" + ": " + String(dbError));
     }
   } finally {
     showsLoading = false;
@@ -271,20 +285,17 @@ export async function loadTrackedShows(): Promise<void> {
 
 export async function addShow(show: SearchResult): Promise<void> {
   const showId = show.tmdb_id ?? 0;
-  if (!showId) return;
+  if (!showId) throw new Error("Missing TMDB show ID");
 
-  try {
-    // Use backend command to add show
-    await invoke("add_show", { id: showId });
+  // Use backend command to add show
+  await invoke("add_show", { id: showId });
 
-    // Update UI immediately
-    await loadTrackedShows();
+  // Update UI immediately
+  await loadTrackedShows();
 
-    // Sync episodes in background (don't await) — syncShowEpisodes refreshes the calendar itself
-    syncShowEpisodes(showId);
-  } catch (error) {
-    logger.error("Failed to add show", error);
-  }
+  // Sync episodes in background (don't await) — syncShowEpisodes refreshes the calendar itself
+  syncShowEpisodes(showId);
+
 }
 
 export async function removeShow(showId: number): Promise<void> {
@@ -296,6 +307,7 @@ export async function removeShow(showId: number): Promise<void> {
     calendarEpisodes = calendarEpisodes.filter((ep) => ep.show_id !== showId);
   } catch (error) {
     logger.error("Failed to remove show", error);
+    showError("Failed to remove show" + ": " + String(error));
   }
 }
 
@@ -306,6 +318,7 @@ export async function loadArchivedShows(): Promise<void> {
     archivedShows = shows;
   } catch (error) {
     logger.error("Failed to load archived shows", error);
+    showError("Failed to load archived shows" + ": " + String(error));
   } finally {
     archivedShowsLoading = false;
   }
@@ -320,6 +333,7 @@ export async function archiveShow(showId: number): Promise<void> {
     calendarEpisodes = calendarEpisodes.filter((ep) => ep.show_id !== showId);
   } catch (error) {
     logger.error("Failed to archive show", error);
+    showError("Failed to archive show" + ": " + String(error));
   }
 }
 
@@ -330,6 +344,7 @@ export async function unarchiveShow(showId: number): Promise<void> {
     await loadArchivedShows();
   } catch (error) {
     logger.error("Failed to unarchive show", error);
+    showError("Failed to unarchive show" + ": " + String(error));
   }
 }
 
@@ -339,6 +354,7 @@ export async function syncShowEpisodes(showId: number): Promise<void> {
     await refreshCalendar();
   } catch (error) {
     logger.error("Failed to sync episodes", error);
+    showError("Failed to sync episodes" + ": " + String(error));
   }
 }
 
@@ -353,15 +369,19 @@ export async function loadEpisodesForRange(
   startDate: string,
   endDate: string
 ): Promise<void> {
+  const request = ++calendarRequest;
   currentCalendarRange = { start: startDate, end: endDate };
   try {
     const episodes = await invoke<Episode[]>("get_episodes_for_range", {
       startDate,
       endDate,
     });
+    if (request !== calendarRequest) return;
     calendarEpisodes = episodes;
   } catch (error) {
+    if (request !== calendarRequest) return;
     logger.error("Failed to load episodes", error);
+    showError("Failed to load episodes" + ": " + String(error));
     // Fallback to database if backend command fails
     try {
       const database = await getDb();
@@ -384,12 +404,14 @@ export async function loadEpisodesForRange(
                 s.name as show_name, s.network, s.poster_url
          FROM episodes e
          JOIN shows s ON e.show_id = s.id
-         WHERE (e.aired >= $1 AND e.aired <= $2) OR (e.scheduled_date >= $1 AND e.scheduled_date <= $2)
+         WHERE COALESCE(s.archived, 0) = 0 AND s.tier_only = 0
+           AND COALESCE(e.scheduled_date, e.aired) >= $1 AND COALESCE(e.scheduled_date, e.aired) <= $2
          ORDER BY COALESCE(e.scheduled_date, e.aired), s.name`,
         [startDate, endDate]
       );
 
-      calendarEpisodes = rows.map((row) => ({
+      if (request !== calendarRequest) return;
+    calendarEpisodes = rows.map((row) => ({
         id: row.id,
         show_id: row.show_id,
         show_name: row.show_name,
@@ -403,7 +425,9 @@ export async function loadEpisodesForRange(
         poster_url: row.poster_url,
       }));
     } catch (dbError) {
+    if (request !== calendarRequest) return;
       logger.error("Database fallback also failed", dbError);
+      showError("Database fallback also failed" + ": " + String(dbError));
     }
   }
 }
@@ -420,6 +444,7 @@ export async function toggleEpisodeWatched(
     );
   } catch (error) {
     logger.error("Failed to toggle episode watched", error);
+    showError("Failed to toggle episode watched" + ": " + String(error));
   }
 }
 
@@ -486,6 +511,7 @@ export async function openEpisodePicker(show: TrackedShow, date: string): Promis
     }));
   } catch (error) {
     logger.error("Failed to load episodes for picker", error);
+    showError("Failed to load episodes for picker" + ": " + String(error));
     episodePickerEpisodes = [];
   }
 }
@@ -520,6 +546,7 @@ export async function scheduleEpisode(episodeId: number, date: string): Promise<
     logger.debug("[Schedule] scheduleEpisode completed successfully");
   } catch (error) {
     logger.error("[Schedule] Failed to schedule episode", error);
+    showError("[Schedule] Failed to schedule episode" + ": " + String(error));
     if (error instanceof Error) {
       logger.error("[Schedule] Error details", {
         message: error.message,
@@ -546,6 +573,7 @@ export async function scheduleMultipleEpisodes(episodeIds: number[], date: strin
     closeEpisodePicker();
   } catch (error) {
     logger.error("Failed to schedule episodes", error);
+    showError("Failed to schedule episodes" + ": " + String(error));
   }
 }
 
@@ -559,6 +587,7 @@ export async function unscheduleEpisode(episodeId: number): Promise<void> {
     }
   } catch (error) {
     logger.error("Failed to unschedule episode", error);
+    showError("Failed to unschedule episode" + ": " + String(error));
   }
 }
 

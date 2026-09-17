@@ -1,7 +1,7 @@
+use crate::db::connection;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use tauri::AppHandle;
-use crate::db::connection;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DuplicatePair {
@@ -29,7 +29,8 @@ pub struct MergeResult {
 /// shows.id is the TMDB id (primary key), so same-id duplicates are impossible.
 #[tauri::command]
 pub async fn find_duplicates(app: AppHandle) -> Result<Vec<DuplicatePair>, String> {
-    let pool = connection::get_pool(&app).await
+    let pool = connection::get_pool(&app)
+        .await
         .map_err(|e| format!("Database error: {}", e))?;
 
     let mut duplicates = Vec::new();
@@ -39,7 +40,7 @@ pub async fn find_duplicates(app: AppHandle) -> Result<Vec<DuplicatePair>, Strin
         r#"SELECT s1.id as id1, s1.name as name1, s1.poster_url as poster1,
                   s2.id as id2, s2.name as name2, s2.poster_url as poster2
            FROM shows s1
-           JOIN shows s2 ON LOWER(s1.name) = LOWER(s2.name) AND s1.id < s2.id"#
+           JOIN shows s2 ON LOWER(s1.name) = LOWER(s2.name) AND s1.id < s2.id"#,
     )
     .fetch_all(&pool)
     .await
@@ -73,7 +74,7 @@ pub async fn find_duplicates(app: AppHandle) -> Result<Vec<DuplicatePair>, Strin
 async fn get_episode_counts(pool: &sqlx::SqlitePool, show_id: i64) -> Result<(i64, i64), String> {
     let row = sqlx::query(
         r#"SELECT COUNT(*) as total, SUM(CASE WHEN watched = 1 THEN 1 ELSE 0 END) as watched
-           FROM episodes WHERE show_id = ?"#
+           FROM episodes WHERE show_id = ?"#,
     )
     .bind(show_id)
     .fetch_one(pool)
@@ -93,32 +94,51 @@ pub async fn merge_duplicates(
     keep_id: i64,
     merge_id: i64,
 ) -> Result<MergeResult, String> {
-    let pool = connection::get_pool(&app).await
+    let pool = connection::get_pool(&app)
+        .await
         .map_err(|e| format!("Database error: {}", e))?;
 
+    merge_in_pool(&pool, keep_id, merge_id).await
+}
+
+pub(crate) async fn merge_in_pool(
+    pool: &sqlx::SqlitePool,
+    keep_id: i64,
+    merge_id: i64,
+) -> Result<MergeResult, String> {
+    if keep_id == merge_id {
+        return Err("Choose two different shows".into());
+    }
+    let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM shows WHERE id IN (?, ?)")
+        .bind(keep_id)
+        .bind(merge_id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+    if count != 2 {
+        return Err("Both shows must still exist before merging".into());
+    }
+
     // Get episodes from both shows
-    let keep_episodes: Vec<(i32, i32)> = sqlx::query(
-        r#"SELECT season_number, episode_number FROM episodes WHERE show_id = ?"#
-    )
-    .bind(keep_id)
-    .fetch_all(&pool)
-    .await
-    .map_err(|e| format!("Failed to get keep episodes: {}", e))?
-    .iter()
-    .map(|row| (row.get("season_number"), row.get("episode_number")))
-    .collect();
+    let keep_episodes: Vec<(i32, i32)> =
+        sqlx::query(r#"SELECT season_number, episode_number FROM episodes WHERE show_id = ?"#)
+            .bind(keep_id)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|e| format!("Failed to get keep episodes: {}", e))?
+            .iter()
+            .map(|row| (row.get("season_number"), row.get("episode_number")))
+            .collect();
 
     let merge_episodes = sqlx::query(
-        r#"SELECT id, season_number, episode_number, watched, scheduled_date, watched_at
+        r#"SELECT id, season_number, episode_number, watched, scheduled_date, watched_at, rating, tags
            FROM episodes WHERE show_id = ?"#
     )
     .bind(merge_id)
-    .fetch_all(&pool)
+    .fetch_all(&mut *tx)
     .await
     .map_err(|e| format!("Failed to get merge episodes: {}", e))?;
-
-    let mut tx = pool.begin().await
-        .map_err(|e| format!("Failed to begin transaction: {}", e))?;
 
     let mut moved = 0i64;
     let mut merged = 0i64;
@@ -133,17 +153,21 @@ pub async fn merge_duplicates(
 
         if keep_episodes.contains(&(season, episode)) {
             // Episode exists in both - merge watched status
-            if watched || scheduled_date.is_some() {
+            {
                 sqlx::query(
                     r#"UPDATE episodes SET
                         watched = CASE WHEN watched = 1 THEN 1 ELSE ? END,
                         watched_at = CASE WHEN watched_at IS NOT NULL THEN watched_at ELSE ? END,
-                        scheduled_date = CASE WHEN scheduled_date IS NOT NULL THEN scheduled_date ELSE ? END
+                        scheduled_date = CASE WHEN scheduled_date IS NOT NULL THEN scheduled_date ELSE ? END,
+                        rating = COALESCE(rating, ?),
+                        tags = (SELECT json_group_array(value) FROM (SELECT value FROM json_each(COALESCE(tags, '[]')) UNION SELECT value FROM json_each(COALESCE(?, '[]'))))
                        WHERE show_id = ? AND season_number = ? AND episode_number = ?"#
                 )
                 .bind(if watched { 1 } else { 0 })
                 .bind(&watched_at)
                 .bind(&scheduled_date)
+                .bind(ep.get::<Option<f64>, _>("rating"))
+                .bind(ep.get::<Option<String>, _>("tags"))
                 .bind(keep_id)
                 .bind(season)
                 .bind(episode)
@@ -152,6 +176,12 @@ pub async fn merge_duplicates(
                 .map_err(|e| format!("Failed to merge episode: {}", e))?;
                 merged += 1;
             }
+            let target_id: i64 = sqlx::query_scalar("SELECT id FROM episodes WHERE show_id = ? AND season_number = ? AND episode_number = ?")
+                .bind(keep_id).bind(season).bind(episode).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
+            sqlx::query("UPDATE plex_scrobble_log SET matched_entity_id = ? WHERE matched_entity_type = 'episode' AND matched_entity_id = ?")
+                .bind(target_id).bind(ep_id).execute(&mut *tx).await.map_err(|e| e.to_string())?;
+            sqlx::query("UPDATE change_history SET entity_id = ? WHERE entity_type = 'episode' AND entity_id = ?")
+                .bind(target_id).bind(ep_id).execute(&mut *tx).await.map_err(|e| e.to_string())?;
             // Delete the duplicate episode
             sqlx::query(r#"DELETE FROM episodes WHERE id = ?"#)
                 .bind(ep_id)
@@ -170,6 +200,27 @@ pub async fn merge_duplicates(
         }
     }
 
+    sqlx::query("UPDATE sonarr_imports SET show_id = ? WHERE show_id = ?")
+        .bind(keep_id)
+        .bind(merge_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+    sqlx::query("UPDATE title_mappings SET tvc_id = ?, tvc_title = (SELECT name FROM shows WHERE id = ?) WHERE media_type = 'show' AND tvc_id = ?")
+        .bind(keep_id).bind(keep_id).bind(merge_id).execute(&mut *tx).await.map_err(|e| e.to_string())?;
+    sqlx::query("UPDATE shows SET rating = COALESCE(rating, (SELECT rating FROM shows WHERE id = ?)) WHERE id = ?")
+        .bind(merge_id).bind(keep_id).execute(&mut *tx).await.map_err(|e| e.to_string())?;
+    sqlx::query(
+        "UPDATE change_history SET entity_id = ? WHERE entity_type = 'show' AND entity_id = ?",
+    )
+    .bind(keep_id)
+    .bind(merge_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| e.to_string())?;
+    sqlx::query("UPDATE shows SET tags = (SELECT json_group_array(value) FROM (SELECT value FROM json_each(COALESCE(tags, '[]')) UNION SELECT value FROM json_each(COALESCE((SELECT tags FROM shows WHERE id = ?), '[]')))), notes = CASE WHEN notes IS NULL OR notes = '' THEN (SELECT notes FROM shows WHERE id = ?) WHEN COALESCE((SELECT notes FROM shows WHERE id = ?), '') = '' OR notes = (SELECT notes FROM shows WHERE id = ?) THEN notes ELSE notes || char(10) || char(10) || (SELECT notes FROM shows WHERE id = ?) END, tier_id = COALESCE(tier_id, (SELECT tier_id FROM shows WHERE id = ?)) WHERE id = ?")
+        .bind(merge_id).bind(merge_id).bind(merge_id).bind(merge_id).bind(merge_id).bind(merge_id).bind(keep_id)
+        .execute(&mut *tx).await.map_err(|e| e.to_string())?;
     // Delete the merged show
     sqlx::query(r#"DELETE FROM shows WHERE id = ?"#)
         .bind(merge_id)
@@ -177,7 +228,8 @@ pub async fn merge_duplicates(
         .await
         .map_err(|e| format!("Failed to delete merged show: {}", e))?;
 
-    tx.commit().await
+    tx.commit()
+        .await
         .map_err(|e| format!("Failed to commit merge: {}", e))?;
 
     Ok(MergeResult {

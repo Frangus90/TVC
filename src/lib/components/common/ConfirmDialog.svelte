@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { modalFocus } from "../../utils/modalFocus";
   import { fade, scale } from "svelte/transition";
   import { AlertTriangle, Info, X } from "lucide-svelte";
   import {
@@ -53,16 +54,9 @@
     closeConfirmDialog(false);
   }
 
-  function handleKeyDown(event: KeyboardEvent) {
-    if (event.key === "Escape") {
-      handleCancel();
-    } else if (event.key === "Enter") {
-      handleConfirm();
-    }
-  }
 </script>
 
-<svelte:window on:keydown={handleKeyDown} />
+
 
 {#if isConfirmDialogOpen()}
   {@const options = getConfirmDialogOptions()}
@@ -72,7 +66,7 @@
 
   <!-- Backdrop -->
   <div
-    transition:fade={{ duration: 150 }}
+    in:fade={{ duration: 150 }}
     class="fixed inset-0 bg-black/60 z-50"
     onclick={handleCancel}
     role="button"
@@ -83,8 +77,9 @@
 
   <!-- Dialog -->
   <div
-    transition:scale={{ duration: 200, start: 0.95, opacity: 0 }}
-    class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[60] bg-surface rounded-xl border border-border shadow-2xl w-[400px] max-w-[95vw]"
+    in:scale={{ duration: 200, start: 0.95, opacity: 0 }}
+    class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[60] bg-surface rounded-xl border border-border shadow-2xl w-[400px] max-w-[95vw] max-h-[90vh] overflow-y-auto"
+    use:modalFocus={handleCancel}
     role="dialog"
     aria-modal="true"
     aria-labelledby="confirm-dialog-title"
@@ -99,7 +94,7 @@
           <h2 id="confirm-dialog-title" class="text-lg font-semibold text-text mb-1">
             {options?.title || "Confirm"}
           </h2>
-          <p class="text-sm text-text-muted">
+          <p class="text-sm text-text-muted whitespace-pre-line">
             {options?.message || ""}
           </p>
         </div>
@@ -115,6 +110,7 @@
       <!-- Actions -->
       <div class="flex items-center justify-end gap-3 mt-6">
         <button
+          data-modal-initial
           onclick={handleCancel}
           class="px-4 py-2 text-sm text-text-muted hover:text-text hover:bg-surface-hover rounded-lg transition-colors"
         >

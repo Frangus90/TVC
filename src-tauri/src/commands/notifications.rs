@@ -1,7 +1,10 @@
 use tauri::AppHandle;
 
 use crate::db::connection;
-use crate::notifications::{self, models::{CreateNotification, Notification, NotificationSettings}};
+use crate::notifications::{
+    self,
+    models::{CreateNotification, Notification, NotificationSettings},
+};
 
 #[tauri::command]
 pub async fn get_notification_settings(app: AppHandle) -> Result<NotificationSettings, String> {
@@ -21,7 +24,9 @@ pub async fn update_notification_settings(
         .await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    notifications::update_settings(&pool, &settings).await
+    notifications::update_settings(&pool, &settings).await?;
+    crate::racing::scheduler::reschedule(app).await;
+    Ok(())
 }
 
 #[tauri::command]
@@ -109,7 +114,7 @@ pub async fn test_in_app_notification(
         ),
         "premiere" => (
             "Premiere Tonight",
-            "Severance S02E01 airs at 9:00 PM",
+            "Severance S02E01 airs at 21:00",
             Some("episode"),
         ),
         "update" => (

@@ -14,6 +14,12 @@ use crate::{commands, db::connection};
 static SYNC_LOCK: Mutex<()> = Mutex::const_new(());
 static ACTIVE: AtomicU8 = AtomicU8::new(0);
 
+pub(crate) fn lock_for_restore() -> Result<tokio::sync::MutexGuard<'static, ()>, String> {
+    SYNC_LOCK.try_lock().map_err(|_| {
+        "Wait for the current library sync or restore to finish before importing a backup".into()
+    })
+}
+
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum Library {
@@ -73,6 +79,7 @@ pub struct Report {
 
 #[derive(Serialize)]
 pub struct Status {
+    last_success_at: Option<DateTime<Utc>>,
     kind: Library,
     frequency: Frequency,
     next_sync_at: Option<DateTime<Utc>>,
@@ -143,6 +150,7 @@ async fn status(pool: &SqlitePool, kind: Library) -> Result<Status, String> {
     let running = ACTIVE.load(Ordering::SeqCst) == kind.code();
     let interrupted = !running && report.as_ref().is_some_and(|r| r.finished_at.is_none());
     Ok(Status {
+        last_success_at: read_setting(pool, &kind.key("last_success")).await?,
         kind,
         frequency,
         running,
@@ -268,8 +276,20 @@ where
     }
     .await;
     report.finished_at = Some(Utc::now());
-    report.current_title = None;
     report.error = result.err();
+    if report.source != "retry"
+        && report.failures.is_empty()
+        && report.error.is_none()
+        && report.succeeded > 0
+    {
+        sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+            .bind(kind.key("last_success"))
+            .bind(serde_json::to_string(&report.finished_at).map_err(|e| e.to_string())?)
+            .execute(pool)
+            .await
+            .map_err(|e| e.to_string())?;
+    }
+    report.current_title = None;
     save_report(pool, &report).await?;
     Ok(report)
 }
@@ -309,7 +329,7 @@ pub async fn run_library_sync(
 ) -> Result<(), String> {
     let _guard = SYNC_LOCK
         .try_lock()
-        .map_err(|_| "A library sync is already running")?;
+        .map_err(|_| "A library sync or restore is already running")?;
     let pool = connection::get_pool(&app)
         .await
         .map_err(|e| e.to_string())?;
@@ -444,6 +464,7 @@ mod tests {
             (4, 1, 2, 1)
         );
         let saved = status(&pool, Library::Shows).await.unwrap();
+        assert!(saved.last_success_at.is_none());
         assert_eq!(saved.frequency, Frequency::Off);
         assert!(saved.next_sync_at.is_none());
         let saved_report = saved.report.unwrap();
@@ -569,5 +590,22 @@ mod tests {
             .unwrap()
             .error
             .is_some());
+    }
+    #[tokio::test]
+    async fn only_complete_success_advances_freshness() {
+        let pool = database().await;
+        sync_library(&pool, Library::Shows, "manual", |_| async { Ok(()) })
+            .await
+            .unwrap();
+        let success = status(&pool, Library::Shows).await.unwrap().last_success_at;
+        assert!(success.is_some());
+        sync_library(&pool, Library::Shows, "manual", |_| async {
+            Err("offline".into())
+        })
+        .await
+        .unwrap();
+        let failed = status(&pool, Library::Shows).await.unwrap();
+        assert_eq!(failed.last_success_at, success);
+        assert_eq!(failed.report.unwrap().failures.len(), 2);
     }
 }

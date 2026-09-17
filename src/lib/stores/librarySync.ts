@@ -22,6 +22,7 @@ export interface SyncReport {
 }
 
 export interface LibrarySyncStatus {
+  last_success_at: string | null;
   kind: LibraryKind;
   frequency: SyncFrequency;
   next_sync_at: string | null;

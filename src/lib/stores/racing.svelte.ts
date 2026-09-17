@@ -1,3 +1,7 @@
+import { formatDateKey, localDayRange } from "../utils/dateFormat";
+import { getDatabase } from "../utils/database";
+let rangeRequest = 0;
+import { showError } from "./toast.svelte";
 import { invoke } from "@tauri-apps/api/core";
 import { logger } from "../utils/logger";
 
@@ -43,6 +47,9 @@ let isLoading = $state(false);
 let isRefreshing = $state(false);
 let currentRacingRange = $state<{ start: string; end: string } | null>(null);
 let refreshSignal = $state(0);
+export interface RacingRefreshReport { attempted_at: string; events: number; succeeded: number; failures: { slug: string; name: string; error: string }[] }
+let refreshReport = $state<RacingRefreshReport | null>(null);
+export function getRacingRefreshReport() { return refreshReport; }
 
 // Getters
 export function getRacingSeries(): RacingSeries[] {
@@ -84,7 +91,7 @@ export function getSeriesColor(series: RacingSeries): string {
 export function getRacingEventsForDate(date: string): RacingEvent[] {
   return racingEvents.filter((ev) => {
     // Compare just the date portion of start_time
-    return ev.start_time.startsWith(date);
+    return formatDateKey(ev.start_time) === date;
   });
 }
 
@@ -100,6 +107,7 @@ export async function loadRacingSeries(): Promise<void> {
     racingSeries = series;
   } catch (error) {
     logger.error("Failed to load racing series", error);
+    showError("Failed to load racing series" + ": " + String(error));
   }
 }
 
@@ -107,8 +115,12 @@ export async function loadRacingConfig(): Promise<void> {
   try {
     const config = await invoke<RacingConfig>("get_racing_config");
     racingConfig = config;
+    const db = await getDatabase();
+    const rows = await db.select<{ value: string }[]>("SELECT value FROM settings WHERE key = 'racing_refresh_report'");
+    refreshReport = rows[0] ? JSON.parse(rows[0].value) : null;
   } catch (error) {
     logger.error("Failed to load racing config", error);
+    showError("Failed to load racing config" + ": " + String(error));
   }
 }
 
@@ -116,18 +128,20 @@ export async function loadRacingEventsForRange(
   start: string,
   end: string
 ): Promise<void> {
+  const request = ++rangeRequest;
   currentRacingRange = { start, end };
   isLoading = true;
   try {
     const events = await invoke<RacingEvent[]>("get_racing_events_for_range", {
-      start,
-      end,
+      ...localDayRange(start, end),
     });
-    racingEvents = events;
+    if (request === rangeRequest) racingEvents = events;
   } catch (error) {
+    if (request !== rangeRequest) return;
     logger.error("Failed to load racing events", error);
+    showError("Failed to load racing events" + ": " + String(error));
   } finally {
-    isLoading = false;
+    if (request === rangeRequest) isLoading = false;
   }
 }
 
@@ -143,6 +157,7 @@ export async function toggleSeries(
     refreshSignal++;
   } catch (error) {
     logger.error("Failed to toggle racing series", error);
+    showError("Failed to toggle racing series" + ": " + String(error));
   }
 }
 
@@ -157,6 +172,7 @@ export async function updateSeriesColor(
     );
   } catch (error) {
     logger.error("Failed to update series color", error);
+    showError("Failed to update series color" + ": " + String(error));
   }
 }
 
@@ -178,6 +194,7 @@ export async function updateSeriesNotification(
     );
   } catch (error) {
     logger.error("Failed to update series notification", error);
+    showError("Failed to update series notification" + ": " + String(error));
   }
 }
 
@@ -192,13 +209,14 @@ export async function updateSeriesIcsUrl(
     );
   } catch (error) {
     logger.error("Failed to update series ICS URL", error);
+    showError("Failed to update series ICS URL" + ": " + String(error));
   }
 }
 
 export async function refreshRacingData(): Promise<void> {
   isRefreshing = true;
   try {
-    await invoke("refresh_racing_data");
+    refreshReport = await invoke<RacingRefreshReport>("refresh_racing_data");
     // Reload events for current range
     if (currentRacingRange) {
       await loadRacingEventsForRange(
@@ -210,6 +228,7 @@ export async function refreshRacingData(): Promise<void> {
     refreshSignal++;
   } catch (error) {
     logger.error("Failed to refresh racing data", error);
+    showError("Failed to refresh racing data" + ": " + String(error));
   } finally {
     isRefreshing = false;
   }
@@ -218,6 +237,11 @@ export async function refreshRacingData(): Promise<void> {
 export async function refreshSingleSeries(slug: string): Promise<void> {
   try {
     await invoke("refresh_single_racing_series", { slug });
+    if (refreshReport) {
+      refreshReport = { ...refreshReport, failures: refreshReport.failures.filter(f => f.slug !== slug) };
+      const db = await getDatabase();
+      await db.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('racing_refresh_report', $1)", [JSON.stringify(refreshReport)]);
+    }
     if (currentRacingRange) {
       await loadRacingEventsForRange(
         currentRacingRange.start,
@@ -227,6 +251,7 @@ export async function refreshSingleSeries(slug: string): Promise<void> {
     refreshSignal++;
   } catch (error) {
     logger.error("Failed to refresh series", error);
+    showError("Failed to refresh series" + ": " + String(error));
   }
 }
 
@@ -244,7 +269,9 @@ export async function updateRacingConfig(
       last_refreshed: racingConfig?.last_refreshed ?? null,
     };
   } catch (error) {
+    await loadRacingConfig();
     logger.error("Failed to update racing config", error);
+    showError("Failed to update racing config" + ": " + String(error));
   }
 }
 
@@ -265,6 +292,7 @@ export async function testNotification(): Promise<void> {
     await invoke("test_racing_notification");
   } catch (error) {
     logger.error("Failed to send test notification", error);
+    showError("Failed to send test notification" + ": " + String(error));
   }
 }
 

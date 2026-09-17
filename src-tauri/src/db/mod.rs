@@ -1,5 +1,15 @@
+pub fn app_identifier() -> &'static str {
+    if cfg!(debug_assertions) {
+        "com.tvc.app.dev"
+    } else {
+        "com.tvc.app"
+    }
+}
+
 // Database operations module
 pub mod connection;
+#[cfg(debug_assertions)]
+pub mod dev_profile;
 pub mod migration_repair;
 pub mod tvdb_remap;
 
@@ -32,6 +42,8 @@ mod tests {
             super::get_db_connection_string()
         );
         if cfg!(debug_assertions) {
+            assert_eq!(super::app_identifier(), "com.tvc.app.dev");
+            assert_ne!(super::app_identifier(), "com.tvc.app");
             assert_eq!(super::get_db_filename(), "tvc_dev.db");
             assert_eq!(
                 super::sql_plugin_config()["preload"][0],
