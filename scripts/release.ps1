@@ -15,6 +15,10 @@ function Write-Success { param($msg) Write-Host $msg -ForegroundColor Green }
 function Write-Err { param($msg) Write-Host $msg -ForegroundColor Red }
 function Write-Info { param($msg) Write-Host $msg -ForegroundColor Yellow }
 
+# Recover lock metadata left behind by an interrupted version bump before locked checks.
+Write-Step "Synchronizing release lock files..."
+& "$PSScriptRoot\sync-release-lockfiles.ps1" -ProjectRoot $ProjectRoot
+
 # Validate before committing, changing versions, building installers, or publishing.
 Write-Step "Running local release checks (disposable test databases only)..."
 Push-Location $ProjectRoot
@@ -312,6 +316,10 @@ $sidebar = Get-Content "$ProjectRoot\src\lib\components\layout\Sidebar.svelte" -
 $sidebar = $sidebar -replace '>v[\d\.]+</p>', ">v$Version</p>"
 Set-Content "$ProjectRoot\src\lib\components\layout\Sidebar.svelte" $sidebar -NoNewline
 Write-Success "  Updated Sidebar.svelte"
+
+# Commit matching manifests and lock files, even if the later installer build fails.
+Write-Step "Synchronizing lock files for $Version..."
+& "$PSScriptRoot\sync-release-lockfiles.ps1" -ProjectRoot $ProjectRoot
 
 # Step 2: Commit and push pending changes
 Write-Step "Committing pending changes..."
