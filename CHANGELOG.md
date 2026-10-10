@@ -2,6 +2,13 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.14.7] - Unreleased
+
+### Tier Lists
+
+- Search your tier list by year: enter `2026` to highlight movies released that year, or shows that first aired that year. You can still search by title.
+- Find several years at once by separating them with commas, such as `2025,2026`.
+
 ## [0.14.6] - 17.09.2026
 
 ### Backups and Saved Data

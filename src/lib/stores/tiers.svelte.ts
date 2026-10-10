@@ -13,6 +13,7 @@ export interface Tier {
 export interface TierListShow {
   id: number;
   name: string;
+  first_aired: string | null;
   poster_url: string | null;
   tier_id: number | null;
   rank_order: number | null;
@@ -22,6 +23,7 @@ export interface TierListShow {
 export interface TierListMovie {
   id: number;
   title: string;
+  release_date: string | null;
   poster_url: string | null;
   tier_id: number | null;
   rank_order: number | null;

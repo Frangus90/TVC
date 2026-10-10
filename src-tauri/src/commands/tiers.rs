@@ -260,6 +260,7 @@ pub async fn apply_tier_preset(
 pub struct TierListShow {
     pub id: i64,
     pub name: String,
+    pub first_aired: Option<String>,
     pub poster_url: Option<String>,
     pub tier_id: Option<i64>,
     pub rank_order: Option<i32>,
@@ -270,6 +271,7 @@ pub struct TierListShow {
 pub struct TierListMovie {
     pub id: i64,
     pub title: String,
+    pub release_date: Option<String>,
     pub poster_url: Option<String>,
     pub tier_id: Option<i64>,
     pub rank_order: Option<i32>,
@@ -281,16 +283,20 @@ pub async fn get_tier_list_shows(app: AppHandle) -> Result<Vec<TierListShow>, St
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
+    tier_list_shows(&pool).await
+}
+
+pub(crate) async fn tier_list_shows(pool: &sqlx::SqlitePool) -> Result<Vec<TierListShow>, String> {
     let rows = sqlx::query(
         r#"
-        SELECT id, name, poster_url, tier_id, rank_order, tier_only
+        SELECT id, name, first_aired, poster_url, tier_id, rank_order, tier_only
         FROM shows
         WHERE tier_only = 1 OR tier_id IS NOT NULL
         ORDER BY name
         LIMIT 10000
         "#,
     )
-    .fetch_all(&pool)
+    .fetch_all(pool)
     .await
     .map_err(|e| format!("Failed to get tier list shows: {}", e))?;
 
@@ -299,6 +305,7 @@ pub async fn get_tier_list_shows(app: AppHandle) -> Result<Vec<TierListShow>, St
         .map(|row| TierListShow {
             id: row.get("id"),
             name: row.get("name"),
+            first_aired: row.get("first_aired"),
             poster_url: row.get("poster_url"),
             tier_id: row.get("tier_id"),
             rank_order: row.get("rank_order"),
@@ -316,16 +323,20 @@ pub async fn get_tier_list_movies(app: AppHandle) -> Result<Vec<TierListMovie>, 
     let pool = connection::get_pool(&app).await
         .map_err(|e| format!("Database error: {}", e))?;
 
+    tier_list_movies(&pool).await
+}
+
+pub(crate) async fn tier_list_movies(pool: &sqlx::SqlitePool) -> Result<Vec<TierListMovie>, String> {
     let rows = sqlx::query(
         r#"
-        SELECT id, title, poster_url, tier_id, rank_order, tier_only
+        SELECT id, title, release_date, poster_url, tier_id, rank_order, tier_only
         FROM movies
         WHERE tier_only = 1 OR tier_id IS NOT NULL
         ORDER BY title
         LIMIT 10000
         "#,
     )
-    .fetch_all(&pool)
+    .fetch_all(pool)
     .await
     .map_err(|e| format!("Failed to get tier list movies: {}", e))?;
 
@@ -334,6 +345,7 @@ pub async fn get_tier_list_movies(app: AppHandle) -> Result<Vec<TierListMovie>, 
         .map(|row| TierListMovie {
             id: row.get("id"),
             title: row.get("title"),
+            release_date: row.get("release_date"),
             poster_url: row.get("poster_url"),
             tier_id: row.get("tier_id"),
             rank_order: row.get("rank_order"),

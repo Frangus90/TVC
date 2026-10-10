@@ -56,6 +56,72 @@ fn canonical_dates_reject_impossible_or_unpadded_values() {
 }
 
 #[tokio::test]
+async fn tier_lists_expose_release_dates_for_ranked_and_untiered_titles() {
+    let pool = database().await;
+    sqlx::raw_sql(
+        "INSERT INTO tiers (id,position,name,color) VALUES (1001,1001,'Test','#ffffff');
+        INSERT INTO shows (id,name,first_aired,tier_id,rank_order,tier_only) VALUES
+        (1,'Ranked show','2026-01-01',1001,3,0),
+        (2,'Untiered show','2025-12-31',NULL,NULL,1),
+        (-1,'Manual show',NULL,1001,4,1),
+        (3,'Outside tiers','2026-01-01',NULL,NULL,0);
+        INSERT INTO movies (id,title,release_date,digital_release_date,tier_id,rank_order,tier_only) VALUES
+        (1,'Ranked movie','2025-12-31','2026-01-15',1001,3,0),
+        (2,'Untiered movie','2026-01-01',NULL,NULL,NULL,1),
+        (-1,'Manual movie',NULL,NULL,1001,4,1),
+        (3,'Outside tiers','2026-01-01',NULL,NULL,NULL,0);",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let shows = crate::commands::tiers::tier_list_shows(&pool)
+        .await
+        .unwrap();
+    let movies = crate::commands::tiers::tier_list_movies(&pool)
+        .await
+        .unwrap();
+    assert_eq!(shows.len(), 3);
+    assert_eq!(movies.len(), 3);
+    let ranked_show = shows.iter().find(|show| show.id == 1).unwrap();
+    assert_eq!(ranked_show.first_aired.as_deref(), Some("2026-01-01"));
+    assert_eq!(ranked_show.rank_order, Some(3));
+    let ranked_movie = movies.iter().find(|movie| movie.id == 1).unwrap();
+    assert_eq!(ranked_movie.release_date.as_deref(), Some("2025-12-31"));
+    assert_eq!(ranked_movie.rank_order, Some(3));
+    assert_eq!(
+        shows
+            .iter()
+            .find(|show| show.id == 2)
+            .unwrap()
+            .first_aired
+            .as_deref(),
+        Some("2025-12-31")
+    );
+    assert_eq!(
+        movies
+            .iter()
+            .find(|movie| movie.id == 2)
+            .unwrap()
+            .release_date
+            .as_deref(),
+        Some("2026-01-01")
+    );
+    assert!(shows
+        .iter()
+        .find(|show| show.id == -1)
+        .unwrap()
+        .first_aired
+        .is_none());
+    assert!(movies
+        .iter()
+        .find(|movie| movie.id == -1)
+        .unwrap()
+        .release_date
+        .is_none());
+}
+
+#[tokio::test]
 async fn calendar_uses_visible_date_and_excludes_archived_and_tier_only() {
     let pool = database().await;
     sqlx::raw_sql(

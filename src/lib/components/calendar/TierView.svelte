@@ -4,6 +4,7 @@
   import { dndzone, type DndEvent } from "svelte-dnd-action";
   import { Tv, Film, Trash2, MoreVertical, Plus, ArrowUpCircle, ArrowDownCircle, ArrowRight, Search, X, Download, Loader2 } from "lucide-svelte";
   import { exportTierListAsImage } from "../../utils/tierExport";
+  import { matchesTierSearch } from "../../utils/tierSearch";
   import {
     getTiers,
     getTierListShows,
@@ -181,9 +182,8 @@
   let searchQuery = $state("");
   const isSearching = $derived(searchQuery.trim().length > 0);
 
-  function matchesSearch(name: string): boolean {
-    if (!isSearching) return true;
-    return name.toLowerCase().includes(searchQuery.trim().toLowerCase());
+  function matchesSearch(name: string, releaseDate: string | null): boolean {
+    return matchesTierSearch(name, releaseDate, searchQuery);
   }
 
   // Hover preview state
@@ -298,13 +298,16 @@
           <input
             type="text"
             bind:value={searchQuery}
-            placeholder="Find in list..."
+            placeholder="Title or year..."
+            aria-label="Find in tier list by title or year"
+            title="Search by title or years separated by commas, e.g. 2025,2026"
             class="w-44 pl-8 pr-7 py-1.5 text-sm bg-surface border border-border rounded-lg text-text placeholder:text-text-muted/50 focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent transition-colors"
           />
           {#if isSearching}
             <button
               type="button"
               onclick={() => { searchQuery = ""; }}
+              aria-label="Clear tier list search"
               class="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text transition-colors"
             >
               <X class="w-3.5 h-3.5" />
@@ -415,7 +418,7 @@
               class="flex-1 flex flex-wrap items-start gap-3 p-3 min-h-[100px]"
             >
               {#each showZone?.items ?? [] as show (show.id)}
-                {@const isMatch = matchesSearch(show.name)}
+                {@const isMatch = matchesSearch(show.name, show.first_aired)}
                 <div animate:flip={{ duration: 200 }} class="group flex flex-col items-center w-16 relative context-menu-container transition-opacity select-none {isSearching && !isMatch ? 'opacity-20' : ''}">
                   <!-- svelte-ignore a11y_no_static_element_interactions -->
                   <div
@@ -536,7 +539,7 @@
               class="flex-1 flex flex-wrap items-start gap-3 p-3 min-h-[100px]"
             >
               {#each movieZone?.items ?? [] as movie (movie.id)}
-                {@const isMatch = matchesSearch(movie.title)}
+                {@const isMatch = matchesSearch(movie.title, movie.release_date)}
                 <div animate:flip={{ duration: 200 }} class="group flex flex-col items-center w-16 relative context-menu-container transition-opacity select-none {isSearching && !isMatch ? 'opacity-20' : ''}">
                   <!-- svelte-ignore a11y_no_static_element_interactions -->
                   <div
@@ -660,7 +663,7 @@
             class="flex flex-wrap gap-3 min-h-[60px] rounded-lg"
           >
             {#each untieredShows as show (show.id)}
-                {@const isMatch = matchesSearch(show.name)}
+                {@const isMatch = matchesSearch(show.name, show.first_aired)}
                 <div animate:flip={{ duration: 200 }} class="group flex flex-col items-center w-16 relative context-menu-container transition-opacity select-none {isSearching && !isMatch ? 'opacity-20' : ''}">
                   <!-- svelte-ignore a11y_no_static_element_interactions -->
                   <div
@@ -731,7 +734,7 @@
             class="flex flex-wrap gap-3 min-h-[60px] rounded-lg"
           >
             {#each untieredMovies as movie (movie.id)}
-              {@const isMatch = matchesSearch(movie.title)}
+              {@const isMatch = matchesSearch(movie.title, movie.release_date)}
               <div animate:flip={{ duration: 200 }} class="group flex flex-col items-center w-16 relative context-menu-container transition-opacity select-none {isSearching && !isMatch ? 'opacity-20' : ''}">
                 <!-- svelte-ignore a11y_no_static_element_interactions -->
                 <div
