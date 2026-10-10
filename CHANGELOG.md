@@ -2,6 +2,14 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.14.8] - Unreleased
+
+### Movies
+
+- Fixed older movies showing a recent re-release date as their original theatrical release. This also corrects their year in tier-list searches after syncing.
+- Digital and physical release dates now use the earliest release listed by TMDB, instead of sometimes picking a later edition.
+- To correct dates already saved in your library, open **Data Management → Sync** and click **Sync now** under **Movies**. This includes tier-only movies.
+
 ## [0.14.7] - 10.10.2026
 
 ### Tier Lists

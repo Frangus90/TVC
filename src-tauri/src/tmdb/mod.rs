@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
 use std::time::Duration;
 
+mod release_dates;
+
 /// Create an HTTP client with proper timeout configuration
 fn create_http_client() -> Client {
     Client::builder()
@@ -263,42 +265,7 @@ pub async fn get_movie_release_dates(
 
     let release_data: ReleaseDatesResponse = response.json().await?;
 
-    // Find release dates for the specified country
-    let country_releases = release_data
-        .results
-        .iter()
-        .find(|r| r.iso_3166_1 == country);
-
-    let mut dates = MovieReleaseDates::default();
-
-    if let Some(country_data) = country_releases {
-        for release in &country_data.release_dates {
-            // Extract just the date part (YYYY-MM-DD) from the ISO datetime
-            let date = release.release_date.split('T').next().unwrap_or(&release.release_date);
-
-            match release.release_type {
-                1 | 2 | 3 => {
-                    // Premiere, Theatrical limited, or Theatrical
-                    if dates.theatrical.is_none() {
-                        dates.theatrical = Some(date.to_string());
-                    }
-                }
-                4 => {
-                    // Digital
-                    if dates.digital.is_none() {
-                        dates.digital = Some(date.to_string());
-                    }
-                }
-                5 => {
-                    // Physical
-                    if dates.physical.is_none() {
-                        dates.physical = Some(date.to_string());
-                    }
-                }
-                _ => {}
-            }
-        }
-    }
+    let mut dates = release_dates::select_movie_release_dates(&release_data, country);
 
     // If no country-specific data, try to use the primary release_date from movie details
     if dates.theatrical.is_none() {
