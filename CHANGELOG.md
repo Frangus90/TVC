@@ -2,7 +2,7 @@
 
 All notable changes to TVC will be documented in this file.
 
-## [0.14.8] - Unreleased
+## [0.14.8] - 10.10.2026
 
 ### Movies
 
