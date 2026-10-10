@@ -2,7 +2,7 @@
 
 All notable changes to TVC will be documented in this file.
 
-## [0.14.7] - Unreleased
+## [0.14.7] - 10.10.2026
 
 ### Tier Lists
 
