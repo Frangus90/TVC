@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { modalFocus } from "../../utils/modalFocus";
   import { GripVertical, Trash2, Plus, RotateCcw } from "lucide-svelte";
   import TiermakerImport from "./TiermakerImport.svelte";
   import {
@@ -370,9 +371,9 @@
 
   <!-- Confirmation dialogs -->
   {#if pendingPreset}
-    <div class="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center" role="dialog">
+    <div class="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="tier-preset-dialog" use:modalFocus={() => pendingPreset = null}>
       <div class="bg-surface rounded-xl border border-border shadow-2xl p-6 max-w-sm">
-        <h4 class="text-base font-semibold text-text mb-2">Change Preset?</h4>
+        <h4 id="tier-preset-dialog" class="text-base font-semibold text-text mb-2">Change Preset?</h4>
         <p class="text-sm text-text-muted mb-4">
           Switching presets will replace all current tiers and remove all tier assignments from shows and movies. This cannot be undone.
         </p>
@@ -398,9 +399,9 @@
 
   {#if pendingDeleteId !== null}
     {@const tierToDelete = tiers.find(t => t.id === pendingDeleteId)}
-    <div class="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center" role="dialog">
+    <div class="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="tier-delete-dialog" use:modalFocus={() => pendingDeleteId = null}>
       <div class="bg-surface rounded-xl border border-border shadow-2xl p-6 max-w-sm">
-        <h4 class="text-base font-semibold text-text mb-2">Delete Tier?</h4>
+        <h4 id="tier-delete-dialog" class="text-base font-semibold text-text mb-2">Delete Tier?</h4>
         <p class="text-sm text-text-muted mb-4">
           Delete "{tierToDelete?.name ?? 'this tier'}"? Shows and movies in this tier will become untiered.
         </p>
@@ -425,9 +426,9 @@
   {/if}
 
   {#if pendingReset}
-    <div class="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center" role="dialog">
+    <div class="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="tier-reset-dialog" use:modalFocus={() => pendingReset = false}>
       <div class="bg-surface rounded-xl border border-border shadow-2xl p-6 max-w-sm">
-        <h4 class="text-base font-semibold text-text mb-2">Reset to Default?</h4>
+        <h4 id="tier-reset-dialog" class="text-base font-semibold text-text mb-2">Reset to Default?</h4>
         <p class="text-sm text-text-muted mb-4">
           This will replace all current tiers with the default 10-star preset and remove all tier assignments. This cannot be undone.
         </p>

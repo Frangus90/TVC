@@ -37,6 +37,7 @@
   import { Tv } from "lucide-svelte";
   import { getThemeSettings } from "../../stores/theme.svelte";
   import { formatDate } from "../../utils/dateFormat";
+  import { openShowDetail } from "../../stores/showDetail.svelte";
 
   let showPickerOpen = $state(false);
   let showPickerDate = $state<string | null>(null);
@@ -187,11 +188,11 @@
   const weekdaysShort = ["M", "T", "W", "T", "F", "S", "S"];
 </script>
 
-<div class="h-full flex flex-col">
+<div class="focus-month flex flex-col">
   <!-- Weekday headers -->
-  <div class="grid grid-cols-7 border-b border-border">
+  <div class="focus-weekdays grid grid-cols-7 border-b border-border">
     {#each weekdays as day, i}
-      <div class="py-2 text-center text-sm font-medium text-text-muted">
+      <div class="px-3 py-3 text-left text-xs font-semibold text-text-muted">
         <span class="hidden sm:inline">{day}</span>
         <span class="sm:hidden">{weekdaysShort[i]}</span>
       </div>
@@ -199,7 +200,7 @@
   </div>
 
   <!-- Calendar grid -->
-  <div class="flex-1 grid grid-cols-7 auto-rows-fr">
+  <div class="focus-month-grid grid grid-cols-7">
     {#each calendarDays as day}
       {@const isCurrentMonth = isSameMonth(day, getCurrentDate())}
       {@const today = isToday(day)}
@@ -208,9 +209,11 @@
         role="region"
         aria-label="Calendar day {formatDate(day)}"
         data-date={format(day, "yyyy-MM-dd")}
-        class="border-b border-r border-border p-2 min-h-[100px] overflow-hidden group hover:bg-surface-hover/30 transition-colors {isCurrentMonth
+        class="focus-month-day border-b border-r border-border p-2 min-h-[100px] group hover:bg-surface-hover/30 transition-colors {isCurrentMonth
           ? ''
           : 'bg-background/50'}"
+        class:is-today={today}
+        class:is-weekend={day.getDay() === 0 || day.getDay() === 6}
       >
         <div class="flex items-center justify-between mb-1">
           <div class="flex items-center gap-1.5">
@@ -228,7 +231,7 @@
           <button
             onclick={() => handleAddClick(day)}
             class="p-1 rounded hover:bg-surface-hover opacity-0 group-hover:opacity-100 transition-opacity"
-            aria-label="Schedule episode"
+            aria-label="Schedule for {formatDate(day)}"
           >
             <Plus class="w-4 h-4 text-text-muted" />
           </button>
@@ -237,17 +240,8 @@
         <!-- Calendar items (episodes + movies) -->
         <div class="space-y-1">
           {#each dayItems.slice(0, 3) as item}
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div
-              role="button"
-              tabindex="0"
-              onclick={(e) => { e.stopPropagation(); handleItemClick(item); }}
-              onkeydown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleItemClick(item);
-                }
-              }}
-              ondblclick={() => item.type === "movie" && handleMovieClick(item.data as CalendarMovie)}
               oncontextmenu={(e) => {
                 e.preventDefault();
                 if (item.type === "episode") {
@@ -255,29 +249,28 @@
                   if (ep.scheduled_date) handleUnschedule(e, ep);
                 }
               }}
-              class="w-full text-left p-1.5 rounded text-xs transition-all relative group/item hover:scale-[1.02] {item.watched
-                ? 'bg-watched/20 text-watched line-through cursor-default'
-                : item.hasAired
-                  ? 'bg-premiere/20 text-premiere hover:bg-premiere/30 cursor-pointer'
-                  : 'bg-upcoming/20 text-upcoming hover:bg-upcoming/30 cursor-pointer'}"
+              class="focus-event p-2 {item.watched ? 'is-watched' : ''}"
               style={item.color ? `border-left: 2px solid ${item.color}` : ''}
-              title="{item.title} - {item.subtitle}{item.watched ? ' (Watched)' : item.hasAired ? ' (Click to mark watched)' : ' (Upcoming)'}"
             >
-              <div class="flex items-center gap-1">
-                {#if item.watched}
-                  <Check class="w-3 h-3 flex-shrink-0" />
-                {:else if item.type === "movie"}
-                  <Film class="w-3 h-3 flex-shrink-0" />
-                {:else}
-                  <Tv class="w-3 h-3 flex-shrink-0" />
-                {/if}
-                <span class="truncate font-medium">{item.title}</span>
+              <button
+                type="button"
+                class="focus-event-open"
+                onclick={() => item.type === "movie" ? handleMovieClick(item.data as CalendarMovie) : openShowDetail((item.data as Episode).show_id)}
+                title="Open {item.title}{item.subtitle ? ` · ${item.subtitle}` : ''}"
+              >
+                <span class="focus-event-type">
+                  {#if item.type === "movie"}<Film class="w-3 h-3" />{:else}<Tv class="w-3 h-3" />{/if}
+                  {item.type === "movie" ? 'Movie' : 'TV episode'}
+                  {#if !item.watched && !item.hasAired}<span class="text-upcoming">· Upcoming</span>{/if}
+                </span>
+                <span class="focus-event-title">{item.title}</span>
+              </button>
+              <div class="focus-event-bottom">
+                <span class="truncate">{item.subtitle || 'Planned watching'}</span>
+                <button type="button" class="focus-watch-button" aria-pressed={item.watched} aria-label="{item.watched ? 'Mark unwatched' : 'Mark watched'}: {item.title}" title={item.watched ? 'Mark unwatched' : 'Mark watched'} onclick={() => handleItemClick(item)}>
+                  {#if item.watched}<Check class="w-3.5 h-3.5" />{:else}<span class="focus-watch-circle"></span>{/if}
+                </button>
               </div>
-              {#if item.subtitle}
-                <div class="truncate opacity-75">
-                  {item.subtitle}
-                </div>
-              {/if}
             </div>
           {/each}
           {#if dayItems.length > 3}
@@ -303,12 +296,12 @@
   ></button>
   {@const theme = getThemeSettings()}
   
-  <div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-surface rounded-xl border border-border shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col">
+  <div class="focus-panel focus-dialog fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-surface rounded-xl border border-border shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col">
     <div class="p-5 pb-0">
       <h3 class="font-semibold text-lg mb-4">Schedule for {formatDate(showPickerDate)}</h3>
 
       <!-- Tabs -->
-      <div class="flex border-b border-border mb-4">
+      <div class="focus-tabs flex border-b border-border mb-4">
         <button
           type="button"
           onclick={() => pickerTab = "shows"}
@@ -405,3 +398,23 @@
     </div>
   </div>
 {/if}
+
+<style>
+  .focus-month { border: 1px solid var(--color-border); border-radius: 0.875rem; background: var(--color-surface); overflow: hidden; }
+  .focus-month-grid { grid-auto-rows: minmax(6.25rem, auto); }
+  .focus-month-day:nth-child(7n) { border-right: 0; }
+  .focus-month-day:nth-last-child(-n+7) { border-bottom: 0; }
+  .focus-month-day.is-weekend { background: color-mix(in srgb, var(--color-background) 50%, var(--color-surface)); }
+  .focus-month-day.is-today { background: color-mix(in srgb, var(--color-accent) 4%, var(--color-surface)); }
+  .focus-event { border: 1px solid var(--color-border); border-radius: 0.5rem; background: var(--color-surface-hover); }
+  .focus-event.is-watched { background: color-mix(in srgb, var(--color-watched) 8%, var(--color-surface)); }
+  .focus-event-open { display: block; width: 100%; min-width: 0; text-align: left; }
+  .focus-event-type { display: flex; align-items: center; gap: 0.3rem; color: var(--color-text-muted); font-size: 0.625rem; }
+  .focus-event-title { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-text); font-size: 0.75rem; font-weight: 600; margin-top: 0.2rem; }
+  .focus-event-bottom { display: flex; align-items: center; justify-content: space-between; gap: 0.3rem; color: var(--color-text-muted); font-size: 0.625rem; }
+  .focus-watch-button { display: flex; align-items: center; justify-content: center; width: 1.35rem; height: 1.35rem; border-radius: 0.3rem; flex: none; color: var(--color-watched); }
+  .focus-watch-button:hover { background: var(--color-surface); color: var(--color-text); }
+  .focus-watch-circle { width: 0.7rem; height: 0.7rem; border: 1px solid var(--color-text-muted); border-radius: 50%; }
+  :global(.compact-spacing) .focus-month-grid { grid-auto-rows: minmax(5.75rem, auto); }
+  :global(.compact-spacing) .focus-month-day { min-height: 5.75rem; }
+</style>

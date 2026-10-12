@@ -32,7 +32,8 @@
 
 <div class="export-root">
   <header class="export-header">
-    <h1>TVC — {heading} Tier List</h1>
+    <div class="export-eyebrow">TVC · YOUR LIBRARY</div>
+    <h1>{heading} tier list</h1>
     <div class="subtitle">{today}</div>
   </header>
 
@@ -97,48 +98,58 @@
 <style>
   .export-root {
     width: 1400px;
-    background-color: #0f0f0f;
-    color: #e5e5e5;
-    padding: 32px;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: #121318;
+    color: #eff0f6;
+    padding: 40px;
+    font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
     box-sizing: border-box;
   }
 
   .export-header {
-    margin-bottom: 24px;
-    border-bottom: 1px solid #2a2a2a;
-    padding-bottom: 16px;
+    margin-bottom: 28px;
+    padding-bottom: 8px;
+  }
+
+  .export-eyebrow {
+    color: #a0a5b6;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.8px;
+    margin-bottom: 8px;
   }
 
   .export-header h1 {
-    font-size: 28px;
-    font-weight: 700;
-    margin: 0 0 4px 0;
-    color: #ffffff;
+    font-size: 34px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    color: #eff0f6;
   }
 
   .subtitle {
     font-size: 14px;
-    color: #a3a3a3;
+    color: #a0a5b6;
   }
 
   .tier-row {
     display: flex;
     align-items: stretch;
-    gap: 16px;
-    padding: 16px 0;
-    border-bottom: 1px solid #1f1f1f;
-    min-height: 120px;
+    gap: 18px;
+    padding: 18px;
+    margin-bottom: 8px;
+    border: 1px solid #2b2e38;
+    border-radius: 12px;
+    background: #191b22;
+    min-height: 132px;
   }
 
   .tier-band {
-    width: 8px;
+    width: 4px;
     flex-shrink: 0;
     border-radius: 4px;
   }
 
   .tier-label {
-    width: 200px;
+    width: 170px;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
@@ -146,16 +157,16 @@
   }
 
   .tier-name {
-    font-size: 22px;
-    font-weight: 700;
-    color: #ffffff;
+    font-size: 20px;
+    font-weight: 600;
+    color: #eff0f6;
     line-height: 1.2;
     word-wrap: break-word;
   }
 
   .tier-pos {
     font-size: 13px;
-    color: #a3a3a3;
+    color: #a0a5b6;
     margin-top: 2px;
   }
 
@@ -168,12 +179,12 @@
   }
 
   .poster {
-    width: 80px;
-    height: 120px;
+    width: 88px;
+    height: 132px;
     flex-shrink: 0;
-    border-radius: 4px;
+    border-radius: 6px;
     overflow: hidden;
-    background-color: #1a1a1a;
+    background-color: #22252e;
   }
 
   .poster img {
@@ -191,10 +202,10 @@
     justify-content: center;
     text-align: center;
     font-size: 10px;
-    color: #a3a3a3;
+    color: #a0a5b6;
     padding: 4px;
     box-sizing: border-box;
-    border: 1px solid #2a2a2a;
+    border: 1px solid #2b2e38;
     overflow: hidden;
     word-break: break-word;
   }
@@ -202,9 +213,9 @@
   .export-footer {
     margin-top: 24px;
     padding-top: 16px;
-    border-top: 1px solid #2a2a2a;
+    border-top: 1px solid #2b2e38;
     font-size: 12px;
-    color: #737373;
+    color: #a0a5b6;
     text-align: center;
   }
 </style>

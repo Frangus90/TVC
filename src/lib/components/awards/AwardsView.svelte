@@ -100,10 +100,17 @@
 
 </script>
 
-<div class="max-w-4xl mx-auto">
+<div class="focus-page focus-awards-page">
+  <header class="focus-page-heading">
+    <div>
+      <p class="focus-eyebrow">YOUR ACTIVITY</p>
+      <h1>Awards</h1>
+      <p>Nominees, predictions and the picks you saved.</p>
+    </div>
+  </header>
   {#if getAwardsSyncReport()}
     {@const report = getAwardsSyncReport()!}
-    <div class="mb-4 text-sm text-text-muted">
+    <div class="focus-awards-sync mb-4 text-sm text-text-muted">
       <p>Last attempt: {formatDateTime(report.attempted_at)}</p>
       {#if report.errors.length}
         <details class="text-red-400">
@@ -117,11 +124,12 @@
     </div>
   {/if}
   <!-- Award toggle + refresh -->
-  <div class="flex items-center justify-between mb-4">
-    <div class="flex bg-background rounded-lg p-1">
+  <div class="focus-toolbar flex flex-wrap items-center justify-between mb-4 gap-3">
+    <div class="focus-tabs flex bg-background rounded-lg p-1">
       {#each [{ v: "oscars", l: "Oscars" }, { v: "emmys", l: "Emmys" }] as opt}
         <button
           onclick={() => switchAward(opt.v as AwardType)}
+          aria-pressed={getAwardType() === opt.v}
           class="px-4 py-1.5 text-sm rounded-md transition-colors {getAwardType() === opt.v
             ? 'bg-surface text-text'
             : 'text-text-muted hover:text-text'}"
@@ -130,7 +138,7 @@
         </button>
       {/each}
     </div>
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-3">
       {#if getLastSync()}
         <span class="text-xs text-text-muted">Last complete sync {relativeTime(getLastSync()!)}</span>
       {/if}
@@ -188,7 +196,7 @@
     >
       <ChevronLeft class="w-4 h-4" /> Back to {showPicks ? "Predict" : "History"}
     </button>
-    <div class="flex items-start justify-between mb-4 gap-4">
+    <div class="focus-ceremony-heading flex flex-wrap items-start justify-between mb-4 gap-4">
       <div>
         <h2 class="text-xl font-semibold">{detail.name}</h2>
         <p class="text-sm text-text-muted">
@@ -218,7 +226,7 @@
           </button>
         {/if}
         {#if showPicks && getScore() && pickCount > 0}
-          <div class="text-right">
+          <div class="focus-awards-score text-right">
             <div class="text-2xl font-bold text-accent">
               {getScore()!.correct}/{getScore()!.total}
             </div>
@@ -234,7 +242,7 @@
       {#each detail.categories as cat (cat.id)}
         {@const resultKnown = cat.nominees.some((n) => n.is_winner === true)}
         {@const canPick = isOpen && !resultKnown}
-        <div class="bg-surface rounded-lg p-3 border border-border">
+        <section class="focus-panel focus-awards-category bg-surface rounded-xl p-5 border border-border">
           <h3 class="font-medium mb-2">{cat.name}</h3>
           {#if detail.status === "past" && !resultKnown}
             <p class="text-xs text-text-muted mb-2">Result pending — a winner has not been confirmed in the synced data.</p>
@@ -248,14 +256,14 @@
                   type="button"
                   disabled={!canPick}
                   onclick={() => togglePick(cat.id, nom.id)}
-                  class="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left transition-colors
-                    {nom.is_winner ? 'bg-green-500/10' : ''}
+                  class="focus-nominee w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors
+                    {nom.is_winner ? 'bg-available/10' : ''}
                     {picked && outcome === null ? 'ring-1 ring-accent bg-accent/10' : ''}
                     {picked && outcome === 'miss' ? 'bg-red-500/10' : ''}
                     {canPick ? 'hover:bg-surface-hover cursor-pointer' : 'cursor-default'}"
                 >
                   {#if nom.is_winner}
-                    <Trophy class="w-4 h-4 text-green-500 flex-shrink-0" />
+                    <Trophy class="w-4 h-4 text-available flex-shrink-0" />
                   {:else if picked}
                     <Check class="w-4 h-4 text-accent flex-shrink-0" />
                   {:else}
@@ -272,7 +280,7 @@
                   </span>
                   {#if picked}
                     <span
-                      class="ml-auto text-xs {outcome === 'win' ? 'text-green-500'
+                      class="ml-auto text-xs flex-shrink-0 {outcome === 'win' ? 'text-available'
                         : outcome === 'miss' ? 'text-red-400' : 'text-accent'}"
                     >
                       your pick{outcome === 'win' ? " ✓" : outcome === 'miss' ? " ✗" : " · pending"}
@@ -282,15 +290,16 @@
               </li>
             {/each}
           </ul>
-        </div>
+        </section>
       {/each}
     </div>
   {:else}
     <!-- Sub-tabs -->
-    <div class="flex gap-4 border-b border-border mb-4">
+    <div class="focus-tabs flex gap-4 border-b border-border mb-4">
       {#each [{ v: "history", l: "History" }, { v: "predict", l: "Predict" }] as t}
         <button
           onclick={() => (subTab = t.v as SubTab)}
+          aria-pressed={subTab === t.v}
           class="pb-2 text-sm font-medium border-b-2 -mb-px {subTab === t.v
             ? 'border-accent text-accent'
             : 'border-transparent text-text-muted hover:text-text'}"
@@ -311,11 +320,11 @@
         </button>
       </div>
     {:else if subTab === "history"}
-      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+      <div class="focus-ceremony-grid grid grid-cols-2 sm:grid-cols-3 gap-4">
         {#each pastCeremonies as c (c.id)}
           <button
             onclick={() => open(c)}
-            class="text-left p-3 rounded-lg bg-surface hover:bg-surface-hover border border-border transition-colors"
+            class="focus-panel focus-ceremony-card text-left p-5 rounded-xl bg-surface hover:bg-surface-hover border border-border transition-colors"
           >
             <div class="font-medium">{c.year}</div>
             <div class="text-xs text-text-muted">{c.name}</div>
@@ -330,7 +339,7 @@
         </div>
       {:else if upcomingCeremony.status === "upcoming"}
         <!-- Nominations not out yet — informational, not pickable. -->
-        <div class="w-full p-4 rounded-lg bg-surface border border-border">
+        <div class="focus-panel w-full p-5 rounded-xl bg-surface border border-border">
           <div class="font-medium text-lg">{upcomingCeremony.name}</div>
           {#if upcomingCeremony.nominations_date}
             <div class="text-sm text-text-muted">
@@ -349,7 +358,7 @@
       {:else}
         <button
           onclick={() => open(upcomingCeremony)}
-          class="w-full text-left p-4 rounded-lg bg-surface hover:bg-surface-hover border border-border transition-colors"
+          class="focus-panel focus-ceremony-card w-full text-left p-5 rounded-xl bg-surface hover:bg-surface-hover border border-border transition-colors"
         >
           <div class="font-medium text-lg">{upcomingCeremony.name}</div>
           {#if upcomingCeremony.ceremony_date}
@@ -366,11 +375,11 @@
         {#if predictionHistory.length === 0}
           <p class="text-sm text-text-muted py-4">Completed ceremonies you made picks for will appear here.</p>
         {:else}
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <div class="focus-ceremony-grid grid grid-cols-2 sm:grid-cols-3 gap-4">
             {#each predictionHistory as c (c.id)}
               <button
                 onclick={() => open(c)}
-                class="text-left p-3 rounded-lg bg-surface hover:bg-surface-hover border border-border transition-colors"
+                class="focus-panel focus-ceremony-card text-left p-5 rounded-xl bg-surface hover:bg-surface-hover border border-border transition-colors"
               >
                 <div class="font-medium">{c.year}</div>
                 <div class="text-xs text-text-muted">{c.name}</div>
@@ -383,3 +392,16 @@
     {/if}
   {/if}
 </div>
+
+<style>
+  .focus-awards-page { max-width: 76rem; margin: 0 auto; }
+  .focus-awards-sync { padding: 0.8rem 1rem; border: 1px solid var(--color-border); border-radius: 0.75rem; background: var(--color-surface); }
+  .focus-ceremony-heading { padding: 1rem 0; }
+  .focus-awards-score { min-width: 7rem; padding: 0.65rem 1rem; background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface)); border: 1px solid color-mix(in srgb, var(--color-accent) 20%, var(--color-border)); border-radius: 0.75rem; }
+  .focus-awards-category h3 { font-size: 1rem; line-height: 1.5; margin-bottom: 0.875rem; }
+  .focus-nominee { font-size: 0.875rem; }
+  .focus-nominee:disabled { opacity: 1; }
+  .focus-ceremony-card { min-height: 6rem; }
+  .focus-ceremony-card > div:first-child { margin-bottom: 0.5rem; }
+  @media (max-width: 1050px) { .focus-ceremony-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .focus-nominee { flex-wrap: wrap; } }
+</style>

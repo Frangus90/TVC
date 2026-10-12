@@ -8,7 +8,7 @@
 
   const defaultTheme: ThemeSettings = {
     colorScheme: "default",
-    accentColor: "#3b82f6",
+    accentColor: "#bba4ff",
     fontSize: 1,
     compactSpacing: false,
     colorblindFriendly: false,
@@ -16,6 +16,7 @@
   };
 
   const accentPresets = [
+    { color: "#bba4ff", name: "Focus" },
     { color: "#3b82f6", name: "Blue" },
     { color: "#8b5cf6", name: "Purple" },
     { color: "#ec4899", name: "Pink" },
@@ -74,6 +75,8 @@
             class="w-7 h-7 rounded-full border-2 transition-all {settings().accentColor === preset.color ? 'border-text scale-110' : 'border-transparent hover:scale-105'}"
             style="background-color: {preset.color}"
             title={preset.name}
+            aria-label={`${preset.name} accent colour`}
+            aria-pressed={settings().accentColor === preset.color}
           ></button>
         {/each}
       </div>
@@ -132,6 +135,7 @@
         onclick={() => handleToggle('compactSpacing')}
         class="relative w-10 h-5 rounded-full transition-colors {settings().compactSpacing ? 'bg-accent' : 'bg-border'}"
         aria-label="Toggle compact spacing"
+        aria-pressed={settings().compactSpacing}
       >
         <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform {settings().compactSpacing ? 'translate-x-5' : ''}"></span>
       </button>
@@ -141,12 +145,13 @@
     <div class="flex items-center justify-between p-3 rounded-lg bg-background border border-border">
       <div>
         <p class="text-sm font-medium text-text">Hide Posters</p>
-        <p class="text-xs text-text-muted">Hide TV and movie posters in the sidebar</p>
+        <p class="text-xs text-text-muted">Hide posters in library and calendar lists and title pickers</p>
       </div>
       <button
         onclick={() => handleToggle('hidePosters')}
         class="relative w-10 h-5 rounded-full transition-colors {settings().hidePosters ? 'bg-accent' : 'bg-border'}"
         aria-label="Toggle hide posters"
+        aria-pressed={settings().hidePosters}
       >
         <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform {settings().hidePosters ? 'translate-x-5' : ''}"></span>
       </button>

@@ -8,10 +8,9 @@
     format,
     isToday,
     isSameMonth,
-    parseISO,
   } from "date-fns";
-  import { Clock } from "lucide-svelte";
-  import { getCurrentDate } from "../../stores/calendar.svelte";
+  import { Clock, ChevronLeft, ChevronRight, RefreshCw, Settings, X } from "lucide-svelte";
+  import { getCurrentDate, getViewMode, setViewMode, previousPeriod, nextPeriod, goToToday } from "../../stores/calendar.svelte";
   import {
     getRacingEvents,
     loadRacingEventsForRange,
@@ -20,10 +19,13 @@
     getSeriesColor,
     isRacingLoading,
     getRefreshSignal,
+    refreshRacingData,
+    isRacingRefreshing,
     type RacingEvent,
   } from "../../stores/racing.svelte";
   import { openSettings } from "../../stores/settings.svelte";
-  import { formatDate, formatLongDate } from "../../utils/dateFormat";
+  import { formatDate, formatDateKey, formatLongDate, formatMonthYearLong, formatTime } from "../../utils/dateFormat";
+  import { modalFocus } from "../../utils/modalFocus";
 
   // Day detail state
   let dayDetailOpen = $state(false);
@@ -60,7 +62,7 @@
     const dateStr = format(day, "yyyy-MM-dd");
     return getRacingEvents().filter((ev) => {
       if (activeSeriesFilter && ev.series_slug !== activeSeriesFilter) return false;
-      return ev.start_time.startsWith(dateStr);
+      return formatDateKey(ev.start_time) === dateStr;
     });
   }
 
@@ -112,15 +114,6 @@
     return session.length > 10 ? session.slice(0, 10) : session;
   }
 
-  function formatLocalTime(isoStr: string): string {
-    try {
-      const date = parseISO(isoStr);
-      return format(date, "HH:mm");
-    } catch {
-      return "";
-    }
-  }
-
   function handleDayClick(day: Date) {
     const events = getEventsForDay(day);
     if (events.length === 0) return;
@@ -139,112 +132,142 @@
     activeSeriesFilter = activeSeriesFilter === slug ? null : slug;
   }
 
+  function changeMonth(direction: "previous" | "next") {
+    const view = getViewMode();
+    setViewMode("month");
+    if (direction === "previous") previousPeriod();
+    else nextPeriod();
+    setViewMode(view);
+  }
+
   const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const weekdaysShort = ["M", "T", "W", "T", "F", "S", "S"];
 </script>
 
-<div class="h-full flex flex-col">
-  <!-- Series filter chips + actions -->
-  <div class="px-4 py-2 border-b border-border">
-    <div class="flex items-center gap-1.5 flex-wrap">
-      {#if getEnabledSeries().length === 0}
-        <span class="text-sm text-text-muted">No series enabled.</span>
-        <button
-          onclick={() => openSettings('racing')}
-          class="text-sm text-accent hover:text-accent/80 transition-colors"
-        >
-          Configure series
-        </button>
-      {:else}
-        {#each getEnabledSeries() as series}
-          <button
-            onclick={() => toggleSeriesFilter(series.slug)}
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap
-              {activeSeriesFilter === null || activeSeriesFilter === series.slug
-                ? 'opacity-100'
-                : 'opacity-40'}"
-            style="background-color: {getSeriesColor(series)}20; color: {getSeriesColor(series)}; border: 1px solid {getSeriesColor(series)}40;"
-          >
-            <span
-              class="w-2 h-2 rounded-full flex-shrink-0"
-              style="background-color: {getSeriesColor(series)};"
-            ></span>
-            {series.name}
-          </button>
-        {/each}
-      {/if}
+<div class="focus-page focus-racing relative flex flex-col">
+  <header class="focus-page-heading">
+    <div>
+      <p class="focus-eyebrow">YOUR ACTIVITY</p>
+      <h1>Racing</h1>
+      <p>Your series, sessions and reminders. All times are local.</p>
+    </div>
+    <div class="flex gap-2">
+      <button type="button" class="focus-button" onclick={() => openSettings('racing')}><Settings class="w-4 h-4" /> Configure</button>
+      <button type="button" class="focus-button" onclick={() => refreshRacingData()} disabled={isRacingRefreshing()}><RefreshCw class="w-4 h-4 {isRacingRefreshing() ? 'animate-spin' : ''}" /> Refresh</button>
+    </div>
+  </header>
+  <div class="focus-toolbar flex flex-wrap items-center justify-between gap-3">
+    <strong>{formatMonthYearLong(getCurrentDate())}</strong>
+    <div class="flex items-center gap-2">
+      <button type="button" class="focus-button" onclick={goToToday}>Today</button>
+      <button type="button" class="focus-button" onclick={() => changeMonth('previous')} aria-label="Previous month"><ChevronLeft class="w-4 h-4" /></button>
+      <button type="button" class="focus-button" onclick={() => changeMonth('next')} aria-label="Next month"><ChevronRight class="w-4 h-4" /></button>
     </div>
   </div>
-
-  <!-- Weekday headers -->
-  <div class="grid grid-cols-7 border-b border-border">
-    {#each weekdays as day, i}
-      <div class="py-2 text-center text-sm font-medium text-text-muted">
-        <span class="hidden sm:inline">{day}</span>
-        <span class="sm:hidden">{weekdaysShort[i]}</span>
-      </div>
-    {/each}
-  </div>
-
-  <!-- Calendar grid -->
-  <div class="flex-1 grid grid-cols-7 auto-rows-fr">
-    {#each calendarDays as day}
-      {@const isCurrentMonth = isSameMonth(day, getCurrentDate())}
-      {@const today = isToday(day)}
-      {@const dayEvents = getEventsForDay(day)}
-      <div
-        role="region"
-        aria-label="Calendar day {formatDate(day)}"
-        data-date={format(day, "yyyy-MM-dd")}
-        class="border-b border-r border-border p-2 min-h-[100px] overflow-hidden group hover:bg-surface-hover/30 transition-colors {isCurrentMonth
-          ? ''
-          : 'bg-background/50'}"
-      >
-        <div class="flex items-center justify-between mb-1">
+  <div class="focus-racing-calendar flex flex-col">
+    <!-- Series filter chips + actions -->
+    <div class="px-4 py-3 border-b border-border">
+      <div class="flex items-center gap-1.5 flex-wrap">
+        {#if getEnabledSeries().length === 0}
+          <span class="text-sm text-text-muted">No series enabled.</span>
           <button
-            onclick={() => handleDayClick(day)}
-            class="text-sm hover:bg-surface-hover rounded-full transition-colors {today
-              ? 'bg-accent text-white w-7 h-7 flex items-center justify-center font-semibold ring-2 ring-accent/50'
-              : isCurrentMonth
-                ? 'text-text w-6 h-6 flex items-center justify-center'
-                : 'text-text-muted w-6 h-6 flex items-center justify-center'}"
+            onclick={() => openSettings('racing')}
+            class="text-sm text-accent hover:text-accent/80 transition-colors"
           >
-            {format(day, "d")}
+            Configure series
           </button>
-        </div>
-
-        <!-- Racing event pills -->
-        <div class="space-y-0.5">
-          {#each dayEvents.slice(0, 5) as event}
-            {@const color = getEventColor(event)}
-            {@const time = formatLocalTime(event.start_time)}
-            {@const sessionLabel = getSessionLabel(event.session_name)}
+        {:else}
+          <button type="button" class="focus-series-all" aria-pressed={activeSeriesFilter === null} onclick={() => activeSeriesFilter = null}>All series</button>
+          {#each getEnabledSeries() as series}
             <button
-              onclick={(e) => { e.stopPropagation(); handleDayClick(day); }}
-              class="w-full text-left px-2 py-1 rounded text-xs transition-all hover:brightness-125 flex items-center gap-1.5"
-              style="background-color: {color}20; border-left: 3px solid {color};"
-              title="{event.event_title}{event.session_name ? ': ' + event.session_name : ''}{event.circuit ? ' at ' + event.circuit : ''}"
+              onclick={() => toggleSeriesFilter(series.slug)}
+              aria-pressed={activeSeriesFilter === null || activeSeriesFilter === series.slug}
+              class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap
+                {activeSeriesFilter === null || activeSeriesFilter === series.slug
+                  ? 'opacity-100'
+                  : 'opacity-40'}"
+              style="background-color: {getSeriesColor(series)}20; color: {getSeriesColor(series)}; border: 1px solid {getSeriesColor(series)}40;"
             >
-              <span class="font-semibold truncate" style="color: {color};">{getSeriesAbbrev(event.series_slug)}</span>
-              {#if sessionLabel}
-                <span class="text-text-muted truncate">{sessionLabel}</span>
-              {/if}
-              {#if time}
-                <span class="text-text-muted/70 ml-auto flex-shrink-0">{time}</span>
-              {/if}
+              <span
+                class="w-2 h-2 rounded-full flex-shrink-0"
+                style="background-color: {getSeriesColor(series)};"
+              ></span>
+              {series.name}
             </button>
           {/each}
-          {#if dayEvents.length > 5}
+        {/if}
+      </div>
+    </div>
+
+    <!-- Weekday headers -->
+    <div class="grid grid-cols-7 border-b border-border">
+      {#each weekdays as day, i}
+        <div class="px-3 py-3 text-left text-xs font-semibold text-text-muted">
+          <span class="hidden sm:inline">{day}</span>
+          <span class="sm:hidden">{weekdaysShort[i]}</span>
+        </div>
+      {/each}
+    </div>
+
+    <!-- Calendar grid -->
+    <div class="focus-racing-grid grid grid-cols-7">
+      {#each calendarDays as day}
+        {@const isCurrentMonth = isSameMonth(day, getCurrentDate())}
+        {@const today = isToday(day)}
+        {@const dayEvents = getEventsForDay(day)}
+        <div
+          role="region"
+          aria-label="Calendar day {formatDate(day)}"
+          data-date={format(day, "yyyy-MM-dd")}
+          class="focus-racing-day border-b border-r border-border p-2 min-h-[100px] group hover:bg-surface-hover/30 transition-colors {isCurrentMonth
+            ? ''
+            : 'bg-background/50'}"
+        >
+          <div class="flex items-center justify-between mb-1">
             <button
               onclick={() => handleDayClick(day)}
-              class="w-full text-xs text-accent hover:text-accent/80 text-center py-0.5 hover:bg-surface-hover rounded transition-colors"
+              class="text-sm hover:bg-surface-hover rounded-full transition-colors {today
+                ? 'bg-accent text-white w-7 h-7 flex items-center justify-center font-semibold ring-2 ring-accent/50'
+                : isCurrentMonth
+                  ? 'text-text w-6 h-6 flex items-center justify-center'
+                  : 'text-text-muted w-6 h-6 flex items-center justify-center'}"
             >
-              +{dayEvents.length - 5} more
+              {format(day, "d")}
             </button>
-          {/if}
+          </div>
+
+          <!-- Racing event pills -->
+          <div class="space-y-0.5">
+            {#each dayEvents.slice(0, 5) as event}
+              {@const color = getEventColor(event)}
+              {@const time = formatTime(event.start_time)}
+              {@const sessionLabel = getSessionLabel(event.session_name)}
+              <button
+                onclick={(e) => { e.stopPropagation(); handleDayClick(day); }}
+                class="focus-racing-session w-full text-left px-2 py-2 rounded-lg text-xs transition-all hover:brightness-125"
+                style="border-left: 3px solid {color};"
+                title="{event.event_title}{event.session_name ? ': ' + event.session_name : ''}{event.circuit ? ' at ' + event.circuit : ''}"
+              >
+                <span class="flex items-center gap-1.5">
+                  <span class="font-semibold truncate" style="color: {color};">{getSeriesAbbrev(event.series_slug)}</span>
+                  {#if sessionLabel}<span class="text-text-muted truncate">{sessionLabel}</span>{/if}
+                  {#if time}<span class="text-text-muted ml-auto flex-shrink-0">{time}</span>{/if}
+                </span>
+                <span class="block truncate text-text mt-1">{event.event_title}</span>
+              </button>
+            {/each}
+            {#if dayEvents.length > 5}
+              <button
+                onclick={() => handleDayClick(day)}
+                class="w-full text-xs text-accent hover:text-accent/80 text-center py-0.5 hover:bg-surface-hover rounded transition-colors"
+              >
+                +{dayEvents.length - 5} more
+              </button>
+            {/if}
+          </div>
         </div>
-      </div>
-    {/each}
+      {/each}
+    </div>
   </div>
 
   <!-- Loading overlay -->
@@ -262,11 +285,11 @@
     onclick={closeDayDetail}
     aria-label="Close"
   ></button>
-  <div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-surface rounded-xl border border-border shadow-2xl w-[500px] max-w-[95vw] max-h-[80vh] flex flex-col">
+  <div class="focus-panel focus-dialog fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-surface rounded-xl border border-border shadow-2xl w-[600px] max-w-[95vw] max-h-[80vh] flex flex-col" role="dialog" aria-modal="true" aria-labelledby="racing-day-detail-title" use:modalFocus={closeDayDetail}>
     <!-- Header -->
     <div class="p-5 border-b border-border flex items-center justify-between">
       <div>
-        <h3 class="font-semibold text-lg text-text">
+        <h3 id="racing-day-detail-title" class="font-semibold text-lg text-text">
           {formatLongDate(dayDetailDate)}
         </h3>
         <p class="text-sm text-text-muted">{dayDetailEvents.length} session{dayDetailEvents.length !== 1 ? 's' : ''}</p>
@@ -274,8 +297,9 @@
       <button
         onclick={closeDayDetail}
         class="p-2 rounded-lg hover:bg-surface-hover transition-colors text-text-muted"
+        aria-label="Close racing day details"
       >
-        &times;
+        <X class="w-5 h-5" />
       </button>
     </div>
 
@@ -306,9 +330,9 @@
             {/if}
             <span class="flex items-center gap-1">
               <Clock class="w-3 h-3" />
-              {formatLocalTime(event.start_time)}
+              {formatTime(event.start_time)}
               {#if event.end_time}
-                - {formatLocalTime(event.end_time)}
+                - {formatTime(event.end_time)}
               {/if}
             </span>
           </div>
@@ -327,3 +351,16 @@
     </div>
   </div>
 {/if}
+
+<style>
+  .focus-racing { min-height: 0; }
+  .focus-racing-calendar { overflow: hidden; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 0.875rem; min-height: 0; }
+  .focus-racing-grid { grid-auto-rows: minmax(6.25rem, auto); }
+  .focus-racing-day:nth-child(7n) { border-right: 0; }
+  .focus-racing-day:nth-last-child(-n+7) { border-bottom: 0; }
+  .focus-racing-session { background: var(--color-surface-hover); border: 1px solid var(--color-border); }
+  .focus-series-all { padding: 0.35rem 0.8rem; border: 1px solid var(--color-border); border-radius: 2rem; font-size: 0.75rem; color: var(--color-text-muted); }
+  .focus-series-all[aria-pressed="true"] { color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface)); }
+  :global(.compact-spacing) .focus-racing-grid { grid-auto-rows: minmax(5.75rem, auto); }
+  :global(.compact-spacing) .focus-racing-day { min-height: 5.75rem; }
+</style>

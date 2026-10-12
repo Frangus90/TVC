@@ -5,6 +5,8 @@
   import { getNow } from "../../stores/now.svelte";
   import { logger } from "../../utils/logger";
   import { formatDateHeader } from "../../utils/dateFormat";
+  import { getThemeSettings } from "../../stores/theme.svelte";
+  import { openShowDetail } from "../../stores/showDetail.svelte";
   import {
     getCalendarEpisodes,
     loadEpisodesForRange,
@@ -133,8 +135,8 @@
   }
 </script>
 
-<div class="h-full overflow-auto">
-  <div class="max-w-3xl mx-auto py-4 space-y-6">
+<div class="focus-agenda h-full overflow-auto">
+  <div class="focus-agenda-list mx-auto py-2">
     {#if allItems.length === 0}
       <div class="text-center py-12">
         <Tv class="w-12 h-12 text-text-muted mx-auto mb-4" />
@@ -144,18 +146,17 @@
     {:else}
       {#each [...groupByDate(allItems)] as [dateStr, items]}
         {@const isPastDate = isDatePast(dateStr)}
-        <div class="space-y-2">
+        <section class="focus-agenda-day">
           <!-- Date header -->
-          <h2 class="text-sm font-semibold text-text-muted uppercase tracking-wide px-2 {isPastDate ? 'opacity-50' : ''}">
+          <h2 class="focus-agenda-date text-sm font-semibold text-text-muted {isPastDate ? 'opacity-50' : ''}">
             {formatDateHeader(dateStr)}
           </h2>
 
           <!-- Items for this date -->
           <div class="space-y-2">
             {#each items as item}
-              <button
-                onclick={(e) => { e.stopPropagation(); handleItemClick(item); }}
-                ondblclick={() => item.type === "movie" && handleMovieClick(item.data as CalendarMovie)}
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <div
                 oncontextmenu={(e) => {
                   e.preventDefault();
                   if (item.type === "episode") {
@@ -163,23 +164,20 @@
                     if (ep.scheduled_date) handleUnschedule(e, ep);
                   }
                 }}
-                class="w-full flex items-center gap-4 p-4 rounded-xl border transition-colors text-left
-                  {item.watched
-                    ? 'bg-watched/10 border-watched/30 text-watched'
-                    : item.hasAired
-                      ? 'bg-premiere/10 border-premiere/30 hover:bg-premiere/20'
-                      : 'bg-surface border-border hover:bg-surface-hover'}"
-                title={item.watched ? "Watched" : item.hasAired ? "Click to mark watched" : "Upcoming"}
+                class="focus-agenda-item flex items-center gap-4 p-3 text-left {item.watched ? 'is-watched' : ''}"
               >
                 <!-- Poster -->
+                {#if !getThemeSettings().hidePosters}
                 {#if item.posterUrl}
                   <img
                     src={item.posterUrl}
                     alt=""
-                    class="w-12 h-18 rounded object-cover flex-shrink-0 {item.watched ? 'opacity-50' : ''}"
+                    class="w-10 h-15 rounded-md object-cover flex-shrink-0"
+                    loading="lazy"
+                    decoding="async"
                   />
                 {:else}
-                  <div class="w-12 h-18 rounded bg-border flex items-center justify-center flex-shrink-0">
+                  <div class="w-10 h-15 rounded-md bg-surface-hover flex items-center justify-center flex-shrink-0">
                     {#if item.type === "movie"}
                       <Film class="w-5 h-5 text-text-muted" />
                     {:else}
@@ -187,43 +185,55 @@
                     {/if}
                   </div>
                 {/if}
+                {/if}
 
                 <!-- Item info -->
-                <div class="flex-1 min-w-0">
+                <button type="button" class="focus-agenda-open flex-1 min-w-0 text-left" onclick={() => item.type === "movie" ? handleMovieClick(item.data as CalendarMovie) : openShowDetail((item.data as Episode).show_id)}>
                   <div class="flex items-center gap-2">
                     {#if item.type === "movie"}
                       <Film class="w-4 h-4 text-accent flex-shrink-0" />
                     {:else}
                       <Tv class="w-4 h-4 text-accent flex-shrink-0" />
                     {/if}
-                    <span class="font-semibold truncate {item.watched ? 'line-through opacity-75' : 'text-text'}">
+                    <span class="font-semibold text-text">
                       {item.title}
                     </span>
                   </div>
                   {#if item.subtitle}
-                    <div class="text-sm {item.watched ? 'opacity-75 line-through' : 'text-text-muted'}">
+                    <div class="text-sm text-text-muted mt-1">
                       {item.subtitle}
                     </div>
                   {/if}
-                </div>
+                </button>
 
                 <!-- Status indicator -->
-                <div class="flex-shrink-0">
+                <span class="focus-agenda-state text-xs text-text-muted">{item.watched ? 'Watched' : item.hasAired ? 'Available' : 'Upcoming'}</span>
+                <button type="button" class="focus-watch-button flex-shrink-0" aria-pressed={item.watched} aria-label="{item.watched ? 'Mark unwatched' : 'Mark watched'}: {item.title}" onclick={() => handleItemClick(item)}>
                   {#if item.watched}
-                    <div class="w-8 h-8 rounded-full bg-watched/20 flex items-center justify-center">
-                      <Check class="w-5 h-5 text-watched" />
-                    </div>
+                    <Check class="w-4 h-4 text-watched" />
                   {:else}
-                    <div class="w-8 h-8 rounded-full bg-surface-hover flex items-center justify-center opacity-0 group-hover:opacity-100">
-                      <Check class="w-5 h-5 text-text-muted" />
-                    </div>
+                    <span class="focus-watch-circle"></span>
                   {/if}
-                </div>
-              </button>
+                </button>
+              </div>
             {/each}
           </div>
-        </div>
+        </section>
       {/each}
     {/if}
   </div>
 </div>
+
+<style>
+  .focus-agenda-list { max-width: 72rem; }
+  .focus-agenda-day { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: 1.5rem; padding: 1.4rem 0; border-bottom: 1px solid var(--color-border); }
+  .focus-agenda-date { padding-top: 0.75rem; }
+  .focus-agenda-item { border: 1px solid var(--color-border); border-radius: 0.75rem; background: var(--color-surface); }
+  .focus-agenda-item.is-watched { background: color-mix(in srgb, var(--color-watched) 5%, var(--color-surface)); }
+  .focus-agenda-open:hover { color: var(--color-accent); }
+  .focus-watch-button { display: flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border: 1px solid var(--color-border); border-radius: 0.5rem; }
+  .focus-watch-button:hover { background: var(--color-surface-hover); }
+  .focus-watch-circle { width: 0.9rem; height: 0.9rem; border: 1px solid var(--color-text-muted); border-radius: 50%; }
+  :global(.compact-spacing) .focus-agenda-day { padding: 0.75rem 0; }
+  @media (max-width: 1050px) { .focus-agenda-day { grid-template-columns: 1fr; gap: 0.75rem; } .focus-agenda-date { padding: 0; } .focus-agenda-state { display: none; } }
+</style>

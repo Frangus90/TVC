@@ -34,6 +34,7 @@
   import { Tv } from "lucide-svelte";
   import { getThemeSettings } from "../../stores/theme.svelte";
   import { formatDate } from "../../utils/dateFormat";
+  import { openShowDetail } from "../../stores/showDetail.svelte";
 
   let showPickerOpen = $state(false);
   let showPickerDate = $state<string | null>(null);
@@ -172,15 +173,15 @@
   }
 </script>
 
-<div class="h-full flex flex-col">
+<div class="focus-week h-full flex flex-col">
   <!-- Week grid - 7 columns -->
-  <div class="flex-1 grid grid-cols-7 gap-2">
+  <div class="focus-week-grid flex-1 grid grid-cols-7 gap-3">
     {#each weekDays as day}
       {@const today = isToday(day)}
       {@const dayItems = getItemsForDay(day)}
-      <div class="flex flex-col border border-border rounded-lg overflow-hidden bg-surface">
+      <div class="focus-week-column flex flex-col border border-border rounded-xl overflow-hidden bg-surface">
         <!-- Day header -->
-        <div class="p-3 border-b border-border flex items-center justify-between {today ? 'bg-accent/10 ring-2 ring-accent/50' : ''}">
+        <div class="p-3 border-b border-border flex items-center justify-between {today ? 'bg-accent/10' : ''}">
           <div class="flex items-center gap-2">
             <button
               onclick={() => handleDayClick(day)}
@@ -195,7 +196,7 @@
           <button
             onclick={() => handleAddClick(day)}
             class="p-1.5 rounded hover:bg-surface-hover transition-colors"
-            aria-label="Schedule episode"
+            aria-label="Schedule for {formatDate(day)}"
           >
             <Plus class="w-4 h-4 text-text-muted" />
           </button>
@@ -204,9 +205,8 @@
         <!-- Items for this day -->
         <div class="flex-1 p-2 space-y-2 overflow-auto">
           {#each dayItems as item}
-            <button
-              onclick={(e) => { e.stopPropagation(); handleItemClick(item); }}
-              ondblclick={() => item.type === "movie" && handleMovieClick(item.data as CalendarMovie)}
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div
               oncontextmenu={(e) => {
                 e.preventDefault();
                 if (item.type === "episode") {
@@ -214,30 +214,24 @@
                   if (ep.scheduled_date) handleUnschedule(e, ep);
                 }
               }}
-              class="w-full text-left p-2 rounded-lg text-sm transition-colors {item.watched
-                ? 'bg-watched/20 text-watched'
-                : item.hasAired
-                  ? 'bg-premiere/20 text-premiere hover:bg-premiere/30'
-                  : 'bg-upcoming/20 text-upcoming hover:bg-upcoming/30'}"
+              class="focus-event p-3 {item.watched ? 'is-watched' : ''}"
               style={item.color ? `border-left: 3px solid ${item.color}` : ''}
-              title={item.watched ? "Watched" : item.hasAired ? "Click to mark watched" : "Upcoming"}
             >
-              <div class="flex items-center gap-1.5 mb-1">
-                {#if item.watched}
-                  <Check class="w-3.5 h-3.5 flex-shrink-0" />
-                {:else if item.type === "movie"}
-                  <Film class="w-3.5 h-3.5 flex-shrink-0" />
-                {:else}
-                  <Tv class="w-3.5 h-3.5 flex-shrink-0" />
-                {/if}
-                <span class="font-medium truncate">{item.title}</span>
+              <button type="button" class="focus-event-open" onclick={() => item.type === "movie" ? handleMovieClick(item.data as CalendarMovie) : openShowDetail((item.data as Episode).show_id)} title="Open {item.title}">
+                <span class="focus-event-type">
+                  {#if item.type === "movie"}<Film class="w-3.5 h-3.5" />{:else}<Tv class="w-3.5 h-3.5" />{/if}
+                  {item.type === "movie" ? 'Movie' : 'TV episode'}
+                </span>
+                <span class="focus-event-title">{item.title}</span>
+                {#if item.subtitle}<span class="focus-event-subtitle">{item.subtitle}</span>{/if}
+              </button>
+              <div class="focus-event-bottom">
+                <span>{item.watched ? 'Watched' : item.hasAired ? 'Available' : 'Upcoming'}</span>
+                <button type="button" class="focus-watch-button" aria-pressed={item.watched} aria-label="{item.watched ? 'Mark unwatched' : 'Mark watched'}: {item.title}" onclick={() => handleItemClick(item)}>
+                  {#if item.watched}<Check class="w-4 h-4" />{:else}<span class="focus-watch-circle"></span>{/if}
+                </button>
               </div>
-              {#if item.subtitle}
-                <div class="text-xs opacity-75 {item.watched ? 'line-through' : ''}">
-                  {item.subtitle}
-                </div>
-              {/if}
-            </button>
+            </div>
           {:else}
             <div class="text-xs text-text-muted text-center py-4">No items</div>
           {/each}
@@ -256,12 +250,12 @@
   ></button>
   {@const theme = getThemeSettings()}
   
-  <div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-surface rounded-xl border border-border shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col">
+  <div class="focus-panel focus-dialog fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-surface rounded-xl border border-border shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col">
     <div class="p-5 pb-0">
       <h3 class="font-semibold text-lg mb-4">Schedule for {formatDate(showPickerDate)}</h3>
 
       <!-- Tabs -->
-      <div class="flex border-b border-border mb-4">
+      <div class="focus-tabs flex border-b border-border mb-4">
         <button
           type="button"
           onclick={() => pickerTab = "shows"}
@@ -358,3 +352,19 @@
     </div>
   </div>
 {/if}
+
+<style>
+  .focus-week-grid { min-height: 0; }
+  .focus-week-column { min-width: 0; }
+  .focus-event { border: 1px solid var(--color-border); border-radius: 0.625rem; background: var(--color-surface-hover); }
+  .focus-event.is-watched { background: color-mix(in srgb, var(--color-watched) 8%, var(--color-surface)); }
+  .focus-event-open { display: block; width: 100%; text-align: left; }
+  .focus-event-type { display: flex; align-items: center; gap: 0.3rem; color: var(--color-text-muted); font-size: 0.6875rem; }
+  .focus-event-title { display: block; color: var(--color-text); font-size: 0.875rem; font-weight: 600; overflow-wrap: anywhere; margin: 0.4rem 0; }
+  .focus-event-subtitle { display: block; color: var(--color-text-muted); font-size: 0.75rem; line-height: 1.5; }
+  .focus-event-bottom { display: flex; align-items: center; justify-content: space-between; gap: 0.3rem; color: var(--color-text-muted); font-size: 0.6875rem; margin-top: 0.65rem; }
+  .focus-watch-button { display: flex; align-items: center; justify-content: center; width: 1.6rem; height: 1.6rem; border: 1px solid var(--color-border); border-radius: 0.4rem; flex: none; color: var(--color-watched); }
+  .focus-watch-button:hover { background: var(--color-surface); color: var(--color-text); }
+  .focus-watch-circle { width: 0.8rem; height: 0.8rem; border: 1px solid var(--color-text-muted); border-radius: 50%; }
+  @media (max-width: 1100px) { .focus-week-grid { gap: 0.375rem; } }
+</style>

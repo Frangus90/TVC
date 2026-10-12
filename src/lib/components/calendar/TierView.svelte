@@ -265,14 +265,22 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="h-full flex flex-col" onkeydown={(e) => { if (e.key === 'Escape') contextMenuOpen = null; }}>
+<div class="focus-page focus-tier-page h-full flex flex-col" onkeydown={(e) => { if (e.key === 'Escape') contextMenuOpen = null; }}>
+  <header class="focus-page-heading">
+    <div>
+      <p class="focus-eyebrow">YOUR LIBRARY</p>
+      <h1>Tier lists</h1>
+      <p>Your favourites, in your order.</p>
+    </div>
+  </header>
   <!-- Header with sub-tabs, stats, and add button -->
-  <div class="flex items-center justify-between mb-4 gap-4">
+  <div class="focus-toolbar flex flex-wrap items-center justify-between mb-4 gap-4">
     <!-- Sub-tabs -->
-    <div class="flex gap-1 p-1 bg-surface rounded-lg">
+    <div class="focus-tabs flex gap-1 p-1 bg-surface rounded-lg">
       <button
         type="button"
         onclick={() => switchSubTab("shows")}
+        aria-pressed={subTab === "shows"}
         class="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors
           {subTab === 'shows' ? 'bg-background text-accent' : 'text-text-muted hover:text-text'}"
       >
@@ -282,6 +290,7 @@
       <button
         type="button"
         onclick={() => switchSubTab("movies")}
+        aria-pressed={subTab === "movies"}
         class="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors
           {subTab === 'movies' ? 'bg-background text-accent' : 'text-text-muted hover:text-text'}"
       >
@@ -290,7 +299,7 @@
       </button>
     </div>
 
-    <div class="flex items-center gap-4">
+    <div class="flex flex-wrap items-center gap-3">
       <!-- Search input -->
       {#if stats.total > 0}
         <div class="relative">
@@ -375,16 +384,16 @@
       </div>
       <h3 class="text-lg font-medium text-text mb-2">No {subTab} in tier list yet</h3>
       <p class="text-text-muted text-sm max-w-md mb-4">
-        Click "Add to Tier List" to search and add {subTab}, or drag them from the sidebar.
+        Click "Add to Tier List" to search and add {subTab}.
       </p>
     </div>
   {:else}
     <p class="text-xs text-text-muted mb-3">
-      Click the menu on a poster to move it between tiers or remove it.
+      Drag posters to rank them. Use the poster menu to move, track or remove a title.
     </p>
 
     <!-- Tier List -->
-    <div class="flex-1 overflow-auto space-y-2">
+    <div class="focus-tier-board flex-1 overflow-auto space-y-2">
       {#each tiers as tier (tier.id)}
         {@const showZone = findShowZone(tier.id)}
         {@const movieZone = findMovieZone(tier.id)}
@@ -394,12 +403,12 @@
         <div
           role="listbox"
           aria-label="{tier.name} tier"
-          class="flex items-stretch rounded-lg transition-all bg-surface
+          class="focus-tier-row flex items-stretch rounded-xl transition-all bg-surface
             {isEmpty ? 'border-2 border-dashed border-border' : ''}"
           style={tier.color ? `border-left: 4px solid ${tier.color};` : ''}
         >
           <!-- Tier label -->
-          <div class="w-28 flex-shrink-0 flex flex-col items-center justify-center py-3 px-2 bg-surface-hover border-r border-border rounded-l-lg">
+          <div class="focus-tier-label w-28 flex-shrink-0 flex flex-col items-center justify-center py-3 px-2 bg-surface-hover border-r border-border rounded-l-xl">
             <span class="text-sm font-bold" style={getTierLabelStyle(tier)}>{tier.name}</span>
             <span class="text-[10px] text-text-muted mt-0.5">#{tier.position}</span>
           </div>
@@ -411,11 +420,11 @@
                 items: showZone?.items ?? [],
                 type: "tier-shows",
                 flipDurationMs: 200,
-                dropTargetStyle: { outline: "2px dashed rgb(59 130 246)", outlineOffset: "-2px" },
+                dropTargetStyle: { outline: "2px dashed var(--color-accent)", outlineOffset: "-2px" },
               }}
               onconsider={(e) => handleShowConsider(tier.id, e as CustomEvent<DndEvent<TierListShow>>)}
               onfinalize={(e) => handleShowFinalize(tier.id, e as CustomEvent<DndEvent<TierListShow>>)}
-              class="flex-1 flex flex-wrap items-start gap-3 p-3 min-h-[100px]"
+              class="focus-tier-zone flex-1 flex flex-wrap items-start gap-3 p-3 min-h-[100px]"
             >
               {#each showZone?.items ?? [] as show (show.id)}
                 {@const isMatch = matchesSearch(show.name, show.first_aired)}
@@ -532,11 +541,11 @@
                 items: movieZone?.items ?? [],
                 type: "tier-movies",
                 flipDurationMs: 200,
-                dropTargetStyle: { outline: "2px dashed rgb(59 130 246)", outlineOffset: "-2px" },
+                dropTargetStyle: { outline: "2px dashed var(--color-accent)", outlineOffset: "-2px" },
               }}
               onconsider={(e) => handleMovieConsider(tier.id, e as CustomEvent<DndEvent<TierListMovie>>)}
               onfinalize={(e) => handleMovieFinalize(tier.id, e as CustomEvent<DndEvent<TierListMovie>>)}
-              class="flex-1 flex flex-wrap items-start gap-3 p-3 min-h-[100px]"
+              class="focus-tier-zone flex-1 flex flex-wrap items-start gap-3 p-3 min-h-[100px]"
             >
               {#each movieZone?.items ?? [] as movie (movie.id)}
                 {@const isMatch = matchesSearch(movie.title, movie.release_date)}
@@ -656,7 +665,7 @@
               items: untieredShows,
               type: "tier-shows",
               flipDurationMs: 200,
-              dropTargetStyle: { outline: "2px dashed rgb(59 130 246)", outlineOffset: "-2px" },
+              dropTargetStyle: { outline: "2px dashed var(--color-accent)", outlineOffset: "-2px" },
             }}
             onconsider={(e) => handleShowConsider(null, e as CustomEvent<DndEvent<TierListShow>>)}
             onfinalize={(e) => handleShowFinalize(null, e as CustomEvent<DndEvent<TierListShow>>)}
@@ -727,7 +736,7 @@
               items: untieredMovies,
               type: "tier-movies",
               flipDurationMs: 200,
-              dropTargetStyle: { outline: "2px dashed rgb(59 130 246)", outlineOffset: "-2px" },
+              dropTargetStyle: { outline: "2px dashed var(--color-accent)", outlineOffset: "-2px" },
             }}
             onconsider={(e) => handleMovieConsider(null, e as CustomEvent<DndEvent<TierListMovie>>)}
             onfinalize={(e) => handleMovieFinalize(null, e as CustomEvent<DndEvent<TierListMovie>>)}
@@ -816,3 +825,20 @@
     </div>
   {/if}
 </div>
+
+<style>
+  .focus-tier-page { min-height: 0; }
+  .focus-tier-board { padding-bottom: 1rem; }
+  .focus-tier-row { border: 1px solid var(--color-border); min-height: 11rem; }
+  .focus-tier-label { text-align: center; overflow-wrap: anywhere; background: color-mix(in srgb, var(--color-surface-hover) 65%, var(--color-surface)); }
+  .focus-tier-label > span:first-child { font-size: 0.9375rem; }
+  .focus-tier-zone { min-width: 0; }
+  .focus-tier-board :global(.context-menu-container) { width: 5.5rem; }
+  .focus-tier-board :global(.context-menu-container img:not(.context-menu-btn img)),
+  .focus-tier-board :global(.context-menu-container [role="button"] > div) { width: 5.5rem; height: 8.25rem; border-radius: 0.5rem; }
+  .focus-tier-board :global(.context-menu-container [role="button"] > span) { white-space: normal; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; text-align: left; line-height: 1.4; margin-top: 0.45rem; font-size: 0.6875rem; min-height: 1.925rem; }
+  .focus-tier-board :global(.context-menu-btn:focus-visible),
+  .focus-tier-board :global(.context-menu-container:focus-within .context-menu-btn) { opacity: 1; }
+  :global(.compact-spacing) .focus-tier-row { min-height: 10rem; }
+  @media (max-width: 1100px) { .focus-tier-label { width: 6rem; } }
+</style>
