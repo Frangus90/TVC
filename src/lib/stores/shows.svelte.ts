@@ -302,6 +302,9 @@ export async function removeShow(showId: number): Promise<void> {
   try {
     await invoke("remove_show", { id: showId });
     await loadTrackedShows();
+    // The library and global search also contain tier-only titles.
+    const { loadTierListShows } = await import("./tiers.svelte");
+    await loadTierListShows();
 
     // Immediately remove episodes from calendar state
     calendarEpisodes = calendarEpisodes.filter((ep) => ep.show_id !== showId);

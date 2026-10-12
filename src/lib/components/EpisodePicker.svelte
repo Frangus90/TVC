@@ -1,5 +1,6 @@
 <script lang="ts">
   import { fade, scale } from "svelte/transition";
+  import { modalFocus } from "../utils/modalFocus";
   import { X, Check, ChevronDown, ChevronRight, Plus } from "lucide-svelte";
   import {
     isEpisodePickerOpen,
@@ -216,7 +217,8 @@
   <!-- Modal -->
   <div
     transition:scale={{ duration: 200, start: 0.95, opacity: 0 }}
-    class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-6xl z-50 bg-surface rounded-xl border border-border shadow-2xl max-h-[90vh] flex flex-col"
+    role="dialog" aria-modal="true" aria-label="Schedule episodes" use:modalFocus={closeEpisodePicker}
+    class="focus-dialog fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-6xl z-50 bg-surface rounded-xl border border-border shadow-2xl max-h-[90vh] flex flex-col"
   >
     <!-- Header -->
     <div class="flex items-center justify-between p-4 border-b border-border">

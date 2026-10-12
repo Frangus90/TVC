@@ -1,5 +1,6 @@
 <script lang="ts">
   import { fade, scale } from "svelte/transition";
+  import { modalFocus } from "../utils/modalFocus";
   import { X, Search, Plus, Loader2, Check, Tv, Film, PenLine } from "lucide-svelte";
   import {
     isTierSearchModalOpen,
@@ -105,6 +106,7 @@
   }
 
   function handleKeyDown(event: KeyboardEvent) {
+    if (!isTierSearchModalOpen()) return;
     if (event.key === "Escape") {
       closeTierSearchModal();
     } else if (event.key === "Enter" && searchMode !== "manual") {
@@ -253,7 +255,8 @@
   <!-- Modal -->
   <div
     transition:scale={{ duration: 200, start: 0.95, opacity: 0 }}
-    class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-5xl z-50 bg-surface rounded-xl border border-border shadow-2xl flex flex-col"
+    role="dialog" aria-modal="true" aria-label="Add a tier-list title" use:modalFocus={closeTierSearchModal}
+    class="focus-dialog fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-5xl z-50 bg-surface rounded-xl border border-border shadow-2xl flex flex-col"
     style="max-height: 700px;"
   >
     <!-- Header -->
@@ -572,6 +575,7 @@
   .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }

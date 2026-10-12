@@ -203,7 +203,7 @@ pub async fn get_archived_movies(app: AppHandle) -> Result<Vec<TrackedMovie>, St
                runtime, status, scheduled_date, watched, rating, color, archived, rank_order,
                tier_id, tier_only
         FROM movies
-        WHERE archived = 1 AND tier_only = 0
+        WHERE archived = 1
         ORDER BY title
         LIMIT 10000
         "#,

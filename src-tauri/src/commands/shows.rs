@@ -124,7 +124,7 @@ pub async fn get_archived_shows(app: AppHandle) -> Result<Vec<TrackedShow>, Stri
         r#"
         SELECT id, name, poster_url, status, color, notes, tags, rating, rank_order, tier_id, tier_only, unmigrated
         FROM shows
-        WHERE archived = 1 AND tier_only = 0
+        WHERE archived = 1
         ORDER BY name
         LIMIT 10000
         "#,

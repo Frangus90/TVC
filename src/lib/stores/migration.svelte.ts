@@ -6,6 +6,7 @@ import {
   loadArchivedShows,
   refreshCalendar,
 } from "./shows.svelte";
+import { loadTierListShows } from "./tiers.svelte";
 
 export interface UnmigratedShow {
   id: number;
@@ -119,7 +120,7 @@ export async function resolveUnmigratedShow(
     newTmdbId,
   });
   await loadUnmigratedShows();
-  await loadTrackedShows();
+  await Promise.all([loadTrackedShows(), loadArchivedShows(), loadTierListShows()]);
   await refreshCalendar();
   return outcome;
 }
@@ -127,7 +128,7 @@ export async function resolveUnmigratedShow(
 export async function deleteUnmigratedShow(id: number): Promise<void> {
   await invoke("delete_unmigrated_show", { id });
   await loadUnmigratedShows();
-  await loadTrackedShows();
+  await Promise.all([loadTrackedShows(), loadArchivedShows(), loadTierListShows()]);
 }
 
 export function setupMigrationListener(): () => void {
@@ -161,6 +162,9 @@ export function setupMigrationListener(): () => void {
     );
     loadArchivedShows().catch((e) =>
       logger.error("[Migration] reload archived shows failed", e),
+    );
+    loadTierListShows().catch((e) =>
+      logger.error("[Migration] reload tier-list shows failed", e),
     );
     refreshCalendar().catch((e) =>
       logger.error("[Migration] refresh calendar failed", e),

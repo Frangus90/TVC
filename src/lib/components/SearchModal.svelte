@@ -1,6 +1,7 @@
 <script lang="ts">
   import { showError } from "../stores/toast.svelte";
   import { fade, scale } from "svelte/transition";
+  import { modalFocus } from "../utils/modalFocus";
   import { X, Search, Plus, Loader2, Check } from "lucide-svelte";
   import {
     isSearchModalOpen,
@@ -69,6 +70,7 @@
   }
 
   function handleKeyDown(event: KeyboardEvent) {
+    if (!isSearchModalOpen()) return;
     if (event.key === "Escape") {
       closeSearchModal();
     } else if (event.key === "Enter") {
@@ -126,7 +128,8 @@
   <!-- Modal -->
   <div
     transition:scale={{ duration: 200, start: 0.95, opacity: 0 }}
-    class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-5xl z-50 bg-surface rounded-xl border border-border shadow-2xl flex flex-col"
+    role="dialog" aria-modal="true" aria-label="Add a TV show" use:modalFocus={closeSearchModal}
+    class="focus-dialog fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-5xl z-50 bg-surface rounded-xl border border-border shadow-2xl flex flex-col"
     style="max-height: {calculatedHeight}px;"
   >
     <!-- Header -->
@@ -139,6 +142,7 @@
         value={getSearchQuery()}
         oninput={handleInput}
         bind:this={searchInput}
+        data-modal-initial
         aria-label="Search for TV shows"
         aria-describedby="search-help"
         autocomplete="off"
@@ -254,6 +258,7 @@
   .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }

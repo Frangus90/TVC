@@ -24,7 +24,7 @@
 
   <div
     transition:scale={{ duration: 200, start: 0.95, opacity: 0 }}
-    class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[60] bg-surface rounded-xl border border-border shadow-2xl w-full max-w-lg p-6"
+    class="focus-dialog fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[60] bg-surface rounded-xl border border-border shadow-2xl w-full max-w-lg p-6"
   >
     <div class="flex items-center gap-3 mb-4">
       <div class="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center">
@@ -68,7 +68,7 @@
     <div transition:fade={{ duration: 150 }} class="fixed inset-0 bg-black/60 z-[60]"></div>
     <div
       transition:scale={{ duration: 200, start: 0.95, opacity: 0 }}
-      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[60] bg-surface rounded-xl border border-border shadow-2xl w-full {wide
+      class="focus-dialog fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[60] bg-surface rounded-xl border border-border shadow-2xl w-full {wide
         ? 'max-w-3xl max-h-[90vh]'
         : 'max-w-lg'} flex flex-col"
     >

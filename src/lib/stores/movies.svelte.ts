@@ -286,6 +286,9 @@ export async function removeMovie(movieId: number): Promise<void> {
   try {
     await invoke("remove_movie", { id: movieId });
     await loadTrackedMovies();
+    // The library and global search also contain tier-only titles.
+    const { loadTierListMovies } = await import("./tiers.svelte");
+    await loadTierListMovies();
     calendarMovies = calendarMovies.filter((m) => m.id !== movieId);
   } catch (error) {
     logger.error("Failed to remove movie:", error);

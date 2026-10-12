@@ -18,7 +18,7 @@ function load(path, dependencies = {}) {
   }, { filename: path });
   return exports;
 }
-function store(name) {
+function store(name, dependencies = {}) {
   const requests = [], errors = [];
   const invoke = (command, args) => new Promise((resolve, reject) => requests.push({ command, args, resolve, reject }));
   const api = load(`src/lib/stores/${name}.svelte.ts`, {
@@ -30,9 +30,92 @@ function store(name) {
     './toast.svelte': { showError: message => errors.push(message) },
     './shows.svelte': { loadTrackedShows: async () => {} },
     './movies.svelte': { loadTrackedMovies: async () => {} },
+    ...dependencies,
   });
   return { api, requests, errors };
 }
+
+for (const kind of ['shows', 'movies']) {
+  test(`${kind}: removing a tier-only title clears the shared library cache; failed removal keeps it`, async () => {
+    const title = kind === 'shows' ? { name: 'Tier-only show' } : { title: 'Tier-only movie' };
+    let saved = [{ id: 42, tier_only: true, tier_id: 1, ...title }];
+    let failRemoval = false;
+    const invoke = async (command) => {
+      if (command === `get_tier_list_${kind}`) return structuredClone(saved);
+      if (command === `get_tracked_${kind}`) return [];
+      if (command === (kind === 'shows' ? 'remove_show' : 'remove_movie')) {
+        if (failRemoval) throw new Error('write failed');
+        saved = [];
+      }
+    };
+    const tiers = load('src/lib/stores/tiers.svelte.ts', {
+      '@tauri-apps/api/core': { invoke },
+      '../utils/logger': { logger: { error() {} } },
+      './toast.svelte': { showError() {} },
+    });
+    const refreshTiers = tiers[kind === 'shows' ? 'loadTierListShows' : 'loadTierListMovies'];
+    const getTiers = tiers[kind === 'shows' ? 'getTierListShows' : 'getTierListMovies'];
+    const { api, errors } = store(kind, { '@tauri-apps/api/core': { invoke }, './tiers.svelte': tiers });
+    const remove = api[kind === 'shows' ? 'removeShow' : 'removeMovie'];
+    await refreshTiers();
+    assert.equal(getTiers()[0].id, 42);
+    await remove(42);
+    assert.equal(saved.length, 0);
+    assert.equal(getTiers().length, 0, 'combined library/global search must not retain a deleted title');
+    saved = [{ id: 42, tier_only: true, tier_id: 1, ...title }];
+    await refreshTiers();
+    failRemoval = true;
+    await remove(42);
+    assert.equal(getTiers()[0].id, 42);
+    assert.equal(errors.length, 1);
+  });
+}
+
+test('unmapped show remap, deletion and completed migration refresh every shared show-ID cache', async () => {
+  let saved = [{ id: 42, name: 'Legacy show', tier_only: true, tier_id: 1, archived: true }];
+  let archived = [], tracked = [];
+  const listeners = new Map();
+  const invoke = async (command, args) => {
+    if (command === 'get_tier_list_shows') return structuredClone(saved);
+    if (command === 'get_unmigrated_shows') return [];
+    if (command === 'resolve_unmigrated_show') {
+      saved = saved.map(show => ({ ...show, id: args.newTmdbId }));
+      return { episodes_orphaned: 0, merged_with: null };
+    }
+    if (command === 'delete_unmigrated_show') saved = [];
+  };
+  const dependencies = {
+    '@tauri-apps/api/core': { invoke },
+    '../utils/logger': { logger: { error() {} } },
+    './toast.svelte': { showError() {} },
+  };
+  const tiers = load('src/lib/stores/tiers.svelte.ts', dependencies);
+  const migration = load('src/lib/stores/migration.svelte.ts', {
+    ...dependencies,
+    '@tauri-apps/api/event': { listen: async (name, handler) => { listeners.set(name, handler); return () => listeners.delete(name); } },
+    './tiers.svelte': tiers,
+    './shows.svelte': {
+      loadTrackedShows: async () => { tracked = saved.filter(show => !show.archived); },
+      loadArchivedShows: async () => { archived = saved.filter(show => show.archived); },
+      refreshCalendar: async () => {},
+    },
+  });
+  await tiers.loadTierListShows();
+  await migration.resolveUnmigratedShow(42, 99);
+  assert.equal(tiers.getTierListShows()[0].id, 99);
+  assert.equal(archived[0].id, 99, 'archived-ID exclusion must use the remapped ID');
+  assert.equal(tracked.length, 0);
+  await migration.deleteUnmigratedShow(99);
+  assert.equal(tiers.getTierListShows().length, 0);
+  assert.equal(archived.length, 0);
+  saved = [{ id: 101, name: 'Migrated show', tier_only: true, tier_id: 1, archived: false }];
+  const stop = migration.setupMigrationListener();
+  listeners.get('tvdb_migration_finished')({ payload: { mapped: 1, quarantined: 0, errors: [], per_show: [] } });
+  await tick();
+  assert.equal(tiers.getTierListShows()[0].id, 101);
+  assert.equal(tracked[0].id, 101);
+  stop();
+});
 const tick = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
 
 for (const kind of ['shows', 'movies']) {

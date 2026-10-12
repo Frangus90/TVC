@@ -237,7 +237,7 @@
 
     <div
       transition:scale={{ duration: 200, start: 0.95, opacity: 0 }}
-      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-surface rounded-xl border border-border shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col"
+      class="focus-dialog fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-surface rounded-xl border border-border shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col"
     >
       <div class="flex items-center justify-between p-5 border-b border-border">
         <div class="flex items-center gap-3">

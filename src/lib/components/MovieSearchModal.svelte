@@ -1,6 +1,7 @@
 <script lang="ts">
   import { showError } from "../stores/toast.svelte";
   import { fade, scale } from "svelte/transition";
+  import { modalFocus } from "../utils/modalFocus";
   import { X, Search, Plus, Loader2, Film, Star, Check } from "lucide-svelte";
   import {
     isMovieSearchModalOpen,
@@ -63,6 +64,7 @@
   }
 
   function handleKeyDown(event: KeyboardEvent) {
+    if (!isMovieSearchModalOpen()) return;
     if (event.key === "Escape") {
       closeMovieSearchModal();
     } else if (event.key === "Enter") {
@@ -129,7 +131,8 @@
   <!-- Modal -->
   <div
     transition:scale={{ duration: 200, start: 0.95, opacity: 0 }}
-    class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-5xl z-50 bg-surface rounded-xl border border-border shadow-2xl flex flex-col"
+    role="dialog" aria-modal="true" aria-label="Add a movie" use:modalFocus={closeMovieSearchModal}
+    class="focus-dialog fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-5xl z-50 bg-surface rounded-xl border border-border shadow-2xl flex flex-col"
     style="max-height: {calculatedHeight}px;"
   >
     <!-- Header -->
@@ -142,6 +145,7 @@
         value={getMovieSearchQuery()}
         oninput={handleInput}
         bind:this={searchInput}
+        data-modal-initial
       />
       <button
         type="button"
@@ -263,6 +267,7 @@
   .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }

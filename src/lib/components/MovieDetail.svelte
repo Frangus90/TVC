@@ -1,5 +1,6 @@
 <script lang="ts">
   import { fade, scale } from "svelte/transition";
+  import { modalFocus } from "../utils/modalFocus";
   import { X, Trash2, RefreshCw, ExternalLink, Star, Eye, EyeOff, Calendar, Archive, Play, Users, FileText, ArrowUpCircle } from "lucide-svelte";
   import { invoke } from "@tauri-apps/api/core";
   import {
@@ -193,7 +194,8 @@
   <!-- Modal -->
   <div
     transition:scale={{ duration: 200, start: 0.95, opacity: 0 }}
-    class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-surface rounded-xl border border-border shadow-2xl w-[700px] max-w-[95vw] max-h-[90vh] flex flex-col"
+    role="dialog" aria-modal="true" aria-label="Movie details" use:modalFocus={closeMovieDetail}
+    class="focus-dialog fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-surface rounded-xl border border-border shadow-2xl w-[700px] max-w-[95vw] max-h-[90vh] flex flex-col"
   >
     {#if isMovieDetailLoading()}
       <div class="flex items-center justify-center p-12">
