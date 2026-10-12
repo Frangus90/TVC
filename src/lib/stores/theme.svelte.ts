@@ -16,7 +16,7 @@ const getDb = getDatabase;
 // Default theme settings
 const defaultTheme: ThemeSettings = {
   colorScheme: "default",
-  accentColor: "#3b82f6",
+  accentColor: "#bba4ff",
   fontSize: 1,
   compactSpacing: false,
   colorblindFriendly: false,
@@ -88,6 +88,7 @@ function applyTheme() {
   // Apply accent color
   root.style.setProperty("--accent-color", themeSettings.accentColor);
   root.style.setProperty("--accent-hover", adjustBrightness(themeSettings.accentColor, -10));
+  root.style.setProperty("--accent-foreground", accentForeground(themeSettings.accentColor));
 
   // Apply font size
   root.style.setProperty("--font-size-multiplier", String(themeSettings.fontSize));
@@ -116,6 +117,18 @@ function adjustBrightness(color: string, percent: number): string {
   const G = Math.max(0, Math.min(255, ((num >> 8) & 0x00ff) + amt));
   const B = Math.max(0, Math.min(255, (num & 0x0000ff) + amt));
   return `#${((1 << 24) + (R << 16) + (G << 8) + B).toString(16).slice(1)}`;
+}
+
+// Keep text readable on both the Focus default and saved custom accent colours.
+function accentForeground(color: string): string {
+  const value = color.replace("#", "");
+  const hex = value.length === 3 ? value.split("").map(c => c + c).join("") : value;
+  const components = [0, 2, 4].map(index => {
+    const channel = parseInt(hex.slice(index, index + 2), 16) / 255;
+    return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  });
+  const luminance = components[0] * 0.2126 + components[1] * 0.7152 + components[2] * 0.0722;
+  return luminance > 0.179 ? "#121318" : "#ffffff";
 }
 
 // Initialize theme on load

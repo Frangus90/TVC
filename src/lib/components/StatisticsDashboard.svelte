@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { fade, scale } from "svelte/transition";
   import {
     X,
@@ -15,6 +16,7 @@
     isStatisticsModalOpen,
     closeStatisticsModal,
     getStatistics,
+    loadAllStatistics,
     getCompletionRates,
     getWatchHistory,
     isLoading,
@@ -26,8 +28,14 @@
     formatDateHeader,
   } from "../stores/statistics.svelte";
 
+  let { embedded = false }: { embedded?: boolean } = $props();
+
+  onMount(() => {
+    if (embedded) void loadAllStatistics();
+  });
+
   function handleKeyDown(event: KeyboardEvent) {
-    if (event.key === "Escape") {
+    if (!embedded && isStatisticsModalOpen() && event.key === "Escape") {
       closeStatisticsModal();
     }
   }
@@ -43,44 +51,51 @@
 
 <svelte:window onkeydown={handleKeyDown} />
 
-{#if isStatisticsModalOpen()}
-  <!-- Backdrop -->
-  <button
-    transition:fade={{ duration: 150 }}
-    class="fixed inset-0 bg-black/60 z-50"
-    onclick={closeStatisticsModal}
-    aria-label="Close modal"
-  ></button>
+{#if embedded || isStatisticsModalOpen()}
+  {#if !embedded}
+    <!-- Backdrop -->
+    <button
+      transition:fade={{ duration: 150 }}
+      class="fixed inset-0 bg-black/60 z-50"
+      onclick={closeStatisticsModal}
+      aria-label="Close modal"
+    ></button>
+  {/if}
 
-  <!-- Modal -->
+  <!-- Modal or full page -->
   <div
-    transition:scale={{ duration: 200, start: 0.95, opacity: 0 }}
-    class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl max-h-[85vh] z-50 bg-surface rounded-xl border border-border shadow-2xl flex flex-col"
+    transition:scale={{ duration: embedded ? 0 : 200, start: 0.95, opacity: 0 }}
+    class={embedded ? "focus-page focus-statistics-page" : "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl max-h-[85vh] z-50 bg-surface rounded-xl border border-border shadow-2xl flex flex-col"}
   >
-    <!-- Header -->
-    <div class="flex items-center justify-between p-4 border-b border-border">
-      <div class="flex items-center gap-3">
-        <BarChart3 class="w-6 h-6 text-accent" />
-        <h2 class="text-xl font-semibold text-text">Statistics</h2>
+    {#if embedded}
+      <header class="focus-page-heading">
+        <div>
+          <p class="focus-eyebrow">Your viewing</p>
+          <h1>Statistics</h1>
+          <p class="text-text-muted">See what you've watched and where you're up to.</p>
+        </div>
+      </header>
+    {:else}
+      <div class="flex items-center justify-between p-4 border-b border-border">
+        <div class="flex items-center gap-3">
+          <BarChart3 class="w-6 h-6 text-accent" />
+          <h2 class="text-xl font-semibold text-text">Statistics</h2>
+        </div>
+        <button type="button" onclick={closeStatisticsModal} class="p-1.5 rounded-lg hover:bg-surface-hover transition-colors" aria-label="Close">
+          <X class="w-5 h-5 text-text-muted" />
+        </button>
       </div>
-      <button
-        type="button"
-        onclick={closeStatisticsModal}
-        class="p-1.5 rounded-lg hover:bg-surface-hover transition-colors"
-        aria-label="Close"
-      >
-        <X class="w-5 h-5 text-text-muted" />
-      </button>
-    </div>
+    {/if}
 
     <!-- Tabs -->
-    <div class="flex border-b border-border">
+    <nav class={embedded ? "focus-tabs" : "flex border-b border-border"} aria-label="Statistics sections">
       <button
         class="flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors {getActiveTab() ===
         'overview'
           ? 'text-accent border-b-2 border-accent'
           : 'text-text-muted hover:text-text'}"
         onclick={() => setActiveTab("overview")}
+        aria-pressed={getActiveTab() === "overview"}
       >
         <BarChart3 class="w-4 h-4" />
         Overview
@@ -91,14 +106,15 @@
           ? 'text-accent border-b-2 border-accent'
           : 'text-text-muted hover:text-text'}"
         onclick={() => setActiveTab("history")}
+        aria-pressed={getActiveTab() === "history"}
       >
         <History class="w-4 h-4" />
         Watch History
       </button>
-    </div>
+    </nav>
 
     <!-- Content -->
-    <div class="flex-1 overflow-auto p-6">
+    <div class={embedded ? "focus-statistics-content" : "flex-1 overflow-auto p-6"}>
       {#if isLoading()}
         <div class="flex items-center justify-center py-12">
           <Loader2 class="w-8 h-8 text-accent animate-spin" />
@@ -108,8 +124,8 @@
         {@const stats = getStatistics()}
         {#if stats}
           <!-- Stats Cards -->
-          <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-            <div class="bg-surface-hover rounded-xl p-4">
+          <div class="grid grid-cols-2 {embedded ? 'lg:grid-cols-3 xl:grid-cols-5' : 'md:grid-cols-3'} gap-4 mb-6">
+            <div class="focus-panel bg-surface rounded-xl border border-border p-5">
               <div class="flex items-center gap-3 mb-2">
                 <div class="p-2 bg-accent/20 rounded-lg">
                   <Clock class="w-5 h-5 text-accent" />
@@ -121,7 +137,7 @@
               </p>
             </div>
 
-            <div class="bg-surface-hover rounded-xl p-4">
+            <div class="focus-panel bg-surface rounded-xl border border-border p-5">
               <div class="flex items-center gap-3 mb-2">
                 <div class="p-2 bg-blue-500/20 rounded-lg">
                   <Tv class="w-5 h-5 text-blue-500" />
@@ -131,7 +147,7 @@
               <p class="text-2xl font-bold text-text">{stats.episodes_watched}</p>
             </div>
 
-            <div class="bg-surface-hover rounded-xl p-4">
+            <div class="focus-panel bg-surface rounded-xl border border-border p-5">
               <div class="flex items-center gap-3 mb-2">
                 <div class="p-2 bg-purple-500/20 rounded-lg">
                   <Film class="w-5 h-5 text-purple-500" />
@@ -141,7 +157,7 @@
               <p class="text-2xl font-bold text-text">{stats.movies_watched}</p>
             </div>
 
-            <div class="bg-surface-hover rounded-xl p-4">
+            <div class="focus-panel bg-surface rounded-xl border border-border p-5">
               <div class="flex items-center gap-3 mb-2">
                 <div class="p-2 bg-green-500/20 rounded-lg">
                   <CheckCircle class="w-5 h-5 text-green-500" />
@@ -151,7 +167,7 @@
               <p class="text-2xl font-bold text-text">{stats.shows_completed}</p>
             </div>
 
-            <div class="bg-surface-hover rounded-xl p-4">
+            <div class="focus-panel bg-surface rounded-xl border border-border p-5">
               <div class="flex items-center gap-3 mb-2">
                 <div class="p-2 bg-yellow-500/20 rounded-lg">
                   <PlayCircle class="w-5 h-5 text-yellow-500" />
@@ -165,7 +181,7 @@
           <!-- Completion Rates -->
           {@const completions = getCompletionRates()}
           {#if completions.length > 0}
-            <div class="mb-6">
+            <div class="focus-panel bg-surface rounded-xl border border-border p-6 mb-6">
               <h3 class="text-lg font-semibold text-text mb-4">Show Progress</h3>
               <div class="space-y-3">
                 {#each completions as show}
@@ -224,7 +240,7 @@
                 <div class="space-y-2">
                   {#each items as item}
                     <div
-                      class="flex items-center gap-4 p-3 bg-surface-hover rounded-lg hover:bg-border/50 transition-colors"
+                      class="flex items-center gap-4 p-4 bg-surface border border-border rounded-xl transition-colors"
                     >
                       {#if item.poster_url}
                         <img
@@ -288,15 +304,22 @@
       {/if}
     </div>
 
-    <!-- Footer -->
-    <div class="p-4 border-t border-border">
-      <button
-        type="button"
-        onclick={closeStatisticsModal}
-        class="w-full py-2.5 text-text-muted hover:bg-surface-hover rounded-lg transition-colors"
-      >
-        Close
-      </button>
-    </div>
+    {#if !embedded}
+      <!-- Footer -->
+      <div class="p-4 border-t border-border">
+        <button
+          type="button"
+          onclick={closeStatisticsModal}
+          class="w-full py-2.5 text-text-muted hover:bg-surface-hover rounded-lg transition-colors"
+        >
+          Close
+        </button>
+      </div>
+    {/if}
   </div>
 {/if}
+
+<style>
+  .focus-statistics-page { max-width: 1440px; }
+  .focus-statistics-content { min-width: 0; }
+</style>

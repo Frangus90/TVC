@@ -73,14 +73,17 @@
     message="Archive shows or movies you're done with to keep your list clean."
   />
 {:else}
-  <p class="text-sm text-text-muted mb-3">
-    {items.length} archived item{items.length === 1 ? "" : "s"}. Restore any to move it
-    back to your active list.
-  </p>
-  <ul class="space-y-1">
+  <div class="focus-toolbar mb-4">
+    <h2 class="text-lg font-semibold mb-1">Archive</h2>
+    <p class="text-sm text-text-muted">
+      {items.length} archived item{items.length === 1 ? "" : "s"}. Restore any to move it
+      back to your active list.
+    </p>
+  </div>
+  <ul class="space-y-2">
     {#each items as item (item.type + item.id)}
       <li
-        class="group flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-hover transition-colors"
+        class="focus-panel group flex items-center gap-3 px-4 py-3 bg-surface border border-border rounded-xl hover:bg-surface-hover transition-colors"
       >
         {#if !theme.hidePosters}
           {#if item.poster_url}
@@ -101,7 +104,7 @@
             </div>
           {/if}
         {/if}
-        <div class="flex-1 min-w-0 flex items-center gap-2">
+        <div class="flex-1 min-w-0 flex flex-wrap items-center gap-x-2 gap-y-1">
           {#if item.color}
             <div
               class="w-3 h-3 rounded-full flex-shrink-0"
@@ -116,8 +119,9 @@
         <button
           type="button"
           onclick={() => unarchive(item)}
-          class="opacity-0 group-hover:opacity-100 flex items-center gap-1 px-2 py-1 rounded hover:bg-accent/20 text-accent text-sm transition-all flex-shrink-0"
+          class="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border hover:bg-accent/10 hover:border-accent/40 text-accent text-sm transition-colors flex-shrink-0"
           title="Restore from archive"
+          aria-label={`Restore ${item.name} from archive`}
         >
           <RotateCcw class="w-4 h-4" /> Restore
         </button>

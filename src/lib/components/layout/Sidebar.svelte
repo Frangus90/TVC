@@ -1,648 +1,100 @@
 <script lang="ts">
-  import { Plus, Tv, Trash2, RefreshCw, Check, Film, Flag, Archive, CalendarX, BarChart3, Database, PanelLeftClose, PanelLeft, Sparkles, Settings } from "lucide-svelte";
   import { onMount } from "svelte";
+  import { invoke } from "@tauri-apps/api/core";
+  import { listen } from "@tauri-apps/api/event";
+  import { PanelLeftClose, PanelLeft, RefreshCw, Sparkles, CircleCheck, CircleAlert, CloudDownload } from "lucide-svelte";
   import { navItems } from "../../config/navItems";
-  import {
-    getTrackedShows,
-    loadTrackedShows,
-    openSearchModal,
-    removeShow,
-    archiveShow,
-    isShowsLoading,
-  } from "../../stores/shows.svelte";
-  import {
-    getTrackedMovies,
-    loadTrackedMovies,
-    openMovieSearchModal,
-    removeMovie,
-    archiveMovie,
-    unscheduleMovie,
-    openMovieDetail,
-    isMoviesLoading,
-  } from "../../stores/movies.svelte";
-  import { openShowDetail } from "../../stores/showDetail.svelte";
-  import {
-    triggerUpdateCheck,
-    isCheckingForUpdates,
-  } from "../../stores/updates.svelte";
-  import { openStatisticsModal } from "../../stores/statistics.svelte";
-  import { openDataManagement } from "../../stores/dataManagement.svelte";
-  import { openSettings } from "../../stores/settings.svelte";
+  import { getTrackedShows } from "../../stores/shows.svelte";
+  import { getTrackedMovies } from "../../stores/movies.svelte";
+  import { isSidebarCollapsed, toggleSidebar, getSidebarTab, setSidebarTab, getSidebarWidth, setSidebarWidth, getIsResizing, setIsResizing, loadSidebarWidth, saveSidebarWidth, SIDEBAR_COLLAPSED_WIDTH } from "../../stores/sidebar.svelte";
+  import { triggerUpdateCheck, isCheckingForUpdates } from "../../stores/updates.svelte";
   import { openWhatsNew, getAppVersion, hasUnseenChanges } from "../../stores/whatsNew.svelte";
-  import {
-    isSidebarCollapsed,
-    toggleSidebar,
-    getSidebarTab,
-    setSidebarTab,
-    type SidebarTab,
-    getSidebarWidth,
-    setSidebarWidth,
-    getIsResizing,
-    setIsResizing,
-    loadSidebarWidth,
-    saveSidebarWidth,
-    SIDEBAR_COLLAPSED_WIDTH,
-    SIDEBAR_NAV_LABELS_MIN_WIDTH,
-  } from "../../stores/sidebar.svelte";
-  import {
-    getEnabledSeries,
-    getSeriesColor,
-    refreshRacingData,
-    isRacingRefreshing,
-    loadRacingSeries,
-    loadRacingConfig,
-  } from "../../stores/racing.svelte";
-  import { getThemeSettings } from "../../stores/theme.svelte";
-  import { openConfirmDialog } from "../../stores/confirmDialog.svelte";
-  import SkeletonLoader from "../common/SkeletonLoader.svelte";
-  import EmptyState from "../common/EmptyState.svelte";
+  import { setActiveTab as setDataTab } from "../../stores/dataManagement.svelte";
+  import type { LibrarySyncStatus } from "../../stores/librarySync";
   import { logger } from "../../utils/logger";
 
-  // Use shared sidebar tab state
-  const activeTab = $derived(getSidebarTab());
-  // Tab labels only fit above a minimum width; below it the row is icon-only.
-  const showTabLabels = $derived(
-    !isSidebarCollapsed() && getSidebarWidth() >= SIDEBAR_NAV_LABELS_MIN_WIDTH
-  );
-  let selectedItems = $state<Set<number>>(new Set());
-  let bulkMode = $state(false);
-
-  const theme = $derived(getThemeSettings());
-  const isCompactList = $derived(theme.compactSpacing && theme.hidePosters);
+  let syncStatus = $state<LibrarySyncStatus[]>([]);
+  let syncError = $state(false);
+  const failed = $derived(syncStatus.reduce((sum, library) => sum + (library.report?.failures.length ?? 0), 0));
+  const needsAttention = $derived(failed > 0 || syncStatus.some(library => library.interrupted || library.report?.error));
+  const hasSynced = $derived(syncStatus.some(library => library.last_success_at));
+  const syncLabel = $derived(syncError ? "Sync status unavailable" : needsAttention ? (failed ? `${failed} titles need syncing` : "Sync needs attention") : hasSynced ? "Library synced" : "Library sync");
 
   onMount(() => {
-    // Load all data in parallel for faster startup
-    Promise.all([
-      loadTrackedShows(),
-      loadTrackedMovies(),
-      loadRacingSeries(),
-      loadRacingConfig(),
-      loadSidebarWidth(),
-    ]).catch((error) => {
-      logger.error("Failed to load sidebar data", error);
+    let disposed = false;
+    const refresh = async () => {
+      try {
+        const result = await invoke<LibrarySyncStatus[]>("get_library_sync_status");
+        if (!disposed) { syncStatus = result; syncError = false; }
+      } catch { if (!disposed) syncError = true; }
+    };
+    void loadSidebarWidth();
+    void refresh();
+    const listener = listen("library-sync-finished", () => { void refresh(); }).catch(error => {
+      if (!disposed) syncError = true;
+      logger.error("Live sync status could not be connected; open Data to check sync", error);
+      return undefined;
     });
+    return () => { disposed = true; void listener.then(stop => stop?.()); };
   });
 
-  function startResize(e: PointerEvent) {
-    e.preventDefault();
+  function showSync() { setDataTab("sync"); setSidebarTab("data"); }
+  function startResize(event: PointerEvent) {
+    event.preventDefault();
     setIsResizing(true);
-    const startX = e.clientX;
+    const startX = event.clientX;
     const startWidth = getSidebarWidth();
+    const previousCursor = document.body.style.cursor;
+    const previousSelect = document.body.style.userSelect;
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
-
-    const onMove = (ev: PointerEvent) => {
-      setSidebarWidth(startWidth + (ev.clientX - startX));
-    };
-    const onUp = () => {
+    const move = (event: PointerEvent) => setSidebarWidth(startWidth + event.clientX - startX);
+    const stop = () => {
       setIsResizing(false);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      saveSidebarWidth();
+      document.body.style.cursor = previousCursor;
+      document.body.style.userSelect = previousSelect;
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+      void saveSidebarWidth();
     };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
   }
-
-  function switchTab(tab: SidebarTab) {
-    setSidebarTab(tab);
-    bulkMode = false;
-    selectedItems = new Set();
-  }
-
-  async function handleRemoveShow(event: MouseEvent, showId: number) {
-    event.stopPropagation();
-    await removeShow(showId);
-  }
-
-  async function handleRemoveMovie(event: MouseEvent, movieId: number) {
-    event.stopPropagation();
-    await removeMovie(movieId);
-  }
-
-  async function handleArchiveShow(event: MouseEvent, showId: number) {
-    event.stopPropagation();
-    await archiveShow(showId);
-  }
-
-  async function handleArchiveMovie(event: MouseEvent, movieId: number) {
-    event.stopPropagation();
-    await archiveMovie(movieId);
-  }
-
-  async function handleUnscheduleMovie(event: MouseEvent, movieId: number) {
-    event.stopPropagation();
-    await unscheduleMovie(movieId);
-  }
-
-  function toggleItemSelection(itemId: number) {
-    const newSelected = new Set(selectedItems);
-    if (newSelected.has(itemId)) {
-      newSelected.delete(itemId);
-    } else {
-      newSelected.add(itemId);
-    }
-    selectedItems = newSelected;
-  }
-
-  async function handleBulkRemove() {
-    if (selectedItems.size === 0) return;
-
-    const itemType = activeTab === "shows" ? "show" : "movie";
-    const confirmed = await openConfirmDialog({
-      title: "Remove Items",
-      message: `Are you sure you want to remove ${selectedItems.size} ${itemType}${selectedItems.size > 1 ? 's' : ''}?`,
-      type: "danger",
-      confirmLabel: "Remove",
-      cancelLabel: "Cancel",
-    });
-
-    if (confirmed) {
-      for (const itemId of selectedItems) {
-        if (activeTab === "shows") {
-          await removeShow(itemId);
-        } else if (activeTab === "movies") {
-          await removeMovie(itemId);
-        }
-      }
-      selectedItems = new Set();
-      bulkMode = false;
-    }
-  }
-
-  function handleAddClick() {
-    if (activeTab === "shows") {
-      openSearchModal();
-    } else if (activeTab === "movies") {
-      openMovieSearchModal();
-    }
-  }
-
 </script>
 
-<aside
-  class="bg-surface border-r border-border flex flex-col relative {getIsResizing() ? '' : 'transition-[width] duration-200'}"
-  style="width: {isSidebarCollapsed() ? SIDEBAR_COLLAPSED_WIDTH : getSidebarWidth()}px"
->
-  <!-- Logo -->
-  <div class="p-4 border-b border-border">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-2 text-xl font-semibold {isSidebarCollapsed() ? 'justify-center w-full' : ''}">
-        <Tv class="w-6 h-6 text-accent flex-shrink-0" />
-        {#if !isSidebarCollapsed()}
-          <span>TVC</span>
-        {/if}
-      </div>
-      {#if !isSidebarCollapsed()}
-        <button
-          type="button"
-          onclick={toggleSidebar}
-          class="p-1.5 rounded hover:bg-surface-hover transition-colors"
-          aria-label="Collapse sidebar"
-          title="Collapse sidebar"
-        >
-          <PanelLeftClose class="w-4 h-4 text-text-muted" />
-        </button>
-      {/if}
-    </div>
-    {#if isSidebarCollapsed()}
-      <button
-        type="button"
-        onclick={toggleSidebar}
-        class="w-full mt-2 p-1.5 rounded hover:bg-surface-hover transition-colors flex justify-center"
-        aria-label="Expand sidebar"
-        title="Expand sidebar"
-      >
-        <PanelLeft class="w-4 h-4 text-text-muted" />
-      </button>
-    {/if}
+<aside class="focus-sidebar" class:collapsed={isSidebarCollapsed()} class:resizing={getIsResizing()} style:width={`${isSidebarCollapsed() ? SIDEBAR_COLLAPSED_WIDTH : getSidebarWidth()}px`}>
+  <div class="focus-nav-heading">
+    {#if !isSidebarCollapsed()}<span class="focus-eyebrow">Your library</span>{/if}
+    <button type="button" onclick={toggleSidebar} class="focus-icon-button" aria-label={isSidebarCollapsed() ? "Expand navigation" : "Collapse navigation"} title={isSidebarCollapsed() ? "Expand navigation" : "Collapse navigation"}>
+      {#if isSidebarCollapsed()}<PanelLeft size={17} />{:else}<PanelLeftClose size={17} />{/if}
+    </button>
   </div>
-
-  <!-- Tab Row (rendered from the nav config) -->
-  <div class="flex {isSidebarCollapsed() ? 'flex-col' : ''} border-b border-border overflow-hidden">
-    {#each navItems as item (item.id)}
+  <nav aria-label="Main navigation" class="focus-navigation">
+    {#each navItems as item}
       {@const Icon = item.icon}
-      {@const isActive = activeTab === item.id}
-      <button
-        type="button"
-        onclick={() => switchTab(item.id)}
-        class="flex-1 flex items-center justify-center gap-1 px-1 py-2.5 text-xs font-medium transition-colors
-          {isActive ? 'border-b-2' : 'text-text-muted hover:text-text hover:bg-surface-hover'}
-          {isSidebarCollapsed() ? 'border-b-0 border-l-2' : ''}"
-        style={isActive ? `color: ${item.color}; border-color: ${item.color}; background-color: ${item.color}14;` : ""}
-        aria-label={item.label}
-        aria-pressed={isActive}
-        title={item.label}
-      >
-        <span class="flex-shrink-0 {isActive ? '' : 'opacity-75'}" style="color: {item.color}">
-          <Icon class={showTabLabels ? "w-3.5 h-3.5" : "w-5 h-5"} />
-        </span>
-        {#if showTabLabels}
-          <span>{item.label}</span>
-        {/if}
+      {@const count = item.id === 'shows' ? getTrackedShows().length : item.id === 'movies' ? getTrackedMovies().length : null}
+      <button type="button" onclick={() => setSidebarTab(item.id)} class="focus-nav-item" aria-current={getSidebarTab() === item.id ? 'page' : undefined} aria-label={item.label} title={isSidebarCollapsed() ? item.label : undefined}>
+        <Icon size={18} strokeWidth={1.7} />
+        {#if !isSidebarCollapsed()}<span>{item.label}</span>{#if count !== null}<span class="focus-nav-count">{count}</span>{/if}{/if}
       </button>
     {/each}
+  </nav>
+  <div class="focus-nav-footer">
+    <button type="button" class="focus-sync-link" class:attention={needsAttention || syncError} onclick={showSync} aria-label={syncLabel} title={isSidebarCollapsed() ? syncLabel : undefined}>
+      {#if needsAttention || syncError}<CircleAlert size={16} />{:else if hasSynced}<CircleCheck size={16} />{:else}<CloudDownload size={16} />{/if}
+      {#if !isSidebarCollapsed()}<span>{syncLabel}</span>{/if}
+    </button>
+    {#if !isSidebarCollapsed()}<p class="text-xs text-text-muted">Local library · TMDB</p>{/if}
+    <button type="button" class="focus-footer-button" onclick={triggerUpdateCheck} disabled={isCheckingForUpdates()} aria-label="Check for updates" title={isSidebarCollapsed() ? "Check for updates" : undefined}>
+      <RefreshCw size={14} class={isCheckingForUpdates() ? 'animate-spin' : ''} />
+      {#if !isSidebarCollapsed()}<span>{isCheckingForUpdates() ? "Checking…" : "Check for updates"}</span>{/if}
+    </button>
+    <button type="button" class="focus-footer-button" onclick={openWhatsNew} aria-label="What's new" title="What's new">
+      <Sparkles size={14} class={hasUnseenChanges() ? 'text-accent' : ''} />
+      {#if !isSidebarCollapsed()}<span>v{getAppVersion() || '…'}</span>{#if hasUnseenChanges()}<span class="focus-unread-dot"></span>{/if}{/if}
+    </button>
   </div>
-
-  <!-- Selection Controls Row (only for shows/movies tabs, hidden when collapsed) -->
-  {#if (activeTab === "shows" || activeTab === "movies") && !isSidebarCollapsed()}
-    <div class="flex items-center justify-end gap-2 px-3 py-2 border-b border-border bg-surface/50">
-      {#if bulkMode}
-        <button
-          type="button"
-          onclick={() => { bulkMode = false; selectedItems = new Set(); }}
-          class="text-xs text-text-muted hover:text-text"
-        >
-          Cancel
-        </button>
-        {#if selectedItems.size > 0}
-          <button
-            type="button"
-            onclick={handleBulkRemove}
-            class="text-xs text-red-400 hover:text-red-300"
-          >
-            Remove ({selectedItems.size})
-          </button>
-        {/if}
-      {:else}
-        <button
-          type="button"
-          onclick={() => bulkMode = true}
-          class="text-xs text-accent hover:underline"
-        >
-          Select
-        </button>
-      {/if}
-    </div>
-  {/if}
-
-  <!-- Content Area (hidden when collapsed) -->
-  <div class="flex-1 overflow-auto p-3 {isSidebarCollapsed() ? 'hidden' : ''}">
-    <!-- TV Shows Tab -->
-    {#if activeTab === "shows"}
-      {#if isShowsLoading()}
-        <div class="space-y-2 py-2">
-          {#each Array(5) as _}
-            <div class="flex items-center gap-3 px-3 py-2">
-              {#if !theme.hidePosters}
-                <SkeletonLoader width="2rem" height="3rem" />
-              {/if}
-              <SkeletonLoader width="60%" height="1rem" />
-            </div>
-          {/each}
-        </div>
-      {:else if getTrackedShows().length === 0}
-        <EmptyState
-          icon={Tv}
-          title="No shows tracked"
-          message="Start tracking your favorite TV shows to see them here."
-          action={{ label: "Add Show", onclick: openSearchModal }}
-        />
-      {:else}
-        <ul class="space-y-1">
-          {#each getTrackedShows() as show}
-            {@const isSelected = selectedItems.has(show.id)}
-            <li>
-              {#if bulkMode}
-                <button
-                  type="button"
-                  onclick={() => toggleItemSelection(show.id)}
-                  class="group w-full flex items-center gap-3 {isCompactList ? 'px-2 py-1' : 'px-3 py-2'} rounded-lg hover:bg-surface-hover transition-colors text-left"
-                >
-                  <span
-                    class="w-5 h-5 rounded border flex-shrink-0 flex items-center justify-center
-                      {isSelected ? 'bg-accent border-accent' : 'border-border'}"
-                  >
-                    {#if isSelected}
-                      <Check class="w-3 h-3 text-white" />
-                    {/if}
-                  </span>
-                  {#if !theme.hidePosters}
-                    {#if show.poster_url}
-                      <img src={show.poster_url} alt="" class="w-8 h-12 rounded object-cover" loading="lazy" decoding="async" />
-                    {:else}
-                      <div class="w-8 h-12 rounded bg-border flex items-center justify-center">
-                        <Tv class="w-4 h-4 text-text-muted" />
-                      </div>
-                    {/if}
-                  {/if}
-                  <span class="flex-1 text-sm truncate">{show.name}</span>
-                </button>
-              {:else}
-                <div
-                  role="group"
-                  class="group w-full flex items-center {isCompactList ? 'gap-2 px-2 py-1' : 'gap-3 px-3 py-2'} rounded-lg hover:bg-surface-hover transition-colors"
-                >
-                  <button
-                    type="button"
-                    class="flex-1 min-w-0 flex items-center {isCompactList ? 'gap-2' : 'gap-3'} text-left"
-                    onclick={() => openShowDetail(show.id)}
-                  >
-                    {#if !theme.hidePosters}
-                      {#if show.poster_url}
-                        <img src={show.poster_url} alt="" class="w-8 h-12 rounded object-cover" loading="lazy" decoding="async" />
-                      {:else}
-                        <div class="w-8 h-12 rounded bg-border flex items-center justify-center">
-                          <Tv class="w-4 h-4 text-text-muted" />
-                        </div>
-                      {/if}
-                    {/if}
-                    <div class="flex-1 flex items-center gap-2 min-w-0">
-                      {#if show.color}
-                        <div
-                          class="w-3 h-3 rounded-full flex-shrink-0"
-                          style="background-color: {show.color};"
-                          title="Show color"
-                        ></div>
-                      {/if}
-                      <span class="text-sm truncate">{show.name}</span>
-                    </div>
-                  </button>
-                  <div class="flex items-center gap-1 flex-shrink-0">
-                    <button
-                      type="button"
-                      onclick={(e) => handleArchiveShow(e, show.id)}
-                      class="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-accent/20 text-text-muted hover:text-accent transition-all"
-                      aria-label="Archive show"
-                      title="Archive show"
-                    >
-                      <Archive class="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onclick={(e) => { e.stopPropagation(); handleRemoveShow(e, show.id); }}
-                      class="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-red-500/20 text-red-400 transition-all"
-                      aria-label="Remove show"
-                    >
-                      <Trash2 class="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              {/if}
-            </li>
-          {/each}
-        </ul>
-      {/if}
-    {/if}
-
-    <!-- Movies Tab -->
-    {#if activeTab === "movies"}
-      {#if isMoviesLoading()}
-        <div class="space-y-2 py-2">
-          {#each Array(5) as _}
-            <div class="flex items-center gap-3 px-3 py-2">
-              {#if !theme.hidePosters}
-                <SkeletonLoader width="2rem" height="3rem" />
-              {/if}
-              <SkeletonLoader width="60%" height="1rem" />
-            </div>
-          {/each}
-        </div>
-      {:else if getTrackedMovies().length === 0}
-        <EmptyState
-          icon={Film}
-          title="No movies tracked"
-          message="Start tracking movies you want to watch."
-          action={{ label: "Add Movie", onclick: openMovieSearchModal }}
-        />
-      {:else}
-        <ul class="space-y-1">
-          {#each getTrackedMovies() as movie}
-            {@const isSelected = selectedItems.has(movie.id)}
-            <li>
-              {#if bulkMode}
-                <button
-                  type="button"
-                  onclick={() => toggleItemSelection(movie.id)}
-                  class="group w-full flex items-center gap-3 {isCompactList ? 'px-2 py-1' : 'px-3 py-2'} rounded-lg hover:bg-surface-hover transition-colors text-left"
-                >
-                  <span
-                    class="w-5 h-5 rounded border flex-shrink-0 flex items-center justify-center
-                      {isSelected ? 'bg-accent border-accent' : 'border-border'}"
-                  >
-                    {#if isSelected}
-                      <Check class="w-3 h-3 text-white" />
-                    {/if}
-                  </span>
-                  {#if !theme.hidePosters}
-                    {#if movie.poster_url}
-                      <img src={movie.poster_url} alt="" class="w-8 h-12 rounded object-cover" loading="lazy" decoding="async" />
-                    {:else}
-                      <div class="w-8 h-12 rounded bg-border flex items-center justify-center">
-                        <Film class="w-4 h-4 text-text-muted" />
-                      </div>
-                    {/if}
-                  {/if}
-                  <span class="flex-1 text-sm truncate">{movie.title}</span>
-                </button>
-              {:else}
-                <div
-                  role="group"
-                  class="group w-full flex items-center {isCompactList ? 'gap-2 px-2 py-1' : 'gap-3 px-3 py-2'} rounded-lg hover:bg-surface-hover transition-colors"
-                >
-                  <button
-                    type="button"
-                    class="flex-1 min-w-0 flex items-center {isCompactList ? 'gap-2' : 'gap-3'} text-left"
-                    onclick={() => openMovieDetail(movie.id)}
-                  >
-                    {#if !theme.hidePosters}
-                      {#if movie.poster_url}
-                        <img src={movie.poster_url} alt="" class="w-8 h-12 rounded object-cover" loading="lazy" decoding="async" />
-                      {:else}
-                        <div class="w-8 h-12 rounded bg-border flex items-center justify-center">
-                          <Film class="w-4 h-4 text-text-muted" />
-                        </div>
-                      {/if}
-                    {/if}
-                    <div class="flex-1 flex items-center gap-2 min-w-0">
-                      {#if movie.color}
-                        <div
-                          class="w-3 h-3 rounded-full flex-shrink-0"
-                          style="background-color: {movie.color};"
-                          title="Movie color"
-                        ></div>
-                      {/if}
-                      <span class="text-sm truncate">{movie.title}</span>
-                    </div>
-                  </button>
-                  <div class="flex items-center gap-1 flex-shrink-0">
-                    {#if movie.scheduled_date}
-                      <button
-                        type="button"
-                        onclick={(e) => handleUnscheduleMovie(e, movie.id)}
-                        class="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-orange-500/20 text-orange-400 transition-all"
-                        aria-label="Remove from schedule"
-                        title="Remove from schedule"
-                      >
-                        <CalendarX class="w-4 h-4" />
-                      </button>
-                    {/if}
-                    <button
-                      type="button"
-                      onclick={(e) => handleArchiveMovie(e, movie.id)}
-                      class="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-accent/20 text-text-muted hover:text-accent transition-all"
-                      aria-label="Archive movie"
-                      title="Archive movie"
-                    >
-                      <Archive class="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onclick={(e) => { e.stopPropagation(); handleRemoveMovie(e, movie.id); }}
-                      class="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-red-500/20 text-red-400 transition-all"
-                      aria-label="Remove movie"
-                    >
-                      <Trash2 class="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              {/if}
-            </li>
-          {/each}
-        </ul>
-      {/if}
-    {/if}
-
-    <!-- Racing Tab -->
-    {#if activeTab === "racing"}
-      {#if getEnabledSeries().length === 0}
-        <EmptyState
-          icon={Flag}
-          title="No series enabled"
-          message="Enable racing series to see them on the calendar."
-          action={{ label: "Configure", onclick: () => openSettings('racing') }}
-        />
-      {:else}
-        <ul class="space-y-1">
-          {#each getEnabledSeries() as series}
-            <li>
-              <div class="group w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-hover transition-colors">
-                <span
-                  class="w-3 h-3 rounded-full flex-shrink-0"
-                  style="background-color: {getSeriesColor(series)};"
-                ></span>
-                <span class="flex-1 text-sm truncate">{series.name}</span>
-              </div>
-            </li>
-          {/each}
-        </ul>
-      {/if}
-    {/if}
-
-  </div>
-
-  <!-- Footer -->
-  <div class="p-3 border-t border-border {isSidebarCollapsed() ? 'px-2' : ''}">
-    {#if activeTab === "shows" || activeTab === "movies"}
-      <button
-        type="button"
-        onclick={handleAddClick}
-        class="w-full flex items-center justify-center gap-2 {isSidebarCollapsed() ? 'p-2' : 'px-4 py-2.5'} bg-accent hover:bg-accent-hover text-white rounded-lg transition-colors font-medium"
-        title={activeTab === "shows" ? "Add Show" : "Add Movie"}
-      >
-        <Plus class="w-4 h-4" />
-        {#if !isSidebarCollapsed()}
-          {activeTab === "shows" ? "Add Show" : "Add Movie"}
-        {/if}
-      </button>
-    {/if}
-    {#if activeTab === "racing"}
-      <div class="flex gap-2 mb-2">
-        <button
-          type="button"
-          onclick={() => openSettings('racing')}
-          class="flex-1 flex items-center justify-center gap-2 {isSidebarCollapsed() ? 'p-2' : 'px-4 py-2.5'} bg-accent hover:bg-accent-hover text-white rounded-lg transition-colors font-medium text-sm"
-          title="Configure Racing"
-        >
-          <Settings class="w-4 h-4" />
-          {#if !isSidebarCollapsed()}
-            Configure
-          {/if}
-        </button>
-        <button
-          type="button"
-          onclick={() => refreshRacingData()}
-          disabled={isRacingRefreshing()}
-          class="{isSidebarCollapsed() ? 'p-2' : 'px-3 py-2.5'} bg-surface-hover hover:bg-border text-text rounded-lg transition-colors disabled:opacity-50"
-          title="Refresh Data"
-        >
-          <RefreshCw class="w-4 h-4 {isRacingRefreshing() ? 'animate-spin' : ''}" />
-        </button>
-      </div>
-    {/if}
-    <div class="flex {isSidebarCollapsed() ? 'flex-col' : ''} gap-2 {(activeTab === 'shows' || activeTab === 'movies') ? 'mt-2' : ''}">
-      <button
-        type="button"
-        onclick={openStatisticsModal}
-        class="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-text-muted hover:text-text hover:bg-surface-hover rounded transition-colors"
-        aria-label="Statistics"
-        title="Statistics"
-      >
-        <BarChart3 class="w-3 h-3" />
-        {#if !isSidebarCollapsed()}
-          Stats
-        {/if}
-      </button>
-      <button
-        type="button"
-        onclick={openDataManagement}
-        class="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-text-muted hover:text-text hover:bg-surface-hover rounded transition-colors"
-        aria-label="Data Management"
-        title="Data Management"
-      >
-        <Database class="w-3 h-3" />
-        {#if !isSidebarCollapsed()}
-          Data
-        {/if}
-      </button>
-      <button
-        type="button"
-        onclick={() => openSettings()}
-        class="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-text-muted hover:text-text hover:bg-surface-hover rounded transition-colors"
-        aria-label="Settings"
-        title="Settings"
-      >
-        <Settings class="w-3 h-3" />
-        {#if !isSidebarCollapsed()}
-          Settings
-        {/if}
-      </button>
-    </div>
-    {#if !isSidebarCollapsed()}
-      <button
-        type="button"
-        onclick={triggerUpdateCheck}
-        disabled={isCheckingForUpdates()}
-        class="w-full flex items-center justify-center gap-2 mt-1 px-3 py-1.5 text-xs text-text-muted hover:text-text hover:bg-surface-hover rounded transition-colors disabled:opacity-50"
-      >
-        <RefreshCw class="w-3 h-3 {isCheckingForUpdates() ? 'animate-spin' : ''}" />
-        {isCheckingForUpdates() ? "Checking..." : "Check for Updates"}
-      </button>
-      <button
-        type="button"
-        onclick={openWhatsNew}
-        class="w-full flex items-center justify-center gap-1.5 mt-2 text-xs text-text-muted hover:text-accent transition-colors group"
-        title="What's New"
-      >
-        {#if hasUnseenChanges()}
-          <Sparkles class="w-3 h-3 text-accent" />
-        {/if}
-        <span>v{getAppVersion() || '...'}</span>
-        {#if hasUnseenChanges()}
-          <span class="w-1.5 h-1.5 rounded-full bg-accent"></span>
-        {/if}
-      </button>
-    {/if}
-  </div>
-
-  {#if !isSidebarCollapsed()}
-    <button
-      type="button"
-      class="absolute top-0 right-0 h-full w-1 cursor-col-resize bg-transparent hover:bg-accent/40 transition-colors z-10"
-      aria-label="Resize sidebar"
-      onpointerdown={startResize}
-    ></button>
-  {/if}
+  {#if !isSidebarCollapsed()}<button type="button" class="focus-sidebar-resize" aria-label="Resize navigation" onpointerdown={startResize}></button>{/if}
 </aside>

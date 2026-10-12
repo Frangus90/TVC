@@ -1,59 +1,29 @@
-import { Tv, Clapperboard, Flag, Layers, Trophy } from "lucide-svelte";
+import { CalendarDays, Tv, Clapperboard, Flag, Layers, Trophy, ChartNoAxesCombined, Database, Settings } from "lucide-svelte";
 import type { Component } from "svelte";
 
-/**
- * Single source of truth for the app's top-level navigation. Adding or removing a
- * feature is a one-line edit here — the sidebar tab row, the main-area dispatch in
- * App.svelte, and the Header all derive from this list.
- *
- * - `kind: "calendar"` — main area is the calendar (Month/Week/Agenda) and the tab
- *   has a contextual list panel in the sidebar (Shows/Movies/Archive).
- * - `kind: "standalone"` — main area is `load()`'s component, full-width, no list
- *   panel (Racing/Tiers/Awards).
- */
-export type NavId = "shows" | "movies" | "racing" | "tiers" | "awards";
+export type NavId = "calendar" | "shows" | "movies" | "tiers" | "racing" | "awards" | "statistics" | "data" | "settings";
 
 export interface NavItem {
   id: NavId;
   label: string;
-  // lucide-svelte icon component (its props don't match Svelte's bare Component<{}>).
   icon: any;
-  /** Per-tab identity color, used for the tab icon and active indicator. */
-  color: string;
   kind: "calendar" | "standalone";
-  /** Lazy loader for a standalone tab's main-area component. */
-  load?: () => Promise<{ default: Component }>;
+  load?: () => Promise<{ default: Component<any> }>;
 }
 
+// The sidebar and page dispatcher share the same navigation definition.
 export const navItems: NavItem[] = [
-  { id: "shows", label: "Shows", icon: Tv, color: "#a78bfa", kind: "calendar" },
-  { id: "movies", label: "Movies", icon: Clapperboard, color: "#38bdf8", kind: "calendar" },
-  {
-    id: "racing",
-    label: "Racing",
-    icon: Flag,
-    color: "#f87171",
-    kind: "standalone",
-    load: () => import("../components/racing/RaceCalendar.svelte"),
-  },
-  {
-    id: "tiers",
-    label: "Tiers",
-    icon: Layers,
-    color: "#34d399",
-    kind: "standalone",
-    load: () => import("../components/calendar/TierView.svelte"),
-  },
-  {
-    id: "awards",
-    label: "Awards",
-    icon: Trophy,
-    color: "#fbbf24",
-    kind: "standalone",
-    load: () => import("../components/awards/AwardsView.svelte"),
-  },
+  { id: "calendar", label: "Calendar", icon: CalendarDays, kind: "calendar" },
+  { id: "shows", label: "TV shows", icon: Tv, kind: "standalone", load: () => import("../components/LibraryView.svelte") },
+  { id: "movies", label: "Movies", icon: Clapperboard, kind: "standalone", load: () => import("../components/LibraryView.svelte") },
+  { id: "tiers", label: "Tier lists", icon: Layers, kind: "standalone", load: () => import("../components/calendar/TierView.svelte") },
+  { id: "racing", label: "Racing", icon: Flag, kind: "standalone", load: () => import("../components/racing/RaceCalendar.svelte") },
+  { id: "awards", label: "Awards", icon: Trophy, kind: "standalone", load: () => import("../components/awards/AwardsView.svelte") },
+  { id: "statistics", label: "Statistics", icon: ChartNoAxesCombined, kind: "standalone", load: () => import("../components/StatisticsDashboard.svelte") },
+  { id: "data", label: "Data management", icon: Database, kind: "standalone", load: () => import("../components/DataManagement.svelte") },
+  { id: "settings", label: "Settings", icon: Settings, kind: "standalone", load: () => import("../components/settings/UnifiedSettings.svelte") },
 ];
 
 export function navItemById(id: NavId): NavItem {
-  return navItems.find((n) => n.id === id) ?? navItems[0];
+  return navItems.find((item) => item.id === id) ?? navItems[0];
 }

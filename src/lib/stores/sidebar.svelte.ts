@@ -3,13 +3,10 @@
 import { getDatabase } from "../utils/database";
 import { logger } from "../utils/logger";
 
-export const SIDEBAR_DEFAULT_WIDTH = 256;
+export const SIDEBAR_DEFAULT_WIDTH = 224;
 export const SIDEBAR_MIN_WIDTH = 200;
 export const SIDEBAR_MAX_WIDTH = 500;
 export const SIDEBAR_COLLAPSED_WIDTH = 64;
-// Below this width the 5 labeled nav tabs can't fit on one line; the tab row
-// drops labels and shows icons only (with tooltips).
-export const SIDEBAR_NAV_LABELS_MIN_WIDTH = 340;
 
 let collapsed = $state(false);
 let width = $state(SIDEBAR_DEFAULT_WIDTH);
@@ -80,7 +77,7 @@ export async function saveSidebarWidth(): Promise<void> {
 // can't drift apart.
 import type { NavId } from "../config/navItems";
 export type SidebarTab = NavId;
-let activeTab = $state<SidebarTab>("shows");
+let activeTab = $state<SidebarTab>("calendar");
 
 export function getSidebarTab() {
   return activeTab;

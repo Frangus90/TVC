@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { fade, scale } from "svelte/transition";
   import { X, Database, Copy, RefreshCw, AlertTriangle, Check, CloudDownload, Download, Upload, ChevronDown, HelpCircle } from "lucide-svelte";
   import SyncTab from "./data/SyncTab.svelte";
@@ -33,6 +34,12 @@
   import { openConfirmDialog } from "../stores/confirmDialog.svelte";
   import { simulateDummyUpdate } from "../stores/updates.svelte";
   import { parseBackup, describeBackup, type BackupData } from "../utils/backup";
+
+  let { embedded = false }: { embedded?: boolean } = $props();
+
+  onMount(() => {
+    if (embedded) setActiveTab(getActiveTab());
+  });
 
   let cleanupMessage = $state<string | null>(null);
   let dummyUpdateVersion = $state("0.8.0");
@@ -72,7 +79,7 @@
   }
 
   $effect(() => {
-    if (isModalOpen()) {
+    if (embedded || isModalOpen()) {
       loadUnmigratedShows();
     }
   });
@@ -209,7 +216,7 @@
   }
 </script>
 
-{#if isModalOpen()}
+{#if embedded || isModalOpen()}
   {@const activeTab = getActiveTab()}
   {@const loading = isLoading()}
   {@const error = getError()}
@@ -219,41 +226,48 @@
   {@const unairedEpisodesList = getUnairedEpisodes()}
   {@const unmappedCount = getUnmigratedShows().length}
 
-  <!-- Backdrop -->
-  <button
-    type="button"
-    transition:fade={{ duration: 150 }}
-    class="fixed inset-0 bg-black/60 z-50"
-    onclick={closeDataManagement}
-    aria-label="Close modal"
-  ></button>
+  {#if !embedded}
+    <!-- Backdrop -->
+    <button
+      type="button"
+      transition:fade={{ duration: 150 }}
+      class="fixed inset-0 bg-black/60 z-50"
+      onclick={closeDataManagement}
+      aria-label="Close modal"
+    ></button>
+  {/if}
 
-  <!-- Modal -->
+  <!-- Modal or full page -->
   <div
-    transition:scale={{ duration: 200, start: 0.95, opacity: 0 }}
-    class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-surface rounded-xl border border-border shadow-2xl w-[800px] max-w-[95vw] max-h-[85vh] flex flex-col"
+    transition:scale={{ duration: embedded ? 0 : 200, start: 0.95, opacity: 0 }}
+    class={embedded ? "focus-page focus-data-page" : "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-surface rounded-xl border border-border shadow-2xl w-[800px] max-w-[95vw] max-h-[85vh] flex flex-col"}
   >
-    <!-- Header -->
-    <div class="flex items-center justify-between p-4 border-b border-border">
-      <div class="flex items-center gap-3">
-        <Database class="w-5 h-5 text-accent" />
-        <h2 class="text-lg font-semibold">Data Management</h2>
+    {#if embedded}
+      <header class="focus-page-heading">
+        <div>
+          <p class="focus-eyebrow">Your library</p>
+          <h1>Data management</h1>
+          <p class="text-text-muted">Sync your titles, protect your library, and keep things organised.</p>
+        </div>
+      </header>
+    {:else}
+      <div class="flex items-center justify-between p-4 border-b border-border">
+        <div class="flex items-center gap-3">
+          <Database class="w-5 h-5 text-accent" />
+          <h2 class="text-lg font-semibold">Data Management</h2>
+        </div>
+        <button type="button" onclick={closeDataManagement} class="p-2 rounded-lg hover:bg-surface-hover transition-colors" aria-label="Close">
+          <X class="w-5 h-5 text-text-muted" />
+        </button>
       </div>
-      <button
-        type="button"
-        onclick={closeDataManagement}
-        class="p-2 rounded-lg hover:bg-surface-hover transition-colors"
-        aria-label="Close"
-      >
-        <X class="w-5 h-5 text-text-muted" />
-      </button>
-    </div>
+    {/if}
 
     <!-- Tabs -->
-    <div class="flex border-b border-border">
+    <nav class={embedded ? "focus-tabs" : "flex border-b border-border overflow-x-auto"} aria-label="Data management sections">
       <button
         type="button"
         onclick={() => setActiveTab("overview")}
+        aria-pressed={activeTab === "overview"}
         class="px-4 py-3 text-sm font-medium transition-colors {activeTab === 'overview'
           ? 'text-accent border-b-2 border-accent'
           : 'text-text-muted hover:text-text'}"
@@ -263,6 +277,7 @@
       <button
         type="button"
         onclick={() => setActiveTab("sync")}
+        aria-pressed={activeTab === "sync"}
         class="px-4 py-3 text-sm font-medium transition-colors {activeTab === 'sync'
           ? 'text-accent border-b-2 border-accent'
           : 'text-text-muted hover:text-text'}"
@@ -272,6 +287,7 @@
       <button
         type="button"
         onclick={() => setActiveTab("duplicates")}
+        aria-pressed={activeTab === "duplicates"}
         class="px-4 py-3 text-sm font-medium transition-colors {activeTab === 'duplicates'
           ? 'text-accent border-b-2 border-accent'
           : 'text-text-muted hover:text-text'}"
@@ -281,6 +297,7 @@
       <button
         type="button"
         onclick={() => setActiveTab("cleanup")}
+        aria-pressed={activeTab === "cleanup"}
         class="px-4 py-3 text-sm font-medium transition-colors {activeTab === 'cleanup'
           ? 'text-accent border-b-2 border-accent'
           : 'text-text-muted hover:text-text'}"
@@ -290,18 +307,21 @@
       <button
         type="button"
         onclick={() => setActiveTab("archive")}
+        aria-pressed={activeTab === "archive"}
         class="px-4 py-3 text-sm font-medium transition-colors {activeTab === 'archive'
           ? 'text-accent border-b-2 border-accent'
           : 'text-text-muted hover:text-text'}"
       >
         Archive
       </button>
-    </div>
+    </nav>
 
     <!-- Content -->
-    <div class="flex-1 overflow-auto p-4">
+    <div class={embedded ? "focus-data-content" : "flex-1 overflow-auto p-4"}>
       {#if activeTab === "sync"}
         <SyncTab />
+      {:else if activeTab === "archive"}
+        <ArchiveManager />
       {:else if loading}
         <div class="flex items-center justify-center py-12">
           <RefreshCw class="w-6 h-6 text-accent animate-spin" />
@@ -315,23 +335,23 @@
         <!-- Overview Tab -->
         {#if stats}
           <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div class="bg-background rounded-lg p-4">
+            <div class="focus-panel bg-surface rounded-xl border border-border p-5">
               <p class="text-2xl font-bold text-text">{stats.total_shows}</p>
               <p class="text-sm text-text-muted">Shows</p>
             </div>
-            <div class="bg-background rounded-lg p-4">
+            <div class="focus-panel bg-surface rounded-xl border border-border p-5">
               <p class="text-2xl font-bold text-text">{stats.total_episodes}</p>
               <p class="text-sm text-text-muted">Episodes</p>
             </div>
-            <div class="bg-background rounded-lg p-4">
+            <div class="focus-panel bg-surface rounded-xl border border-border p-5">
               <p class="text-2xl font-bold text-text">{stats.total_movies}</p>
               <p class="text-sm text-text-muted">Movies</p>
             </div>
-            <div class="bg-background rounded-lg p-4">
+            <div class="focus-panel bg-surface rounded-xl border border-border p-5">
               <p class="text-2xl font-bold text-text">{formatBytes(stats.database_size_bytes)}</p>
               <p class="text-sm text-text-muted">Database Size</p>
             </div>
-            <div class="bg-background rounded-lg p-4">
+            <div class="focus-panel bg-surface rounded-xl border border-border p-5">
               <p class="text-2xl font-bold {stats.orphaned_episodes > 0 ? 'text-yellow-400' : 'text-text'}">
                 {stats.orphaned_episodes}
               </p>
@@ -386,7 +406,7 @@
           {/if}
 
           <!-- Export / Import Section -->
-          <div class="mt-6 p-4 bg-background rounded-lg border border-border">
+          <div class="focus-panel mt-6 p-5 bg-surface rounded-xl border border-border">
             <h3 class="text-sm font-medium text-text mb-3">Backup & Restore</h3>
             <p class="text-xs text-text-muted mb-4">
               Back up your library, watch dates, schedules, ratings, notes, tiers, award predictions,
@@ -429,7 +449,7 @@
           <!-- TEMP: Set to false to test production mode (hiding feature) -->
           {@const showDummyUpdate = import.meta.env.DEV && true}
           {#if showDummyUpdate}
-            <div class="mt-6 p-4 bg-background rounded-lg border border-border border-dashed">
+            <div class="focus-panel mt-6 p-5 bg-surface rounded-xl border border-border border-dashed">
               <h3 class="text-sm font-medium text-text mb-3">Development: Test Update Modal</h3>
               <p class="text-xs text-text-muted mb-4">
                 Simulate an update notification to test the update modal UI without requiring a real GitHub release.
@@ -466,7 +486,7 @@
               </div>
             </div>
 
-            <div class="mt-6 p-4 bg-background rounded-lg border border-border border-dashed">
+            <div class="focus-panel mt-6 p-5 bg-surface rounded-xl border border-border border-dashed">
               <h3 class="text-sm font-medium text-text mb-3">Development: Force TVDB&rarr;TMDB Migration</h3>
               <p class="text-xs text-text-muted mb-4">
                 Resets every migrated show back to <code>unmigrated=1</code> and seeds N
@@ -523,12 +543,12 @@
               Found {duplicates.length} potential duplicate{duplicates.length !== 1 ? "s" : ""}
             </p>
             {#each duplicates as pair}
-              <div class="bg-background rounded-lg p-4">
+              <div class="focus-panel bg-surface rounded-xl border border-border p-5">
                 <div class="flex items-center gap-2 mb-3">
                   <Copy class="w-4 h-4 text-yellow-400" />
                   <span class="text-sm text-yellow-400">{pair.similarity_reason}</span>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <!-- Show 1 -->
                   <div class="border border-border rounded-lg p-3">
                     <div class="flex gap-3">
@@ -585,8 +605,8 @@
         {#if stats}
           <div class="space-y-4">
             <!-- Orphaned Episodes -->
-            <div class="bg-background rounded-lg p-4">
-              <div class="flex items-center justify-between">
+            <div class="focus-panel bg-surface rounded-xl border border-border p-5">
+              <div class="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <h3 class="font-medium">Orphaned Episodes</h3>
                   <p class="text-sm text-text-muted">Episodes whose show has been deleted</p>
@@ -638,8 +658,8 @@
             </div>
 
             <!-- Unaired Episodes -->
-            <div class="bg-background rounded-lg p-4">
-              <div class="flex items-center justify-between">
+            <div class="focus-panel bg-surface rounded-xl border border-border p-5">
+              <div class="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <h3 class="font-medium">Unaired & Unscheduled Episodes</h3>
                   <p class="text-sm text-text-muted">Episodes with no air date and not scheduled</p>
@@ -691,11 +711,11 @@
             </div>
 
             <!-- Optimize -->
-            <div class="bg-background rounded-lg p-4">
-              <div class="flex items-center justify-between">
+            <div class="focus-panel bg-surface rounded-xl border border-border p-5">
+              <div class="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <h3 class="font-medium">Optimize Database</h3>
-                  <p class="text-sm text-text-muted">VACUUM and rebuild indexes for better performance</p>
+                  <p class="text-sm text-text-muted">Compact stored data and keep the app running smoothly</p>
                 </div>
                 <button
                   type="button"
@@ -708,8 +728,8 @@
             </div>
 
             <!-- Full Cleanup -->
-            <div class="bg-background rounded-lg p-4 border border-red-500/30">
-              <div class="flex items-center justify-between">
+            <div class="focus-panel bg-surface rounded-xl p-5 border border-red-500/30">
+              <div class="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <h3 class="font-medium text-red-400">Full Cleanup</h3>
                   <p class="text-sm text-text-muted">Remove all orphaned data and optimize database</p>
@@ -725,14 +745,12 @@
             </div>
           </div>
         {/if}
-      {:else if activeTab === "archive"}
-        <ArchiveManager />
       {/if}
     </div>
 
     <!-- Footer message -->
     {#if cleanupMessage}
-      <div class="p-3 border-t border-border bg-available/10 text-available text-sm text-center">
+      <div role="status" class="mt-4 p-3 rounded-lg border border-available/30 bg-available/10 text-available text-sm">
         {cleanupMessage}
       </div>
     {/if}
@@ -740,3 +758,8 @@
 
   <UnmigratedShowsResolver open={resolverOpen} onClose={() => (resolverOpen = false)} />
 {/if}
+
+<style>
+  .focus-data-page { max-width: 1280px; }
+  .focus-data-content { min-width: 0; }
+</style>

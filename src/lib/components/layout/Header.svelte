@@ -1,168 +1,73 @@
 <script lang="ts">
-  import { ChevronLeft, ChevronRight, Power, Bell } from "lucide-svelte";
-  import { startOfWeek, endOfWeek } from "date-fns";
+  import { Search, TvMinimal, Bell, Settings, Power, X, Tv, Film } from "lucide-svelte";
   import { invoke } from "@tauri-apps/api/core";
-  import {
-    getCurrentDate,
-    getViewMode,
-    setViewMode,
-    getCalendarFilter,
-    setCalendarFilter,
-    previousPeriod,
-    nextPeriod,
-    goToToday,
-  } from "../../stores/calendar.svelte";
-  import { getSidebarTab } from "../../stores/sidebar.svelte";
-  import { navItemById } from "../../config/navItems";
   import { openConfirmDialog } from "../../stores/confirmDialog.svelte";
-  import {
-    getUnreadCount,
-    isNotificationCenterOpen,
-    toggleNotificationCenter,
-  } from "../../stores/notifications.svelte";
+  import { getUnreadCount, isNotificationCenterOpen, toggleNotificationCenter } from "../../stores/notifications.svelte";
   import NotificationCenter from "../notifications/NotificationCenter.svelte";
-  import { logger } from "../../utils/logger";
-  import { formatWeekRange, formatMonthYearLong } from "../../utils/dateFormat";
+  import { setSidebarTab } from "../../stores/sidebar.svelte";
+  import { getTrackedShows, getArchivedShows } from "../../stores/shows.svelte";
+  import { getTrackedMovies, getArchivedMovies, openMovieDetail } from "../../stores/movies.svelte";
+  import { getTierListShows, getTierListMovies } from "../../stores/tiers.svelte";
+  import { openShowDetail } from "../../stores/showDetail.svelte";
+  import { showError } from "../../stores/toast.svelte";
+  import { modalFocus } from "../../utils/modalFocus";
+  import { getThemeSettings } from "../../stores/theme.svelte";
 
-  async function handleExit() {
-    const confirmed = await openConfirmDialog({
-      title: "Exit Application",
-      message: "Are you sure you want to fully exit TVC? The app will close completely and will not minimize to the system tray.",
-      type: "warning",
-      confirmLabel: "Exit",
-      cancelLabel: "Cancel",
-    });
-
-    if (confirmed) {
-      try {
-        await invoke("exit_app");
-      } catch (error) {
-        logger.error("Failed to exit app", error);
-      }
-    }
+  let searchOpen = $state(false);
+  let query = $state("");
+  const results = $derived.by(() => {
+    const archivedShows = new Set(getArchivedShows().map(show => show.id));
+    const archivedMovies = new Set(getArchivedMovies().map(movie => movie.id));
+    const shows = new Map([...getTierListShows(), ...getTrackedShows()].map(show => [show.id, { id: show.id, title: show.name, poster: show.poster_url, type: "shows" as const }]));
+    const movies = new Map([...getTierListMovies(), ...getTrackedMovies()].map(movie => [movie.id, { id: movie.id, title: movie.title, poster: movie.poster_url, type: "movies" as const }]));
+    const text = query.trim().toLowerCase();
+    if (!text) return [];
+    return [...shows.values(), ...movies.values()].filter(item => !(item.type === "shows" ? archivedShows : archivedMovies).has(item.id) && item.title.toLowerCase().includes(text)).sort((a, b) => a.title.localeCompare(b.title));
+  });
+  function openSearch() { query = ""; searchOpen = true; }
+  function handleKeydown(event: KeyboardEvent) {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { event.preventDefault(); openSearch(); }
   }
-
-  const tab = $derived(getSidebarTab());
-  const item = $derived(navItemById(tab));
-  const isRacing = $derived(tab === "racing");
-  const isCalendar = $derived(item.kind === "calendar");
-
-  function getHeaderTitle(): string {
-    const date = getCurrentDate();
-    const mode = getViewMode();
-
-    // Racing is standalone but uses the calendar date-nav, so it keeps a date title.
-    if (isRacing) return formatMonthYearLong(date);
-    if (item.kind === "standalone") return item.label;
-
-    if (mode === "week") {
-      const weekStart = startOfWeek(date, { weekStartsOn: 1 });
-      const weekEnd = endOfWeek(date, { weekStartsOn: 1 });
-      return formatWeekRange(weekStart, weekEnd);
-    } else if (mode === "agenda") {
-      return "Upcoming Episodes";
-    }
-    return formatMonthYearLong(date);
+  async function exitApp() {
+    if (!await openConfirmDialog({ title: "Exit TVC", message: "Close TVC completely? Automatic sync and reminders will stop until you reopen the app.", type: "warning", confirmLabel: "Exit", cancelLabel: "Cancel" })) return;
+    try { await invoke("exit_app"); } catch (error) { showError(`Could not exit TVC: ${error}`); }
+  }
+  async function openResult(item: { id: number; type: "shows" | "movies" }) {
+    searchOpen = false;
+    if (item.type === "shows") await openShowDetail(item.id); else await openMovieDetail(item.id);
   }
 </script>
 
-<header class="h-14 bg-surface border-b border-border flex items-center justify-between px-4">
-  <div class="flex items-center gap-2">
-    {#if isRacing || (isCalendar && getViewMode() !== "agenda")}
-      <button
-        onclick={previousPeriod}
-        class="p-1.5 rounded-lg hover:bg-surface-hover transition-colors"
-        aria-label="Previous month"
-        title="Previous month"
-      >
-        <ChevronLeft class="w-5 h-5" />
-      </button>
-
-      <button
-        onclick={nextPeriod}
-        class="p-1.5 rounded-lg hover:bg-surface-hover transition-colors"
-        aria-label="Next month"
-        title="Next month"
-      >
-        <ChevronRight class="w-5 h-5" />
-      </button>
-
-      <button
-        onclick={goToToday}
-        class="px-3 py-1.5 text-sm rounded-lg hover:bg-surface-hover transition-colors"
-        aria-label="Go to today"
-        title="Go to today"
-      >
-        Today
-      </button>
-    {:else}
-      <div class="w-[140px]"></div>
-    {/if}
-  </div>
-
-  <h1 class="text-lg font-semibold">
-    {getHeaderTitle()}
-  </h1>
-
-  <div class="flex items-center gap-2">
-    {#if isCalendar}
-      <div class="flex bg-background rounded-lg p-1">
-        {#each [{ value: "all", label: "All" }, { value: "shows", label: "Shows" }, { value: "movies", label: "Movies" }] as option}
-          <button
-            onclick={() => setCalendarFilter(option.value as "all" | "shows" | "movies")}
-            class="px-3 py-1 text-sm rounded-md transition-colors {getCalendarFilter() === option.value
-              ? 'bg-surface text-text'
-              : 'text-text-muted hover:text-text'}"
-            aria-label="Show {option.label.toLowerCase()}"
-            aria-pressed={getCalendarFilter() === option.value}
-            title="Show {option.label.toLowerCase()}"
-          >
-            {option.label}
-          </button>
-        {/each}
-      </div>
-      <div class="flex bg-background rounded-lg p-1">
-        {#each ["month", "week", "agenda"] as mode}
-          <button
-            onclick={() => setViewMode(mode as "month" | "week" | "agenda")}
-            class="px-3 py-1 text-sm rounded-md transition-colors capitalize {getViewMode() === mode
-              ? 'bg-surface text-text'
-              : 'text-text-muted hover:text-text'}"
-            aria-label="Switch to {mode} view"
-            aria-pressed={getViewMode() === mode}
-            title="Switch to {mode} view"
-          >
-            {mode}
-          </button>
-        {/each}
-      </div>
-    {/if}
+<svelte:window onkeydown={handleKeydown} />
+<header class="focus-topbar">
+  <div class="focus-brand"><TvMinimal size={25} strokeWidth={1.6} /><strong>TVC</strong><span>Your watching, organised.</span></div>
+  <div class="focus-top-actions">
+    <button type="button" class="focus-search-trigger" onclick={openSearch} aria-label="Search library"><Search size={17} /><span>Search library</span><kbd>Ctrl K</kbd></button>
     <div class="relative">
-      <button
-        data-notification-bell
-        onclick={toggleNotificationCenter}
-        class="p-1.5 rounded-lg hover:bg-surface-hover transition-colors text-text-muted hover:text-text relative"
-        aria-label="Notifications"
-        title="Notifications"
-      >
-        <Bell class="w-5 h-5" />
-        {#if getUnreadCount() > 0}
-          <span class="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-            {getUnreadCount() > 9 ? "9+" : getUnreadCount()}
-          </span>
-        {/if}
-      </button>
-      {#if isNotificationCenterOpen()}
-        <NotificationCenter />
-      {/if}
+      <button type="button" data-notification-bell class="focus-icon-button" onclick={toggleNotificationCenter} aria-label="Notifications" title="Notifications"><Bell size={18} />{#if getUnreadCount() > 0}<span class="focus-unread-dot"></span>{/if}</button>
+      {#if isNotificationCenterOpen()}<NotificationCenter />{/if}
     </div>
-    <button
-      onclick={handleExit}
-      class="p-1.5 rounded-lg hover:bg-surface-hover transition-colors text-text-muted hover:text-red-400"
-      aria-label="Exit application"
-      title="Exit application (fully close, not minimize to tray)"
-    >
-      <Power class="w-5 h-5" />
-    </button>
+    <button type="button" class="focus-icon-button" onclick={() => setSidebarTab('settings')} aria-label="Settings" title="Settings"><Settings size={18} /></button>
+    <button type="button" class="focus-icon-button" onclick={exitApp} aria-label="Exit application" title="Exit application"><Power size={18} /></button>
   </div>
 </header>
+{#if searchOpen}
+  <div class="focus-search-backdrop" role="presentation" onclick={(event) => { if (event.target === event.currentTarget) searchOpen = false; }}>
+    <div class="focus-search-dialog focus-dialog" role="dialog" aria-modal="true" aria-labelledby="library-search-title" use:modalFocus={() => searchOpen = false}>
+      <div class="flex justify-between items-center gap-4 mb-5"><h2 id="library-search-title" class="text-xl font-semibold">Search your library</h2><button type="button" class="focus-icon-button" onclick={() => searchOpen = false} aria-label="Close search"><X size={19} /></button></div>
+      <label class="focus-search-field"><Search size={18} /><input type="search" data-modal-initial bind:value={query} placeholder="Find a saved show or movie" aria-label="Search saved titles" /></label>
+      <div class="focus-search-results" aria-live="polite">
+        {#if !query.trim()}<p class="text-text-muted py-6 text-sm">Search your tracked and tier-list titles.</p>
+        {:else if !results.length}<p class="text-text-muted py-6 text-sm">No saved titles match “{query}”.</p>
+        {:else}
+          {#each results as item (`${item.type}-${item.id}`)}
+            <button type="button" class="focus-search-result" onclick={() => openResult(item)}>
+              {#if item.poster && !getThemeSettings().hidePosters}<img src={item.poster} alt="" loading="lazy" decoding="async" />{:else if item.type === 'shows'}<Tv size={20} />{:else}<Film size={20} />{/if}
+              <span><strong>{item.title}</strong><small>{item.type === 'shows' ? 'TV show' : 'Movie'}</small></span>
+            </button>
+          {/each}
+        {/if}
+      </div>
+    </div>
+  </div>
+{/if}

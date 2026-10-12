@@ -62,10 +62,10 @@
   });
 </script>
 
-<div class="space-y-4">
-  <div class="flex items-start justify-between gap-4">
+<div class="focus-sync-content space-y-5">
+  <div class="focus-toolbar flex flex-wrap items-start justify-between gap-4">
     <div>
-      <h3 class="font-semibold text-text">TMDB sync</h3>
+      <h2 class="text-lg font-semibold text-text">TMDB sync</h2>
       <p class="text-sm text-text-muted mt-1">Refresh titles, artwork, release dates, and TV episodes.</p>
     </div>
     <button type="button" onclick={() => sync()} disabled={busy || saving !== null || !libraries.length || !!loadError}
@@ -94,15 +94,16 @@
     </div>
   {/if}
 
+  <div class="focus-sync-grid">
   {#each libraries as library (library.kind)}
     {@const report = library.report}
     {@const completed = report ? report.succeeded + report.skipped + report.failures.length : 0}
-    <section class="bg-background rounded-lg border border-border p-4 space-y-4" aria-label={library.kind === 'shows' ? 'TV show sync' : 'Movie sync'}>
+    <section class="focus-panel bg-surface rounded-xl border border-border p-5 space-y-4" aria-label={library.kind === 'shows' ? 'TV show sync' : 'Movie sync'}>
       <div class="flex flex-wrap items-center justify-between gap-3">
-        <h4 class="font-medium flex items-center gap-2">
+        <h3 class="font-semibold flex items-center gap-2">
           {#if library.kind === "shows"}<Tv class="w-5 h-5 text-accent" />TV shows
           {:else}<Film class="w-5 h-5 text-accent" />Movies{/if}
-        </h4>
+        </h3>
         <button type="button" onclick={() => sync(library.kind)} disabled={busy || !!loadError}
           class="px-3 py-1.5 text-sm bg-accent/20 hover:bg-accent/30 text-accent rounded disabled:opacity-50">
           {library.running ? "Syncing…" : "Sync now"}
@@ -175,6 +176,7 @@
       {/if}
     </section>
   {/each}
+  </div>
 
   <p class="text-xs text-text-muted">
     Includes archived and tier-list titles. Manual entries and unresolved TVDB matches are skipped.
@@ -182,3 +184,9 @@
     Every day means 24 hours, every week means 7 days, and every month means one calendar month after the last full attempt.
   </p>
 </div>
+
+<style>
+  .focus-sync-content { container-type: inline-size; }
+  .focus-sync-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }
+  @container (max-width: 740px) { .focus-sync-grid { grid-template-columns: 1fr; } }
+</style>
