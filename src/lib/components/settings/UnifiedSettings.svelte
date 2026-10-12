@@ -55,26 +55,8 @@
     aria-modal={embedded ? undefined : true}
     aria-labelledby="settings-modal-title"
   >
-    {#if embedded}
-      <header class="focus-page-heading">
-        <div>
-          <p class="focus-eyebrow">Make it yours</p>
-          <h1 id="settings-modal-title">Settings</h1>
-          <p class="text-text-muted">Adjust TVC's appearance, reminders, and connected services.</p>
-        </div>
-      </header>
-    {:else}
-      <div class="flex items-center justify-between px-6 py-4 border-b border-border">
-        <h2 id="settings-modal-title" class="text-xl font-semibold">Settings</h2>
-        <button onclick={closeSettings} class="p-2 rounded-lg hover:bg-surface-hover transition-colors" aria-label="Close">
-          <X class="w-5 h-5 text-text-muted" />
-        </button>
-      </div>
-    {/if}
-
-    <!-- Body: Tab Nav + Content -->
-    <div class={embedded ? "focus-settings-body" : "flex flex-1 overflow-hidden"}>
-      <!-- Left Tab Nav -->
+    {#snippet sectionTabs()}
+      <!-- Section tabs -->
       <nav class={embedded ? "focus-tabs" : "w-[180px] border-r border-border py-2 flex-shrink-0"} aria-label="Settings sections">
         {#each tabs as tab}
           {@const isActive = getActiveSettingsTab() === tab.id}
@@ -87,10 +69,31 @@
             aria-pressed={isActive}
           >
             <tab.icon class="w-4 h-4 flex-shrink-0" />
-            <span class="truncate">{tab.label}</span>
+            <span class={embedded ? "" : "truncate"}>{tab.label}</span>
           </button>
         {/each}
       </nav>
+    {/snippet}
+
+    {#if embedded}
+      <header class="focus-page-heading focus-page-bar">
+        <h1 id="settings-modal-title">Settings</h1>
+        {@render sectionTabs()}
+      </header>
+    {:else}
+      <div class="flex items-center justify-between px-6 py-4 border-b border-border">
+        <h2 id="settings-modal-title" class="text-xl font-semibold">Settings</h2>
+        <button onclick={closeSettings} class="p-2 rounded-lg hover:bg-surface-hover transition-colors" aria-label="Close">
+          <X class="w-5 h-5 text-text-muted" />
+        </button>
+      </div>
+    {/if}
+
+    <!-- Body: Tab Nav + Content -->
+    <div class={embedded ? "focus-settings-body" : "flex flex-1 overflow-hidden"}>
+      {#if !embedded}
+        {@render sectionTabs()}
+      {/if}
 
       <!-- Right Content Panel -->
       <div class={embedded ? "focus-panel focus-settings-content bg-surface border border-border rounded-xl p-6" : "flex-1 overflow-y-auto p-6"}>
@@ -125,6 +128,7 @@
 {/if}
 
 <style>
+  .focus-page-bar .focus-tabs { margin-bottom: 0; }
   .focus-settings-page { max-width: 1180px; }
   .focus-settings-body { min-width: 0; }
   .focus-settings-content { min-width: 0; }

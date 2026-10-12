@@ -216,26 +216,8 @@
 </script>
 
 <section class="focus-page library-page" class:library-compact={theme.compactSpacing} aria-labelledby="library-heading">
-  <header class="focus-page-heading">
-    <div>
-      <p class="focus-eyebrow">Your library</p>
-      <h1 id="library-heading">{title}</h1>
-      <p class="text-text-muted">{trackingCount} tracking · {tierOnlyCount} tier only</p>
-    </div>
-    <button type="button" onclick={addTitle} class="library-button library-primary">
-      <Plus size={17} /> Add a {noun}
-    </button>
-  </header>
-
-  {#if mediaType === "shows" && unmappedCount > 0}
-    <div class="focus-panel library-notice">
-      <AlertTriangle size={18} class="text-amber-400 shrink-0" />
-      <p>{unmappedCount} {unmappedCount === 1 ? "show needs" : "shows need"} a TMDB match before their episodes can sync.</p>
-      <button type="button" class="library-button" onclick={() => resolverOpen = true}>Resolve shows</button>
-    </div>
-  {/if}
-
-  <div class="focus-toolbar library-toolbar">
+  <header class="focus-page-heading focus-page-bar library-toolbar">
+    <h1 id="library-heading">{title}</h1>
     <div class="library-filters" aria-label="Library filter">
       {#each [["all", "All", items.length], ["tracking", "Tracking", trackingCount], ["tier-only", "Tier only", tierOnlyCount]] as [value, label, count]}
         <button type="button" aria-pressed={filter === value} class:active={filter === value}
@@ -257,8 +239,17 @@
       {#if !bulkMode}
         <button type="button" class="library-button" disabled={loading || !items.length} onclick={() => bulkMode = true}>Select</button>
       {/if}
+      <button type="button" onclick={addTitle} class="library-button library-primary"><Plus size={17} /> Add a {noun}</button>
     </div>
-  </div>
+  </header>
+
+  {#if mediaType === "shows" && unmappedCount > 0}
+    <div class="focus-panel library-notice">
+      <AlertTriangle size={18} class="text-amber-400 shrink-0" />
+      <p>{unmappedCount} {unmappedCount === 1 ? "show needs" : "shows need"} a TMDB match before their episodes can sync.</p>
+      <button type="button" class="library-button" onclick={() => resolverOpen = true}>Resolve shows</button>
+    </div>
+  {/if}
 
   {#if bulkMode}
     <div class="focus-panel library-selection" role="group" aria-label="Selected titles">
@@ -343,9 +334,10 @@
   .library-danger { color: #f28b94; }
   .library-notice { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem; margin-bottom: 1.25rem; padding: .85rem 1rem; font-size: .85em; }
   .library-notice p { flex: 1; }
-  .library-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+  .library-toolbar { justify-content: flex-start; }
+  .library-toolbar h1 { flex: none; }
   .library-filters, .library-tools, .library-layout { display: flex; align-items: center; gap: .4rem; }
-  .library-tools { flex-wrap: wrap; }
+  .library-tools { flex-wrap: wrap; margin-left: auto; }
   .library-filters button { display: flex; align-items: center; gap: .45rem; padding: .55rem .8rem; border-radius: .55rem; font-size: .8em; color: var(--color-text-muted); }
   .library-filters button:hover, .library-layout button:hover { background: var(--color-surface-hover); color: var(--color-text); }
   .library-filters button.active { background: color-mix(in srgb, var(--color-accent) 13%, transparent); color: var(--color-accent); }

@@ -67,13 +67,38 @@
     transition:scale={{ duration: embedded ? 0 : 200, start: 0.95, opacity: 0 }}
     class={embedded ? "focus-page focus-statistics-page" : "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl max-h-[85vh] z-50 bg-surface rounded-xl border border-border shadow-2xl flex flex-col"}
   >
+    {#snippet sectionTabs()}
+      <!-- Tabs -->
+      <nav class={embedded ? "focus-tabs" : "flex border-b border-border"} aria-label="Statistics sections">
+        <button
+          class="flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors {getActiveTab() ===
+          'overview'
+            ? 'text-accent border-b-2 border-accent'
+            : 'text-text-muted hover:text-text'}"
+          onclick={() => setActiveTab("overview")}
+          aria-pressed={getActiveTab() === "overview"}
+        >
+          <BarChart3 class="w-4 h-4" />
+          Overview
+        </button>
+        <button
+          class="flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors {getActiveTab() ===
+          'history'
+            ? 'text-accent border-b-2 border-accent'
+            : 'text-text-muted hover:text-text'}"
+          onclick={() => setActiveTab("history")}
+          aria-pressed={getActiveTab() === "history"}
+        >
+          <History class="w-4 h-4" />
+          Watch History
+        </button>
+      </nav>
+    {/snippet}
+
     {#if embedded}
-      <header class="focus-page-heading">
-        <div>
-          <p class="focus-eyebrow">Your viewing</p>
-          <h1>Statistics</h1>
-          <p class="text-text-muted">See what you've watched and where you're up to.</p>
-        </div>
+      <header class="focus-page-heading focus-page-bar">
+        <h1>Statistics</h1>
+        {@render sectionTabs()}
       </header>
     {:else}
       <div class="flex items-center justify-between p-4 border-b border-border">
@@ -87,31 +112,9 @@
       </div>
     {/if}
 
-    <!-- Tabs -->
-    <nav class={embedded ? "focus-tabs" : "flex border-b border-border"} aria-label="Statistics sections">
-      <button
-        class="flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors {getActiveTab() ===
-        'overview'
-          ? 'text-accent border-b-2 border-accent'
-          : 'text-text-muted hover:text-text'}"
-        onclick={() => setActiveTab("overview")}
-        aria-pressed={getActiveTab() === "overview"}
-      >
-        <BarChart3 class="w-4 h-4" />
-        Overview
-      </button>
-      <button
-        class="flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors {getActiveTab() ===
-        'history'
-          ? 'text-accent border-b-2 border-accent'
-          : 'text-text-muted hover:text-text'}"
-        onclick={() => setActiveTab("history")}
-        aria-pressed={getActiveTab() === "history"}
-      >
-        <History class="w-4 h-4" />
-        Watch History
-      </button>
-    </nav>
+    {#if !embedded}
+      {@render sectionTabs()}
+    {/if}
 
     <!-- Content -->
     <div class={embedded ? "focus-statistics-content" : "flex-1 overflow-auto p-6"}>
@@ -320,6 +323,7 @@
 {/if}
 
 <style>
+  .focus-page-bar .focus-tabs { margin-bottom: 0; }
   .focus-statistics-page { max-width: 1440px; }
   .focus-statistics-content { min-width: 0; }
 </style>

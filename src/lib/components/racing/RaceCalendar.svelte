@@ -146,27 +146,21 @@
 
 <div class="focus-page focus-racing relative flex flex-col">
   <header class="focus-page-heading">
-    <div>
-      <p class="focus-eyebrow">YOUR ACTIVITY</p>
+    <div class="focus-page-bar">
       <h1>Racing</h1>
-      <p>Your series, sessions and reminders. All times are local.</p>
+      <strong class="text-sm">{formatMonthYearLong(getCurrentDate())}</strong>
+      <button type="button" class="focus-button" onclick={goToToday}>Today</button>
+      <button type="button" class="focus-icon-button" onclick={() => changeMonth('previous')} aria-label="Previous month"><ChevronLeft class="w-4 h-4" /></button>
+      <button type="button" class="focus-icon-button" onclick={() => changeMonth('next')} aria-label="Next month"><ChevronRight class="w-4 h-4" /></button>
     </div>
-    <div class="flex gap-2">
+    <div class="focus-page-bar">
       <button type="button" class="focus-button" onclick={() => openSettings('racing')}><Settings class="w-4 h-4" /> Configure</button>
       <button type="button" class="focus-button" onclick={() => refreshRacingData()} disabled={isRacingRefreshing()}><RefreshCw class="w-4 h-4 {isRacingRefreshing() ? 'animate-spin' : ''}" /> Refresh</button>
     </div>
   </header>
-  <div class="focus-toolbar flex flex-wrap items-center justify-between gap-3">
-    <strong>{formatMonthYearLong(getCurrentDate())}</strong>
-    <div class="flex items-center gap-2">
-      <button type="button" class="focus-button" onclick={goToToday}>Today</button>
-      <button type="button" class="focus-button" onclick={() => changeMonth('previous')} aria-label="Previous month"><ChevronLeft class="w-4 h-4" /></button>
-      <button type="button" class="focus-button" onclick={() => changeMonth('next')} aria-label="Next month"><ChevronRight class="w-4 h-4" /></button>
-    </div>
-  </div>
   <div class="focus-racing-calendar flex flex-col">
     <!-- Series filter chips + actions -->
-    <div class="px-4 py-3 border-b border-border">
+    <div class="px-4 py-2 border-b border-border">
       <div class="flex items-center gap-1.5 flex-wrap">
         {#if getEnabledSeries().length === 0}
           <span class="text-sm text-text-muted">No series enabled.</span>
@@ -196,6 +190,7 @@
             </button>
           {/each}
         {/if}
+        <span class="text-xs text-text-muted ml-auto">All times local</span>
       </div>
     </div>
 

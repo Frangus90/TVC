@@ -7,6 +7,7 @@ All notable changes to TVC will be documented in this file.
 ### Focus Redesign
 
 - TVC has a new look with clearer navigation, more readable text, and consistent controls throughout the app.
+- Page headers keep their titles and controls together in one or two rows, leaving more room for your library and calendar.
 - Calendar, TV Shows, and Movies now have their own pages. Browse your library with posters or a text list, search saved titles, and filter between tracked and tier-only titles.
 - Search your saved shows and movies from the top bar, or press **Ctrl K**.
 - Settings, Data Management, and Statistics now open as full pages, with more space for sync results, history, and connected services.

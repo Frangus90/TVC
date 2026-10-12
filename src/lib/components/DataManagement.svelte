@@ -242,13 +242,66 @@
     transition:scale={{ duration: embedded ? 0 : 200, start: 0.95, opacity: 0 }}
     class={embedded ? "focus-page focus-data-page" : "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-surface rounded-xl border border-border shadow-2xl w-[800px] max-w-[95vw] max-h-[85vh] flex flex-col"}
   >
+    {#snippet sectionTabs()}
+      <!-- Tabs -->
+      <nav class={embedded ? "focus-tabs" : "flex border-b border-border overflow-x-auto"} aria-label="Data management sections">
+        <button
+          type="button"
+          onclick={() => setActiveTab("overview")}
+          aria-pressed={activeTab === "overview"}
+          class="px-4 py-3 text-sm font-medium transition-colors {activeTab === 'overview'
+            ? 'text-accent border-b-2 border-accent'
+            : 'text-text-muted hover:text-text'}"
+        >
+          Overview
+        </button>
+        <button
+          type="button"
+          onclick={() => setActiveTab("sync")}
+          aria-pressed={activeTab === "sync"}
+          class="px-4 py-3 text-sm font-medium transition-colors {activeTab === 'sync'
+            ? 'text-accent border-b-2 border-accent'
+            : 'text-text-muted hover:text-text'}"
+        >
+          Sync
+        </button>
+        <button
+          type="button"
+          onclick={() => setActiveTab("duplicates")}
+          aria-pressed={activeTab === "duplicates"}
+          class="px-4 py-3 text-sm font-medium transition-colors {activeTab === 'duplicates'
+            ? 'text-accent border-b-2 border-accent'
+            : 'text-text-muted hover:text-text'}"
+        >
+          Duplicates
+        </button>
+        <button
+          type="button"
+          onclick={() => setActiveTab("cleanup")}
+          aria-pressed={activeTab === "cleanup"}
+          class="px-4 py-3 text-sm font-medium transition-colors {activeTab === 'cleanup'
+            ? 'text-accent border-b-2 border-accent'
+            : 'text-text-muted hover:text-text'}"
+        >
+          Cleanup
+        </button>
+        <button
+          type="button"
+          onclick={() => setActiveTab("archive")}
+          aria-pressed={activeTab === "archive"}
+          class="px-4 py-3 text-sm font-medium transition-colors {activeTab === 'archive'
+            ? 'text-accent border-b-2 border-accent'
+            : 'text-text-muted hover:text-text'}"
+        >
+          Archive
+        </button>
+      </nav>
+    {/snippet}
+
     {#if embedded}
-      <header class="focus-page-heading">
-        <div>
-          <p class="focus-eyebrow">Your library</p>
-          <h1>Data management</h1>
-          <p class="text-text-muted">Sync your titles, protect your library, and keep things organised.</p>
-        </div>
+      <header class="focus-page-heading focus-page-bar">
+        <h1>Data management</h1>
+        {@render sectionTabs()}
       </header>
     {:else}
       <div class="flex items-center justify-between p-4 border-b border-border">
@@ -262,59 +315,9 @@
       </div>
     {/if}
 
-    <!-- Tabs -->
-    <nav class={embedded ? "focus-tabs" : "flex border-b border-border overflow-x-auto"} aria-label="Data management sections">
-      <button
-        type="button"
-        onclick={() => setActiveTab("overview")}
-        aria-pressed={activeTab === "overview"}
-        class="px-4 py-3 text-sm font-medium transition-colors {activeTab === 'overview'
-          ? 'text-accent border-b-2 border-accent'
-          : 'text-text-muted hover:text-text'}"
-      >
-        Overview
-      </button>
-      <button
-        type="button"
-        onclick={() => setActiveTab("sync")}
-        aria-pressed={activeTab === "sync"}
-        class="px-4 py-3 text-sm font-medium transition-colors {activeTab === 'sync'
-          ? 'text-accent border-b-2 border-accent'
-          : 'text-text-muted hover:text-text'}"
-      >
-        Sync
-      </button>
-      <button
-        type="button"
-        onclick={() => setActiveTab("duplicates")}
-        aria-pressed={activeTab === "duplicates"}
-        class="px-4 py-3 text-sm font-medium transition-colors {activeTab === 'duplicates'
-          ? 'text-accent border-b-2 border-accent'
-          : 'text-text-muted hover:text-text'}"
-      >
-        Duplicates
-      </button>
-      <button
-        type="button"
-        onclick={() => setActiveTab("cleanup")}
-        aria-pressed={activeTab === "cleanup"}
-        class="px-4 py-3 text-sm font-medium transition-colors {activeTab === 'cleanup'
-          ? 'text-accent border-b-2 border-accent'
-          : 'text-text-muted hover:text-text'}"
-      >
-        Cleanup
-      </button>
-      <button
-        type="button"
-        onclick={() => setActiveTab("archive")}
-        aria-pressed={activeTab === "archive"}
-        class="px-4 py-3 text-sm font-medium transition-colors {activeTab === 'archive'
-          ? 'text-accent border-b-2 border-accent'
-          : 'text-text-muted hover:text-text'}"
-      >
-        Archive
-      </button>
-    </nav>
+    {#if !embedded}
+      {@render sectionTabs()}
+    {/if}
 
     <!-- Content -->
     <div class={embedded ? "focus-data-content" : "flex-1 overflow-auto p-4"}>
@@ -760,6 +763,7 @@
 {/if}
 
 <style>
+  .focus-page-bar .focus-tabs { margin-bottom: 0; }
   .focus-data-page { max-width: 1280px; }
   .focus-data-content { min-width: 0; }
 </style>

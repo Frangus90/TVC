@@ -63,22 +63,22 @@
 </script>
 
 <div class="focus-sync-content space-y-5">
-  <div class="focus-toolbar flex flex-wrap items-start justify-between gap-4">
-    <div>
-      <h2 class="text-lg font-semibold text-text">TMDB sync</h2>
-      <p class="text-sm text-text-muted mt-1">Refresh titles, artwork, release dates, and TV episodes.</p>
+  <div class="space-y-2">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <h2 class="text-base font-semibold text-text">TMDB sync</h2>
+        <p class="text-sm text-text-muted">Automatic sync runs while TVC is open or in the tray.</p>
+      </div>
+      <button type="button" onclick={() => sync()} disabled={busy || saving !== null || !libraries.length || !!loadError}
+        class="shrink-0 flex items-center gap-2 px-3 py-2 text-sm bg-accent/20 hover:bg-accent/30 text-accent rounded-lg disabled:opacity-50">
+        <RefreshCw class="w-4 h-4 {busy ? 'animate-spin' : ''}" />
+        Sync All
+      </button>
     </div>
-    <button type="button" onclick={() => sync()} disabled={busy || saving !== null || !libraries.length || !!loadError}
-      class="shrink-0 flex items-center gap-2 px-3 py-2 text-sm bg-accent/20 hover:bg-accent/30 text-accent rounded-lg disabled:opacity-50">
-      <RefreshCw class="w-4 h-4 {busy ? 'animate-spin' : ''}" />
-      Sync All
-    </button>
+    <p class="text-xs text-text-muted">
+      Shows and movies have separate schedules. After reopening, overdue syncs start within a minute once no other sync is running.
+    </p>
   </div>
-
-  <p class="text-sm text-text-muted rounded-lg border border-border p-3">
-    Automatic sync runs while TVC is open, including in the tray. Overdue syncs run after you reopen the app.
-    Schedules are separate for TV shows and movies. When no sync is running, overdue syncs start within a minute.
-  </p>
 
   {#if loadError || actionError}
     <div role="alert" class="text-sm text-red-400 rounded-lg border border-red-500/30 bg-red-500/10 p-3 break-words">

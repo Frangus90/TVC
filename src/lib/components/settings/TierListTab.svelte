@@ -162,15 +162,10 @@
 </script>
 
 <div class="space-y-6">
-  <div>
-    <h3 class="text-lg font-semibold text-text mb-1">Tier List</h3>
-    <p class="text-sm text-text-muted">Customize your tier system, names, and colors.</p>
-  </div>
-
   <!-- Preset selector -->
   <div class="space-y-2">
-    <span class="block text-sm font-medium text-text">Preset</span>
-    <div class="flex gap-2">
+    <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Tier preset">
+      <span class="text-sm font-medium text-text mr-2">Preset</span>
       {#each [
         { id: "10-star", label: "10 Stars" },
         { id: "5-star", label: "5 Stars" },
@@ -179,6 +174,7 @@
         <button
           type="button"
           onclick={() => requestPresetChange(presetOption.id)}
+          aria-pressed={preset === presetOption.id}
           class="px-4 py-2 text-sm rounded-lg border transition-colors
             {preset === presetOption.id
               ? 'border-accent bg-accent/10 text-accent font-medium'
@@ -190,11 +186,11 @@
     </div>
     <p class="text-xs text-text-muted">
       {#if preset === "10-star"}
-        10 tiers (Masterpiece to Terrible). Star ratings available in detail modals.
+        10 tiers (Masterpiece to Terrible). Set star ratings in title details.
       {:else if preset === "5-star"}
-        5 tiers (Excellent to Terrible). Full-star ratings in detail modals.
+        5 tiers (Excellent to Terrible). Set full-star ratings in title details.
       {:else}
-        Custom tiers. Use the tier picker dropdown in detail modals.
+        Custom tiers. Edit names and colours below; assign titles using the tier picker in title details.
       {/if}
     </p>
   </div>

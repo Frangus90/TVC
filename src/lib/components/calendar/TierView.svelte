@@ -267,38 +267,37 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="focus-page focus-tier-page h-full flex flex-col" onkeydown={(e) => { if (e.key === 'Escape') contextMenuOpen = null; }}>
   <header class="focus-page-heading">
-    <div>
-      <p class="focus-eyebrow">YOUR LIBRARY</p>
+    <div class="focus-page-bar">
       <h1>Tier lists</h1>
-      <p>Your favourites, in your order.</p>
+      <div class="focus-segment" role="group" aria-label="Tier list media">
+        <button
+          type="button"
+          onclick={() => switchSubTab("shows")}
+          aria-pressed={subTab === "shows"}
+          class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors
+            {subTab === 'shows' ? 'bg-background text-accent' : 'text-text-muted hover:text-text'}"
+        >
+          <Tv class="w-4 h-4" />
+          Shows
+        </button>
+        <button
+          type="button"
+          onclick={() => switchSubTab("movies")}
+          aria-pressed={subTab === "movies"}
+          class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors
+            {subTab === 'movies' ? 'bg-background text-accent' : 'text-text-muted hover:text-text'}"
+        >
+          <Film class="w-4 h-4" />
+          Movies
+        </button>
+      </div>
+      {#if tiers.length && stats.total}
+        <p class="text-xs text-text-muted">Drag to rank · Poster menu for move, track and remove</p>
+      {/if}
     </div>
   </header>
-  <!-- Header with sub-tabs, stats, and add button -->
-  <div class="focus-toolbar flex flex-wrap items-center justify-between mb-4 gap-4">
-    <!-- Sub-tabs -->
-    <div class="focus-tabs flex gap-1 p-1 bg-surface rounded-lg">
-      <button
-        type="button"
-        onclick={() => switchSubTab("shows")}
-        aria-pressed={subTab === "shows"}
-        class="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors
-          {subTab === 'shows' ? 'bg-background text-accent' : 'text-text-muted hover:text-text'}"
-      >
-        <Tv class="w-4 h-4" />
-        Shows
-      </button>
-      <button
-        type="button"
-        onclick={() => switchSubTab("movies")}
-        aria-pressed={subTab === "movies"}
-        class="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors
-          {subTab === 'movies' ? 'bg-background text-accent' : 'text-text-muted hover:text-text'}"
-      >
-        <Film class="w-4 h-4" />
-        Movies
-      </button>
-    </div>
 
+  <div class="focus-toolbar flex flex-wrap items-center justify-between gap-3">
     <div class="flex flex-wrap items-center gap-3">
       <!-- Search input -->
       {#if stats.total > 0}
@@ -333,7 +332,8 @@
           </span>
         </div>
       {/if}
-
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
       <!-- Export Image button -->
       <button
         type="button"
@@ -362,7 +362,7 @@
     </div>
   </div>
 
-  <!-- Drag hint or empty state -->
+  <!-- Empty state or tier board -->
   {#if tiers.length === 0}
     <div class="flex-1 flex flex-col items-center justify-center text-center py-12">
       <div class="w-16 h-16 rounded-full bg-surface flex items-center justify-center mb-4">
@@ -388,10 +388,6 @@
       </p>
     </div>
   {:else}
-    <p class="text-xs text-text-muted mb-3">
-      Drag posters to rank them. Use the poster menu to move, track or remove a title.
-    </p>
-
     <!-- Tier List -->
     <div class="focus-tier-board flex-1 overflow-auto space-y-2">
       {#each tiers as tier (tier.id)}

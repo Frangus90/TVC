@@ -73,13 +73,10 @@
     message="Archive shows or movies you're done with to keep your list clean."
   />
 {:else}
-  <div class="focus-toolbar mb-4">
-    <h2 class="text-lg font-semibold mb-1">Archive</h2>
-    <p class="text-sm text-text-muted">
-      {items.length} archived item{items.length === 1 ? "" : "s"}. Restore any to move it
-      back to your active list.
-    </p>
-  </div>
+  <p class="text-sm text-text-muted mb-3">
+    <span class="font-medium text-text">{items.length} archived item{items.length === 1 ? "" : "s"}</span>
+    · Restore a title to return it to your active library.
+  </p>
   <ul class="space-y-2">
     {#each items as item (item.type + item.id)}
       <li

@@ -102,30 +102,33 @@
 
 <div class="focus-page focus-awards-page">
   <header class="focus-page-heading">
-    <div>
-      <p class="focus-eyebrow">YOUR ACTIVITY</p>
+    <div class="focus-page-bar">
       <h1>Awards</h1>
-      <p>Nominees, predictions and the picks you saved.</p>
-    </div>
-  </header>
-  {#if getAwardsSyncReport()}
-    {@const report = getAwardsSyncReport()!}
-    <div class="focus-awards-sync mb-4 text-sm text-text-muted">
-      <p>Last attempt: {formatDateTime(report.attempted_at)}</p>
-      {#if report.errors.length}
-        <details class="text-red-400">
-          <summary>{report.errors.length} sync issues</summary>
-          <ul>{#each report.errors as error}<li>{error}</li>{/each}</ul>
-        </details>
-        {#if report.failed_ceremonies?.length}
-          <button class="underline" disabled={isSyncing()} onclick={() => doRefresh(false, true)}>Retry failed ceremonies</button>
-        {/if}
+      {#if detail}
+        <button onclick={clearSelectedCeremony} class="flex items-center gap-1 text-sm text-text-muted hover:text-text">
+          <ChevronLeft class="w-4 h-4" /> Back to {subTab === "predict" ? "Predict" : "History"}
+        </button>
+        <h2 class="text-base font-semibold">{detail.name}</h2>
+        <span class="text-xs text-text-muted">
+          {subTab === "predict" && detail.status === "nominated"
+            ? "Nominations open — choose a nominee"
+            : subTab === "predict" ? "Your prediction results" : "Winners & nominees"}{#if detail.ceremony_date}
+            · {formatDate(detail.ceremony_date)}{/if}
+        </span>
+      {:else}
+        <div class="focus-segment" role="group" aria-label="Awards view">
+          {#each [{ v: "history", l: "History" }, { v: "predict", l: "Predict" }] as t}
+            <button onclick={() => (subTab = t.v as SubTab)} aria-pressed={subTab === t.v} class="px-3 py-1.5 text-sm font-medium">
+              {t.l}
+            </button>
+          {/each}
+        </div>
       {/if}
     </div>
-  {/if}
+  </header>
   <!-- Award toggle + refresh -->
-  <div class="focus-toolbar flex flex-wrap items-center justify-between mb-4 gap-3">
-    <div class="focus-tabs flex bg-background rounded-lg p-1">
+  <div class="focus-toolbar flex flex-wrap items-center justify-between gap-3">
+    <div class="focus-segment" role="group" aria-label="Award type">
       {#each [{ v: "oscars", l: "Oscars" }, { v: "emmys", l: "Emmys" }] as opt}
         <button
           onclick={() => switchAward(opt.v as AwardType)}
@@ -141,6 +144,19 @@
     <div class="flex flex-wrap items-center gap-3">
       {#if getLastSync()}
         <span class="text-xs text-text-muted">Last complete sync {relativeTime(getLastSync()!)}</span>
+      {/if}
+      {#if getAwardsSyncReport()}
+        {@const report = getAwardsSyncReport()!}
+        <span class="text-xs text-text-muted">Last attempt: {formatDateTime(report.attempted_at)}</span>
+        {#if report.errors.length}
+          <details class="focus-awards-sync text-xs text-red-400">
+            <summary>{report.errors.length} sync issues</summary>
+            <ul>{#each report.errors as error}<li>{error}</li>{/each}</ul>
+          </details>
+          {#if report.failed_ceremonies?.length}
+            <button class="text-xs text-red-400 underline" disabled={isSyncing()} onclick={() => doRefresh(false, true)}>Retry failed ceremonies</button>
+          {/if}
+        {/if}
       {/if}
       <div class="relative flex">
         <button
@@ -183,61 +199,31 @@
           </div>
         {/if}
       </div>
+      {#if detail && subTab === "history" && pickCount > 0}
+        <button onclick={() => (subTab = "predict")} class="focus-button" title="Open your saved picks and their results for this ceremony">
+          <Check class="w-4 h-4" /> View your predictions
+        </button>
+      {/if}
+      {#if detail && subTab === "predict" && pickCount > 0}
+        <button onclick={exportPicks} class="focus-button" title="Save your picks as a shareable image">
+          <Download class="w-4 h-4" /> Export picks
+        </button>
+        {#if getScore()}
+          <div class="focus-awards-score flex flex-wrap items-center gap-2 text-sm">
+            <strong class="text-accent">{getScore()!.correct}/{getScore()!.total}</strong>
+            <span class="text-text-muted">correct picks</span>
+            {#if pickCount > getScore()!.total}
+              <span class="text-text-muted">· {pickCount - getScore()!.total} pending</span>
+            {/if}
+          </div>
+        {/if}
+      {/if}
     </div>
   </div>
 
   {#if detail}
     {@const showPicks = subTab === "predict"}
     {@const isOpen = showPicks && detail.status === "nominated"}
-    <!-- Ceremony detail -->
-    <button
-      onclick={clearSelectedCeremony}
-      class="flex items-center gap-1 text-sm text-text-muted hover:text-text mb-3"
-    >
-      <ChevronLeft class="w-4 h-4" /> Back to {showPicks ? "Predict" : "History"}
-    </button>
-    <div class="focus-ceremony-heading flex flex-wrap items-start justify-between mb-4 gap-4">
-      <div>
-        <h2 class="text-xl font-semibold">{detail.name}</h2>
-        <p class="text-sm text-text-muted">
-          {isOpen
-            ? "Nominations open — tap a nominee to pick the winner"
-            : showPicks ? "Your prediction results" : "Winners & nominees"}{#if detail.ceremony_date}
-            · Ceremony {formatDate(detail.ceremony_date)}{/if}
-        </p>
-      </div>
-      <div class="flex items-center gap-4 flex-shrink-0">
-        {#if !showPicks && pickCount > 0}
-          <button
-            onclick={() => (subTab = "predict")}
-            class="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-surface hover:bg-surface-hover text-text"
-            title="Open your saved picks and their results for this ceremony"
-          >
-            <Check class="w-4 h-4" /> View your predictions
-          </button>
-        {/if}
-        {#if showPicks && pickCount > 0}
-          <button
-            onclick={exportPicks}
-            class="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-surface hover:bg-surface-hover text-text"
-            title="Save your picks as a shareable image"
-          >
-            <Download class="w-4 h-4" /> Export picks
-          </button>
-        {/if}
-        {#if showPicks && getScore() && pickCount > 0}
-          <div class="focus-awards-score text-right">
-            <div class="text-2xl font-bold text-accent">
-              {getScore()!.correct}/{getScore()!.total}
-            </div>
-            <div class="text-xs text-text-muted">correct picks</div>
-            {#if pickCount > getScore()!.total}
-              <div class="text-xs text-text-muted">{pickCount - getScore()!.total} pending</div>
-            {/if}
-          </div>
-        {/if}
-      </div>
-    </div>
     <div class="space-y-4">
       {#each detail.categories as cat (cat.id)}
         {@const resultKnown = cat.nominees.some((n) => n.is_winner === true)}
@@ -294,21 +280,6 @@
       {/each}
     </div>
   {:else}
-    <!-- Sub-tabs -->
-    <div class="focus-tabs flex gap-4 border-b border-border mb-4">
-      {#each [{ v: "history", l: "History" }, { v: "predict", l: "Predict" }] as t}
-        <button
-          onclick={() => (subTab = t.v as SubTab)}
-          aria-pressed={subTab === t.v}
-          class="pb-2 text-sm font-medium border-b-2 -mb-px {subTab === t.v
-            ? 'border-accent text-accent'
-            : 'border-transparent text-text-muted hover:text-text'}"
-        >
-          {t.l}
-        </button>
-      {/each}
-    </div>
-
     {#if isLoading()}
       <div class="text-center text-text-muted py-12">Loading…</div>
     {:else if getCeremonies().length === 0}
@@ -395,9 +366,10 @@
 
 <style>
   .focus-awards-page { max-width: 76rem; }
-  .focus-awards-sync { padding: 0.8rem 1rem; border: 1px solid var(--color-border); border-radius: 0.75rem; background: var(--color-surface); }
-  .focus-ceremony-heading { padding: 1rem 0; }
-  .focus-awards-score { min-width: 7rem; padding: 0.65rem 1rem; background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface)); border: 1px solid color-mix(in srgb, var(--color-accent) 20%, var(--color-border)); border-radius: 0.75rem; }
+  .focus-awards-sync { position: relative; }
+  .focus-awards-sync summary { cursor: pointer; }
+  .focus-awards-sync ul { position: absolute; right: 0; top: 100%; z-index: 10; width: min(28rem, 80vw); max-height: 60vh; overflow: auto; overflow-wrap: anywhere; margin-top: .5rem; padding: .8rem 1rem; border: 1px solid var(--color-border); border-radius: .6rem; background: var(--color-surface); box-shadow: 0 10px 30px #0004; }
+  .focus-awards-score { padding: .35rem .65rem; background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface)); border: 1px solid color-mix(in srgb, var(--color-accent) 20%, var(--color-border)); border-radius: .5rem; }
   .focus-awards-category h3 { font-size: 1rem; line-height: 1.5; margin-bottom: 0.875rem; }
   .focus-nominee { font-size: 0.875rem; }
   .focus-nominee:disabled { opacity: 1; }

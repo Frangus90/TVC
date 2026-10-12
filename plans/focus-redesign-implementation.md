@@ -91,3 +91,21 @@ Used the real App.svelte and lazy-loaded components with isolated in-memory Taur
 - Native file/export dialogs, updater installation, live TMDB sync, live Plex/Arr connections, and native tray behaviour were not exercised in the browser preview. Their existing handlers remain and the build/regression checks pass.
 - Test the branch with the normal dev app and its own `tvc_dev.db` before merging/releasing. Expected external failure cases remain unavailable services, missing credentials, or incomplete metadata; existing error handling applies.
 - This task creates no release installer and does not merge the redesign into main.
+
+## Follow-up: compact page headers
+
+User testing found that the page headers occupy too much vertical space. Compact the main page controls into one or two rows at 1080p and 4K, retaining all actions and allowing additional wrapping when larger text or smaller windows require it.
+
+- Remove repeated eyebrow labels and generic descriptions; keep titles, counts, important status information, and controls.
+- Libraries: title, filters/counts, search, layout, selection, tier list, and Add share a wrapping bar.
+- Calendar: title/period/navigation/view/Add share the first row; media filters and legend share the second.
+- Tier lists, awards, and racing: group primary controls with their headings, followed by secondary selectors/tools.
+- Data, Settings, and Statistics: place their title and section tabs together.
+- Reduce shared top padding and heading/tab margins; retain readable text, clear focus indicators, and responsive wrapping.
+- Validate all destinations using isolated fixtures at 1920 x 1080, 3840 x 2160, scaled 4K, and 150% text. Keep the running development app on its verified dev profile; never access release data.
+- Completed on 13.10.2026. Main headers measure about 37–41 CSS pixels at 100% text; libraries use one row, while calendar/tier/awards/racing secondary controls use a second row.
+- All nine destinations checked at 1920 x 1080 and 3840 x 2160 with no measured horizontal overflow. Also checked scaled 4K (2560 x 1440) and the main headers at 150% text; labels and actions remained visible.
+- Sync, Archive, and tier settings have compact summaries instead of repeated headings. Automatic-sync conditions and preset guidance remain readable. Settings panel padding is retained for the Arr tab's nested toolbar.
+- `npm run check` passed: Svelte 0 errors / 0 warnings, 25 frontend tests, 84 Rust tests (1 live Wikipedia test ignored), and production build. Rebuilt after removing an obsolete description-spacing rule. `git diff --check` passed.
+- Read-only review found no lost handlers or controls; tab snippets render once in both full-page and legacy modal variants.
+- Proof images: `plans/focus-redesign-screenshots/compact-calendar-4k.jpg`, `compact-calendar-1080p.jpg`, `compact-library-1080p.jpg`, and `compact-tiers-1080p.jpg`. Browser checks used only isolated sample fixtures; no release database access.
