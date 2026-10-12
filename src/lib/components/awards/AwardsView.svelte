@@ -394,7 +394,7 @@
 </div>
 
 <style>
-  .focus-awards-page { max-width: 76rem; margin: 0 auto; }
+  .focus-awards-page { max-width: 76rem; }
   .focus-awards-sync { padding: 0.8rem 1rem; border: 1px solid var(--color-border); border-radius: 0.75rem; background: var(--color-surface); }
   .focus-ceremony-heading { padding: 1rem 0; }
   .focus-awards-score { min-width: 7rem; padding: 0.65rem 1rem; background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface)); border: 1px solid color-mix(in srgb, var(--color-accent) 20%, var(--color-border)); border-radius: 0.75rem; }

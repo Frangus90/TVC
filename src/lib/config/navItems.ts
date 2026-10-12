@@ -20,7 +20,7 @@ export const navItems: NavItem[] = [
   { id: "racing", label: "Racing", icon: Flag, kind: "standalone", load: () => import("../components/racing/RaceCalendar.svelte") },
   { id: "awards", label: "Awards", icon: Trophy, kind: "standalone", load: () => import("../components/awards/AwardsView.svelte") },
   { id: "statistics", label: "Statistics", icon: ChartNoAxesCombined, kind: "standalone", load: () => import("../components/StatisticsDashboard.svelte") },
-  { id: "data", label: "Data management", icon: Database, kind: "standalone", load: () => import("../components/DataManagement.svelte") },
+  { id: "data", label: "Data", icon: Database, kind: "standalone", load: () => import("../components/DataManagement.svelte") },
   { id: "settings", label: "Settings", icon: Settings, kind: "standalone", load: () => import("../components/settings/UnifiedSettings.svelte") },
 ];
 

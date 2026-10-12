@@ -254,6 +254,7 @@ select {
 .focus-page { width:100%; min-width:0; }
 .focus-page-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:var(--focus-gap); margin-bottom:1.8rem; flex-wrap:wrap; }
 .focus-page-heading h1 { font-size:1.9rem; line-height:1.2; font-weight:650; letter-spacing:-.035em; margin:0; }
+.focus-page-heading > div > p:not(.focus-eyebrow) { margin-top:.65rem; color:var(--color-text-muted); font-size:.85rem; }
 .focus-description { margin-top:.65rem; color:var(--color-text-muted); font-size:.85rem; }
 .focus-heading-actions { display:flex; align-items:center; flex-wrap:wrap; gap:.6rem; padding-top:.5rem; }
 .focus-button { display:inline-flex; align-items:center; justify-content:center; gap:.5rem; padding:.55rem .85rem; font-size:.8rem; border:1px solid var(--color-border); border-radius:.6rem; background:var(--color-surface); color:var(--color-text); min-height:2.25rem; }

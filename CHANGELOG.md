@@ -2,6 +2,19 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.15.0] - Unreleased
+
+### Focus Redesign
+
+- TVC has a new look with clearer navigation, more readable text, and consistent controls throughout the app.
+- Calendar, TV Shows, and Movies now have their own pages. Browse your library with posters or a text list, search saved titles, and filter between tracked and tier-only titles.
+- Search your saved shows and movies from the top bar, or press **Ctrl K**.
+- Settings, Data Management, and Statistics now open as full pages, with more space for sync results, history, and connected services.
+- Calendar titles open their details. Use the separate watched button to change watch status; scheduling and right-click shortcuts are still available.
+- Tier lists, awards, racing, notifications, and exported images share the updated appearance.
+- Your custom colours, text size, compact spacing, hidden posters, tiers, and saved history are kept.
+- Archived tier-only titles now appear in **Data Management → Archive**, where you can restore them.
+
 ## [0.14.8] - 10.10.2026
 
 ### Movies

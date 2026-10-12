@@ -1,11 +1,14 @@
 <script lang="ts">
   import { fade, scale } from "svelte/transition";
+  import { modalFocus } from "../utils/modalFocus";
   import { X, Sparkles, ChevronDown, ChevronUp } from "lucide-svelte";
   import {
     isWhatsNewOpen,
     closeWhatsNew,
     getAppVersion,
   } from "../stores/whatsNew.svelte";
+  import { isConfirmDialogOpen } from "../stores/confirmDialog.svelte";
+  import { isMigrationInProgress, getLastMigrationResult } from "../stores/migration.svelte";
   import { inlineReleaseNotes } from "../utils/releaseNotes";
   import changelog from "../../../CHANGELOG.md?raw";
 
@@ -67,7 +70,7 @@
   const olderVersions = $derived(allVersions.slice(1));
 </script>
 
-{#if isWhatsNewOpen()}
+{#if isWhatsNewOpen() && !isConfirmDialogOpen() && !isMigrationInProgress() && !getLastMigrationResult()}
   <!-- Backdrop -->
   <button
     type="button"
@@ -80,6 +83,10 @@
   <!-- Modal -->
   <div
     transition:scale={{ duration: 200, start: 0.95, opacity: 0 }}
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="whats-new-title"
+    use:modalFocus={closeWhatsNew}
     class="focus-dialog fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-surface rounded-xl border border-border shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col"
   >
     <!-- Header -->
@@ -89,7 +96,7 @@
           <Sparkles class="w-5 h-5 text-accent" />
         </div>
         <div>
-          <h2 class="text-lg font-semibold text-text">What's New</h2>
+          <h2 id="whats-new-title" class="text-lg font-semibold text-text">What's New</h2>
           <p class="text-sm text-text-muted">v{getAppVersion()}</p>
         </div>
       </div>

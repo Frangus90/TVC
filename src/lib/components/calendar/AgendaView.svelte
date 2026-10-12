@@ -136,7 +136,7 @@
 </script>
 
 <div class="focus-agenda h-full overflow-auto">
-  <div class="focus-agenda-list mx-auto py-2">
+  <div class="focus-agenda-list py-2">
     {#if allItems.length === 0}
       <div class="text-center py-12">
         <Tv class="w-12 h-12 text-text-muted mx-auto mb-4" />

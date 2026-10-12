@@ -104,10 +104,6 @@
     }
   });
 
-
-
-
-
   $effect(() => {
     if (isUpdateModalOpen() && !UpdateModalComponent) {
       import("./lib/components/UpdateModal.svelte").then((mod) => {
@@ -146,8 +142,6 @@
       });
     }
   });
-
-
 
   $effect(() => {
     if (isTierSearchModalOpen() && !TierSearchModalComponent) {

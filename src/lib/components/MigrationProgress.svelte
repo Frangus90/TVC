@@ -1,5 +1,6 @@
 <script lang="ts">
   import { fade, scale } from "svelte/transition";
+  import { modalFocus } from "../utils/modalFocus";
   import { RefreshCw, Check, AlertTriangle } from "lucide-svelte";
   import {
     isMigrationInProgress,
@@ -20,18 +21,23 @@
   {@const percent = total > 0 ? Math.round((done / total) * 100) : 0}
 
   <!-- Blocking backdrop: the DB is being mutated, don't let the user touch anything. -->
-  <div transition:fade={{ duration: 150 }} class="fixed inset-0 bg-black/70 z-[60]"></div>
+  <div transition:fade={{ duration: 150 }} class="fixed inset-0 bg-black/70 z-[70]"></div>
 
   <div
     transition:scale={{ duration: 200, start: 0.95, opacity: 0 }}
-    class="focus-dialog fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[60] bg-surface rounded-xl border border-border shadow-2xl w-full max-w-lg p-6"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="migration-progress-title"
+    aria-describedby="migration-progress-description"
+    use:modalFocus={() => undefined}
+    class="focus-dialog fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] bg-surface rounded-xl border border-border shadow-2xl w-full max-w-lg p-6"
   >
     <div class="flex items-center gap-3 mb-4">
       <div class="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center">
         <RefreshCw class="w-5 h-5 text-accent animate-spin" />
       </div>
       <div>
-        <h2 class="text-lg font-semibold text-text">Migrating Library</h2>
+        <h2 id="migration-progress-title" class="text-lg font-semibold text-text">Migrating Library</h2>
         <p class="text-sm text-text-muted">Rewriting shows to TMDB metadata.</p>
       </div>
     </div>
@@ -54,7 +60,7 @@
       {/if}
     </div>
 
-    <p class="text-xs text-text-muted mt-4 leading-relaxed">
+    <p id="migration-progress-description" class="text-xs text-text-muted mt-4 leading-relaxed">
       Please don't close the app. Shows TMDB can't match will be available to
       resolve manually in Data Management when this finishes.
     </p>
@@ -65,10 +71,14 @@
     {@const remaining = getUnmigratedShows().length}
     {@const hasQuarantined = finished.quarantined > 0}
     {@const wide = hasQuarantined}
-    <div transition:fade={{ duration: 150 }} class="fixed inset-0 bg-black/60 z-[60]"></div>
+    <div transition:fade={{ duration: 150 }} class="fixed inset-0 bg-black/60 z-[70]"></div>
     <div
       transition:scale={{ duration: 200, start: 0.95, opacity: 0 }}
-      class="focus-dialog fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[60] bg-surface rounded-xl border border-border shadow-2xl w-full {wide
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="migration-result-title"
+      use:modalFocus={dismissMigrationResult}
+      class="focus-dialog fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] bg-surface rounded-xl border border-border shadow-2xl w-full {wide
         ? 'max-w-3xl max-h-[90vh]'
         : 'max-w-lg'} flex flex-col"
     >
@@ -82,7 +92,7 @@
             {/if}
           </div>
           <div>
-            <h2 class="text-lg font-semibold text-text">Migration Complete</h2>
+            <h2 id="migration-result-title" class="text-lg font-semibold text-text">Migration Complete</h2>
             <p class="text-sm text-text-muted">TVDB &rarr; TMDB</p>
           </div>
         </div>
@@ -110,7 +120,7 @@
 
         {#if finished.per_show.some((p) => p.episodes_orphaned > 0)}
           <details class="text-sm text-text-muted mt-3">
-            <summary class="cursor-pointer">Shows with lost episode state</summary>
+            <summary tabindex="0" class="cursor-pointer">Shows with lost episode state</summary>
             <ul class="mt-2 space-y-1 max-h-40 overflow-auto">
               {#each finished.per_show.filter((p) => p.episodes_orphaned > 0) as p (p.new_tmdb_id)}
                 <li class="text-xs">
@@ -137,6 +147,7 @@
       <div class="flex justify-end p-6 pt-4 flex-shrink-0 border-t border-border">
         <button
           type="button"
+          data-modal-initial
           onclick={dismissMigrationResult}
           class="px-4 py-2 text-sm font-medium bg-accent hover:bg-accent/90 text-white rounded-lg transition-colors"
         >

@@ -26,7 +26,10 @@
   });
   function openSearch() { query = ""; searchOpen = true; }
   function handleKeydown(event: KeyboardEvent) {
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { event.preventDefault(); openSearch(); }
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+      event.preventDefault();
+      if (!document.querySelector('[aria-modal="true"]')) openSearch();
+    }
   }
   async function exitApp() {
     if (!await openConfirmDialog({ title: "Exit TVC", message: "Close TVC completely? Automatic sync and reminders will stop until you reopen the app.", type: "warning", confirmLabel: "Exit", cancelLabel: "Cancel" })) return;

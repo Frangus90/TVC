@@ -1,5 +1,6 @@
 <script lang="ts">
   import { fade, scale } from "svelte/transition";
+  import { modalFocus } from "../utils/modalFocus";
   import { X, Download, Clock, RefreshCw, Check } from "lucide-svelte";
   import {
     isUpdateModalOpen,
@@ -9,6 +10,9 @@
     getDownloadProgress,
     downloadAndInstallUpdate,
   } from "../stores/updates.svelte";
+  import { isWhatsNewOpen } from "../stores/whatsNew.svelte";
+  import { isConfirmDialogOpen } from "../stores/confirmDialog.svelte";
+  import { isMigrationInProgress, getLastMigrationResult } from "../stores/migration.svelte";
 
   import { inlineReleaseNotes as inlineMarkdown } from "../utils/releaseNotes";
 
@@ -75,7 +79,7 @@
 
 </script>
 
-{#if isUpdateModalOpen()}
+{#if isUpdateModalOpen() && !isWhatsNewOpen() && !isConfirmDialogOpen() && !isMigrationInProgress() && !getLastMigrationResult()}
   {@const info = getUpdateInfo()}
   {@const downloading = isDownloadingUpdate()}
   {@const progress = getDownloadProgress()}
@@ -86,12 +90,17 @@
     transition:fade={{ duration: 150 }}
     class="fixed inset-0 bg-black/60 z-50"
     onclick={closeUpdateModal}
+    disabled={downloading}
     aria-label="Close modal"
   ></button>
 
   <!-- Modal -->
   <div
     transition:scale={{ duration: 200, start: 0.95, opacity: 0 }}
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="update-modal-title"
+    use:modalFocus={closeUpdateModal}
     class="focus-dialog fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-surface rounded-xl border border-border shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col"
   >
     <!-- Header -->
@@ -101,13 +110,14 @@
           <Download class="w-5 h-5 text-accent" />
         </div>
         <div>
-          <h2 class="text-lg font-semibold text-text">Update Available</h2>
+          <h2 id="update-modal-title" class="text-lg font-semibold text-text">Update Available</h2>
           <p class="text-sm text-text-muted">Version {info?.version}</p>
         </div>
       </div>
       <button
         type="button"
         onclick={closeUpdateModal}
+        disabled={downloading}
         class="p-2 rounded-lg hover:bg-surface-hover transition-colors"
         aria-label="Close"
       >
@@ -159,6 +169,7 @@
         <div class="flex items-center justify-end gap-3">
           <button
             type="button"
+            data-modal-initial
             onclick={closeUpdateModal}
             class="px-4 py-2 text-sm font-medium text-text-muted hover:text-text hover:bg-surface-hover rounded-lg transition-colors flex items-center gap-2"
           >
