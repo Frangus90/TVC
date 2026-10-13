@@ -2,7 +2,7 @@
 
 All notable changes to TVC will be documented in this file.
 
-## [0.15.0] - Unreleased
+## [0.15.0] - 13.10.2026
 
 ### Focus Redesign
 
