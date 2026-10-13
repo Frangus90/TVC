@@ -21,6 +21,7 @@
   import { openUrl } from "@tauri-apps/plugin-opener";
   import CastCrew from "./CastCrew.svelte";
   import TierPicker from "./TierPicker.svelte";
+  import WatchedBadge from "./common/WatchedBadge.svelte";
   import { updateShowTier, promoteShowToTracked, loadTiers } from "../stores/tiers.svelte";
   import { openConfirmDialog } from "../stores/confirmDialog.svelte";
   import { logger } from "../utils/logger";
@@ -227,7 +228,7 @@
       </div>
     {:else if getError()}
       <div class="p-6">
-        <p class="text-red-400">{getError()}</p>
+        <p class="text-error">{getError()}</p>
         <button
           type="button"
           onclick={closeShowDetail}
@@ -305,7 +306,7 @@
       <!-- Actions -->
       <div class="flex items-center gap-2 p-4 border-b border-border">
         {#if show.unmigrated}
-          <div class="flex-1 flex items-center gap-3 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-sm text-yellow-300">
+          <div class="flex-1 flex items-center gap-3 px-3 py-2 rounded-lg bg-warning/10 border border-warning/30 text-sm text-warning">
             <span class="font-medium">Needs TMDB mapping.</span>
             <span class="text-text-muted">Open Data Management → Resolve unmapped shows to finish migrating this entry.</span>
           </div>
@@ -315,7 +316,7 @@
             <button
               type="button"
               onclick={handlePromoteToTracked}
-              class="px-3 py-1.5 text-sm bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg transition-colors flex items-center gap-2"
+              class="px-3 py-1.5 text-sm bg-success/20 hover:bg-success/30 text-success rounded-lg transition-colors flex items-center gap-2"
             >
               <ArrowUpCircle class="w-4 h-4" />
               Start Tracking
@@ -369,7 +370,7 @@
         <button
           type="button"
           onclick={handleRemove}
-          class="px-3 py-1.5 text-sm bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors flex items-center gap-2 ml-auto"
+          class="px-3 py-1.5 text-sm bg-error/20 hover:bg-error/30 text-error rounded-lg transition-colors flex items-center gap-2 ml-auto"
         >
           <Trash2 class="w-4 h-4" />
           Remove
@@ -435,26 +436,23 @@
                     </div>
                     <div class="space-y-2">
                       {#each seasonEpisodes as episode}
-                        <div
-                          class="flex items-center gap-3 p-2 rounded {episode.watched
-                            ? 'bg-watched/10'
-                            : 'hover:bg-surface-hover'}"
-                        >
+                        <div class="show-episode flex items-center gap-3 p-2 rounded" class:episode-watched={episode.watched}>
                           <span class="text-sm font-mono text-text-muted w-16 flex-shrink-0">
                             E{String(episode.episode_number).padStart(2, "0")}
                           </span>
-                          <span class="flex-1 text-sm {episode.watched ? 'line-through text-text-muted' : 'text-text'}">
+                          <span class="flex-1 min-w-0 text-sm text-text">
                             {episode.name || "TBA"}
                           </span>
+                          {#if episode.watched}<WatchedBadge />{/if}
                           {#if episode.aired}
                             <span class="text-xs text-text-muted">{formatDate(episode.aired)}</span>
                           {/if}
                           <button
                             type="button"
                             onclick={() => handleMarkEpisodeWatched(episode.id, episode.watched)}
-                            class="p-1.5 rounded-full transition-colors {episode.watched
-                              ? 'text-available bg-available/20 hover:bg-available/30'
-                              : 'text-text-muted hover:text-available hover:bg-available/10'}"
+                            class="show-watch-button p-1.5 rounded-full transition-colors"
+                            class:episode-watched={episode.watched}
+                            aria-pressed={episode.watched}
                             aria-label={episode.watched ? "Mark as unwatched" : "Mark as watched"}
                           >
                             {#if episode.watched}
@@ -507,7 +505,7 @@
                   </div>
                 </button>
               {:else if localTrailerError}
-                <p class="text-sm text-red-400 text-center py-4 bg-red-500/10 rounded-lg">
+                <p class="text-sm text-error text-center py-4 bg-error/10 rounded-lg">
                   {localTrailerError}
                 </p>
               {:else}
@@ -533,6 +531,13 @@
 {/if}
 
 <style>
+  .show-episode { border: 1px solid transparent; }
+  .show-episode:hover { background: var(--color-surface-hover); }
+  .show-episode.episode-watched { background: var(--focus-watched-background); border-color: var(--focus-watched-border); }
+  .show-watch-button { flex: none; color: var(--color-text-muted); }
+  .show-watch-button:hover { background: var(--color-surface-hover); color: var(--color-text); }
+  .show-watch-button.episode-watched { background: var(--focus-watched); color: var(--focus-watched-ink); }
+  .show-watch-button.episode-watched:hover { background: color-mix(in srgb, var(--focus-watched) 85%, white); }
   .line-clamp-3 {
     display: -webkit-box;
     -webkit-line-clamp: 3;

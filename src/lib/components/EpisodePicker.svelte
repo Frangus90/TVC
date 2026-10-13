@@ -14,6 +14,7 @@
   } from "../stores/shows.svelte";
   import { getThemeSettings } from "../stores/theme.svelte";
   import { formatDate } from "../utils/dateFormat";
+  import WatchedBadge from "./common/WatchedBadge.svelte";
 
   // Local UI state
   let searchQuery = $state("");
@@ -411,7 +412,7 @@
                       <div class="w-5 h-5 rounded border flex-shrink-0 flex items-center justify-center
                         {isSelected ? 'bg-accent border-accent' : 'border-border'}">
                         {#if isSelected}
-                          <Check class="w-3 h-3 text-white" />
+                          <Check class="w-3 h-3 text-accent-foreground" />
                         {/if}
                       </div>
                       <!-- Episode thumbnail -->
@@ -431,7 +432,7 @@
                         E{formatEpisodeNumber(episode.episode_number)}
                       </span>
                       <div class="flex-1 min-w-0">
-                        <span class="text-sm truncate block {episode.watched ? 'text-text-muted' : 'text-text'}">
+                        <span class="text-sm truncate block text-text">
                           {episode.name || "TBA"}
                         </span>
                         {#if episode.overview}
@@ -442,7 +443,7 @@
                       </div>
                       <div class="flex items-center gap-2 flex-shrink-0">
                         {#if episode.watched}
-                          <Check class="w-4 h-4 text-watched" />
+                          <WatchedBadge />
                         {/if}
                         {#if episode.scheduled_date}
                           <span class="text-xs text-premiere bg-premiere/10 px-2 py-0.5 rounded">

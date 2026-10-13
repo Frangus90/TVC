@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy } from "svelte";
-  import { RotateCcw } from "lucide-svelte";
+  import { RotateCcw, Check, Clock, CircleX, TriangleAlert } from "lucide-svelte";
+  import WatchedBadge from "../common/WatchedBadge.svelte";
   import {
     getThemeSettings, updateThemeSettings, defaultTheme, normalizeAccentColor,
     isThemeSaving, getThemeSaveError, getThemeLoadError, loadThemeSettings, retryThemeSave,
@@ -52,12 +53,12 @@
 
 <div class="space-y-4">
   {#if getThemeLoadError()}
-    <div role="alert" class="p-3 rounded-lg border border-red-500/30 text-red-400 text-sm">
+    <div role="alert" class="p-3 rounded-lg border border-error/30 text-error text-sm">
       <p>{getThemeLoadError()}</p><button type="button" onclick={() => loadThemeSettings()} class="underline mt-1">Retry loading</button>
     </div>
   {/if}
   {#if getThemeSaveError()}
-    <div role="alert" class="p-3 rounded-lg border border-red-500/30 text-red-400 text-sm">
+    <div role="alert" class="p-3 rounded-lg border border-error/30 text-error text-sm">
       <p>{getThemeSaveError()}</p><button type="button" disabled={isThemeSaving()} onclick={() => retryThemeSave()} class="underline mt-1">Retry saving</button>
     </div>
   {/if}
@@ -79,7 +80,7 @@
               aria-invalid={!!colourError} aria-describedby={colourError ? 'accent-colour-error' : undefined}
               class="w-28 px-2 py-1 rounded border border-border bg-surface text-text text-sm font-mono" placeholder="#bba4ff" />
           </div>
-          {#if colourError}<p id="accent-colour-error" role="alert" class="text-sm text-red-400 mt-1">{colourError}</p>{/if}
+          {#if colourError}<p id="accent-colour-error" role="alert" class="text-sm text-error mt-1">{colourError}</p>{/if}
         </details>
       </div>
     </div>
@@ -105,14 +106,25 @@
     {#each [
       { key: 'compactSpacing' as const, label: 'Compact spacing', help: 'Fit more content into the same space.' },
       { key: 'hidePosters' as const, label: 'Hide posters', help: 'Use text lists in libraries, calendars, and title pickers.' },
-      { key: 'colorblindFriendly' as const, label: 'Colourblind-friendly colours', help: 'Use clearer colours for episode statuses.' },
+      { key: 'colorblindFriendly' as const, label: 'Colourblind-friendly colours', help: 'Use blue and orange for results across TVC. Labels and symbols help with red–green colour blindness.' },
     ] as option}
       <div class="settings-row">
-        <div><p class="font-medium text-sm">{option.label}</p><p class="text-xs text-text-muted">{option.help}</p></div>
+        <div>
+          <p class="font-medium text-sm">{option.label}</p><p class="text-xs text-text-muted">{option.help}</p>
+          {#if option.key === 'colorblindFriendly'}
+            <div class="appearance-status-preview" role="group" aria-label="Status colour preview">
+              <WatchedBadge />
+              <span class="text-upcoming bg-upcoming/15"><Clock size={13} aria-hidden="true" />Upcoming</span>
+              <span class="text-success bg-success/15"><Check size={13} aria-hidden="true" />Correct</span>
+              <span class="text-error bg-error/15"><CircleX size={13} aria-hidden="true" />Incorrect</span>
+              <span class="text-warning bg-warning/15"><TriangleAlert size={13} aria-hidden="true" />Needs attention</span>
+            </div>
+          {/if}
+        </div>
         <button type="button" role="switch" aria-checked={settings[option.key]} aria-label={option.label}
           onclick={() => updateThemeSettings({ [option.key]: !settings[option.key] })}
-          class="relative w-10 h-5 shrink-0 rounded-full transition-colors {settings[option.key] ? 'bg-accent' : 'bg-border'}">
-          <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform {settings[option.key] ? 'translate-x-5' : ''}"></span>
+          class="appearance-switch relative w-10 h-5 shrink-0 rounded-full transition-colors {settings[option.key] ? 'bg-accent' : 'bg-border'}">
+          <span style:background-color={settings[option.key] ? 'var(--accent-foreground)' : 'var(--color-text)'} class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform {settings[option.key] ? 'translate-x-5' : ''}"></span>
         </button>
       </div>
     {/each}
@@ -123,3 +135,9 @@
     {#if !isDefault}<button type="button" onclick={resetDefaults} class="flex items-center gap-2 text-sm text-text-muted hover:text-text"><RotateCcw size={15} />Reset appearance</button>{/if}
   </div>
 </div>
+
+<style>
+  .appearance-status-preview { display:flex; flex-wrap:wrap; align-items:center; gap:.35rem; margin-top:.55rem; }
+  .appearance-status-preview > span { display:inline-flex; align-items:center; gap:.25rem; padding:.2rem .4rem; border-radius:.35rem; font-size:.7rem; white-space:nowrap; }
+  .appearance-switch[aria-checked="true"] { outline:1px solid var(--accent-focus); }
+</style>

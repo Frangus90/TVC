@@ -1,7 +1,7 @@
 <script lang="ts">
   import WatchedBadge from "../common/WatchedBadge.svelte";
   import { format, parseISO, addDays, isPast, isToday } from "date-fns";
-  import { Check, Tv, Film } from "lucide-svelte";
+  import { Check, Tv, Film, Clock, PlayCircle } from "lucide-svelte";
   import { getCalendarFilter } from "../../stores/calendar.svelte";
   import { getNow } from "../../stores/now.svelte";
   import { logger } from "../../utils/logger";
@@ -208,7 +208,11 @@
                 </button>
 
                 <!-- Status indicator -->
-                <span class="focus-agenda-state text-xs text-text-muted" class:is-watched={item.watched}>{#if item.watched}<WatchedBadge />{:else}{item.hasAired ? 'Available' : 'Upcoming'}{/if}</span>
+                <span class="focus-agenda-state text-xs {item.hasAired ? 'text-available' : 'text-upcoming'}" class:is-watched={item.watched}>
+                  {#if item.watched}<WatchedBadge />{:else}
+                    {#if item.hasAired}<PlayCircle class="w-3 h-3" aria-hidden="true" />Available{:else}<Clock class="w-3 h-3" aria-hidden="true" />Upcoming{/if}
+                  {/if}
+                </span>
                 <button type="button" class="focus-watch-button flex-shrink-0" aria-pressed={item.watched} aria-label="{item.watched ? 'Mark unwatched' : 'Mark watched'}: {item.title}" onclick={() => handleItemClick(item)}>
                   {#if item.watched}
                     <Check class="w-4 h-4" />
@@ -231,13 +235,13 @@
   .focus-agenda-date { padding-top: 0.75rem; }
   .focus-agenda-item { border: 1px solid var(--color-border); border-radius: 0.75rem; background: var(--color-surface); }
   .focus-agenda-item.is-watched { background: var(--focus-watched-background); border-color: var(--focus-watched-border); }
-  .focus-agenda-state { flex: none; }
-  .focus-agenda-open:hover { color: var(--color-accent); }
+  .focus-agenda-state { display: inline-flex; align-items: center; gap: 0.25rem; flex: none; }
+  .focus-agenda-open:hover { color: var(--accent-text); }
   .focus-watch-button { display: flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border: 1px solid var(--color-border); border-radius: 0.5rem; }
   .focus-watch-button:hover { background: var(--color-surface-hover); }
   .focus-watch-button[aria-pressed="true"] { background: var(--focus-watched); border-color: var(--focus-watched); color: var(--focus-watched-ink); }
   .focus-watch-button[aria-pressed="true"]:hover { background: color-mix(in srgb, var(--focus-watched) 85%, white); }
   .focus-watch-circle { width: 0.9rem; height: 0.9rem; border: 1px solid var(--color-text-muted); border-radius: 50%; }
   :global(.compact-spacing) .focus-agenda-day { padding: 0.75rem 0; }
-  @media (max-width: 1050px) { .focus-agenda-day { grid-template-columns: 1fr; gap: 0.75rem; } .focus-agenda-date { padding: 0; } .focus-agenda-state:not(.is-watched) { display: none; } }
+  @media (max-width: 1050px) { .focus-agenda-day { grid-template-columns: 1fr; gap: 0.75rem; } .focus-agenda-date { padding: 0; } .focus-agenda-item { flex-wrap: wrap; gap: 0.75rem; } .focus-agenda-open { min-width: min(12rem, 100%); } }
 </style>

@@ -38,7 +38,7 @@
 
 <div class="space-y-5">
   {#if getError()}
-    <div role="alert" class="focus-panel p-4 text-red-400"><p>{getError()}</p><button type="button" class="focus-button mt-3" onclick={() => setActiveTab("overview")}>Reload summary</button></div>
+    <div role="alert" class="focus-panel p-4 text-error"><p>{getError()}</p><button type="button" class="focus-button mt-3" onclick={() => setActiveTab("overview")}>Reload summary</button></div>
   {:else if stats}
     <section aria-label="Library totals" class="grid grid-cols-3 gap-3">
       {#each [{ name: "TV shows", count: stats.total_shows }, { name: "Episodes", count: stats.total_episodes }, { name: "Movies", count: stats.total_movies }] as item}
@@ -53,7 +53,7 @@
   <section aria-label="Library status" class="space-y-3">
     <div class="focus-panel p-4 flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-start gap-3"><CloudDownload size={19} class="text-accent mt-0.5" /><div><h2 class="font-medium">Sync with TMDB</h2>
-        {#if syncError}<p role="alert" class="text-sm text-red-400">{syncError}</p>
+        {#if syncError}<p role="alert" class="text-sm text-error">{syncError}</p>
         {:else if healthLoading && !sync.length}<p class="text-sm text-text-muted">Loading sync status…</p>
         {:else}<p class="text-sm text-text-muted">{sync.some(item => item.running) ? "Your library is syncing." : sync.some(item => item.report?.error) ? "The latest sync failed. Open its results to retry." : failed ? `${failed} title${failed === 1 ? " needs" : "s need"} another sync attempt.` : sync.some(item => item.interrupted || item.report?.stopped || item.last_full_report?.stopped || item.last_full_report && !item.last_full_report.finished_at) ? "A sync stopped before finishing. Review its results." : sync.every(item => item.last_success_at) && sync.length === 2 ? "Both libraries have completed a full sync." : "Review sync results and choose an automatic schedule."}</p>{/if}
       </div></div>
@@ -61,7 +61,7 @@
     </div>
     <div class="focus-panel p-4 flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-start gap-3"><HelpCircle size={19} class="text-accent mt-0.5" /><div><h2 class="font-medium">Match older shows</h2>
-        {#if getUnmigratedError()}<p role="alert" class="text-sm text-red-400">{getUnmigratedError()}</p>
+        {#if getUnmigratedError()}<p role="alert" class="text-sm text-error">{getUnmigratedError()}</p>
         {:else if !healthReady}<p class="text-sm text-text-muted">Loading matching status…</p>
         {:else}<p class="text-sm text-text-muted">{getUnmigratedShows().length ? `${getUnmigratedShows().length} show${getUnmigratedShows().length === 1 ? " needs" : "s need"} a TMDB match. Existing watch history is kept.` : "No shows are waiting for a TMDB match."}</p>{/if}
       </div></div>
@@ -69,9 +69,9 @@
     </div>
     <div class="focus-panel p-4 flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-start gap-3"><Download size={19} class="text-accent mt-0.5" /><div><h2 class="font-medium">Backups</h2>
-        {#if getBackupError()}<p role="alert" class="text-sm text-red-400">{getBackupError()}</p>
+        {#if getBackupError()}<p role="alert" class="text-sm text-error">{getBackupError()}</p>
         {:else if !backup}<p class="text-sm text-text-muted">Loading backup status…</p>
-        {:else if backup?.last_error}<p role="alert" class="text-sm text-yellow-400">Latest backup needs attention: {backup.last_error}</p>
+        {:else if backup?.last_error}<p role="alert" class="text-sm text-warning">Latest backup needs attention: {backup.last_error}</p>
         {:else}<p class="text-sm text-text-muted">{backup?.last_success_at ? `Last backup: ${formatDateTime(backup.last_success_at)}.` : "No successful backup has been recorded yet."} {backup?.preferences.frequency === "off" ? "Automatic backups are off." : backup?.next_due_at ? `Next: ${formatDateTime(backup.next_due_at)}.` : ""}</p>{/if}
       </div></div>
       <button type="button" class="focus-button" onclick={() => setActiveTab("backups")}>Open backups <ArrowRight size={15} /></button>

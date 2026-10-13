@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
-  import { RefreshCw, Tv, Film, AlertTriangle, Check } from "lucide-svelte";
+  import { RefreshCw, Tv, Film, AlertTriangle, Check, CircleX } from "lucide-svelte";
   import type { LibraryKind, LibrarySyncStatus, SyncFrequency, SyncReport } from "../../stores/librarySync";
   import { formatDateTime } from "../../utils/dateFormat";
   import { setActiveTab as setDataTab } from "../../stores/dataManagement.svelte";
@@ -154,7 +154,8 @@
   </div>
 
   {#if loadError || actionError}
-    <div role="alert" class="text-sm text-red-400 rounded-lg border border-red-500/30 bg-red-500/10 p-3 break-words">
+    <div role="alert" class="text-sm text-error rounded-lg border border-error/30 bg-error/10 p-3 break-words">
+      <CircleX size={16} class="mb-1" aria-hidden="true" />
       {#if loadError}<p>Could not load sync status: {loadError}</p>{/if}
       {#if savedScheduleStatusUnavailable}<p>Your schedule was saved. Sync status is temporarily unavailable.</p>{/if}
       {#if actionError}<p>{actionError}</p>{/if}
@@ -210,9 +211,9 @@
           {#if report.release_country}<p class="text-xs text-text-muted">Movie release country: {report.release_country}</p>{/if}
           <div class="flex items-center gap-2 text-sm">
             {#if library.running}<RefreshCw class="w-4 h-4 animate-spin text-accent" />
-            {:else if library.interrupted || report.stopped || report.error || report.failures.length}<AlertTriangle class="w-4 h-4 text-yellow-400" />
-            {:else}<Check class="w-4 h-4 text-available" />{/if}
-            <span>{runLabel(report)} · {formatDateTime(report.started_at)}</span>
+            {:else if library.interrupted || report.stopped || report.error || report.failures.length}<AlertTriangle class="w-4 h-4 text-warning" />
+            {:else}<Check class="w-4 h-4 text-success" />{/if}
+            <span>{runLabel(report)} · {formatDateTime(report.started_at)} · {library.running ? 'Syncing' : report.stopped ? 'Stopped' : library.interrupted ? 'Interrupted' : report.error || report.failures.length ? 'Needs attention' : 'Completed'}</span>
           </div>
           {#if library.running}
             <p class="text-sm text-text-muted break-words">{processed} / {report.total} processed{report.current_title ? ` · ${report.current_title}` : ''}</p>
@@ -220,20 +221,20 @@
             <progress value={processed} max={Math.max(report.total, 1)} aria-label="Sync progress" class="w-full h-1.5 accent-accent"></progress>
           {/if}
           {#if report.stopped}
-            <p class="text-sm text-yellow-400">Stopped after {processed} / {report.total} titles. Sync now starts a new full run. Automatic sync waits until its next scheduled run.</p>
+            <p class="text-sm text-warning">Stopped after {processed} / {report.total} titles. Sync now starts a new full run. Automatic sync waits until its next scheduled run.</p>
           {/if}
           {#if library.interrupted}
-            <p class="text-sm text-yellow-400">This run was interrupted. Sync now to finish refreshing the library.</p>
+            <p class="text-sm text-warning">This run was interrupted. Sync now to finish refreshing the library.</p>
           {/if}
           <p class="text-sm text-text-muted">
-            <span class="text-available">{report.succeeded} synced</span> ·
-            <span class={report.failures.length ? 'text-red-400' : ''}>{report.failures.length} failed</span> ·
+            <span class="text-success">{report.succeeded} synced</span> ·
+            <span class={report.failures.length ? 'text-error' : ''}>{report.failures.length} failed</span> ·
             {report.skipped} skipped
           </p>
           {#if report.total === 0 && report.finished_at && !report.error}
             <p class="text-sm text-text-muted">{report.source === 'retry' ? 'No failed titles remain in this library.' : 'No saved titles to sync yet.'}</p>
           {/if}
-          {#if report.error}<p class="text-sm text-red-400 break-words">{report.error}</p>{/if}
+          {#if report.error}<p class="text-sm text-error break-words">{report.error}</p>{/if}
           {#if report.skipped > 0}
             <details class="text-sm">
               <summary class="cursor-pointer text-text-muted py-1">Skipped titles ({report.skipped})</summary>
@@ -254,10 +255,10 @@
           {/if}
           {#if report.failures.length}
             <details open class="text-sm">
-              <summary class="cursor-pointer text-red-400 py-1">Failed titles ({report.failures.length})</summary>
+              <summary class="cursor-pointer text-error py-1">Failed titles ({report.failures.length})</summary>
               <ul class="mt-2 space-y-2 max-h-56 overflow-auto">
                 {#each report.failures as failure (failure.id)}
-                  <li class="rounded bg-red-500/5 border border-red-500/20 p-2 break-words">
+                  <li class="rounded bg-error/5 border border-error/20 p-2 break-words">
                     <p class="font-medium">{failure.title}</p>
                     <p class="text-xs text-text-muted mt-1">{failure.error}</p>
                   </li>
@@ -277,14 +278,14 @@
           <summary class="cursor-pointer text-text-muted">Original full-run result · {formatDateTime(full.started_at)}</summary>
           <p class="mt-2 text-text-muted">{completed(full)} / {full.total} processed · {full.succeeded} synced · {full.failures.length} failed · {full.skipped} skipped{full.stopped ? ' · Stopped' : !full.finished_at ? ' · Interrupted' : ''}</p>
           <p class="text-xs text-text-muted mt-1">These are the results before retries. The latest retry above shows which failures remain.</p>
-          {#if full.stopped || !full.finished_at}<p class="text-xs text-yellow-400 mt-1">This full run ended early. Start a full sync to refresh its remaining titles.</p>{/if}
+          {#if full.stopped || !full.finished_at}<p class="text-xs text-warning mt-1">This full run ended early. Start a full sync to refresh its remaining titles.</p>{/if}
         </details>
       {/if}
       <details class="border-t border-border pt-3 text-sm" ontoggle={(event) => toggleHistory(library.kind, event)}>
         <summary class="cursor-pointer text-text-muted">Recent runs · last five</summary>
         {#if historyLoading[library.kind]}<p role="status" class="text-xs text-text-muted mt-2">Loading history…</p>{/if}
         {#if historyErrors[library.kind]}
-          <p role="alert" class="text-xs text-red-400 mt-2">Could not load history: {historyErrors[library.kind]}</p>
+          <p role="alert" class="text-xs text-error mt-2">Could not load history: {historyErrors[library.kind]}</p>
           <button type="button" class="focus-button mt-2" onclick={() => loadHistory(library.kind)}>Retry</button>
         {:else if !historyLoading[library.kind] && !histories[library.kind].length}
           <p class="text-xs text-text-muted mt-2">No completed runs recorded yet.</p>
@@ -294,11 +295,11 @@
             <details class="rounded border border-border bg-background p-3">
               <summary class="cursor-pointer">
                 <span>{runLabel(run)} · {formatDateTime(run.started_at)}</span>
-                <span class="text-xs {run.stopped || !run.finished_at || run.error || run.failures.length ? 'text-yellow-400' : 'text-available'}">{run.stopped ? 'Stopped' : !run.finished_at ? 'Interrupted' : run.error || run.failures.length ? 'Needs attention' : 'Completed'}</span>
+                <span class="text-xs {run.stopped || !run.finished_at || run.error || run.failures.length ? 'text-warning' : 'text-success'}">{run.stopped ? 'Stopped' : !run.finished_at ? 'Interrupted' : run.error || run.failures.length ? 'Needs attention' : 'Completed'}</span>
               </summary>
               <p class="text-xs text-text-muted mt-2">{completed(run)} / {run.total} processed · {run.succeeded} synced · {run.failures.length} failed · {run.skipped} skipped</p>
               {#if run.release_country}<p class="text-xs text-text-muted mt-1">Movie release country: {run.release_country}</p>{/if}
-              {#if run.error}<p class="text-xs text-red-400 mt-2 break-words">{run.error}</p>{/if}
+              {#if run.error}<p class="text-xs text-error mt-2 break-words">{run.error}</p>{/if}
               {#if run.failures.length}
                 <ul class="space-y-1 mt-2 max-h-40 overflow-auto">{#each run.failures as failure}<li class="text-xs break-words"><span class="font-medium">{failure.title}</span> · {failure.error}</li>{/each}</ul>
               {/if}

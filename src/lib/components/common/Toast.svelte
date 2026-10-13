@@ -31,9 +31,9 @@
   };
 
   const colors = {
-    success: "bg-green-500/20 text-green-400 border-green-500/30",
-    error: "bg-red-500/20 text-red-400 border-red-500/30",
-    info: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+    success: "toast-success text-success border-success/30",
+    error: "toast-error text-error border-error/30",
+    info: "toast-info text-info border-info/30",
   };
 
   let IconComponent = $derived(icons[type]);
@@ -70,6 +70,10 @@
 {/if}
 
 <style>
+  .toast-success { background: color-mix(in srgb, var(--color-success) 20%, var(--color-surface)); }
+  .toast-error { background: color-mix(in srgb, var(--color-error) 20%, var(--color-surface)); }
+  .toast-info { background: color-mix(in srgb, var(--color-info) 20%, var(--color-surface)); }
+
   @keyframes slide-up {
     from {
       transform: translateY(100%);

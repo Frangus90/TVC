@@ -25,18 +25,18 @@
     switch (type) {
       case "danger":
         return {
-          icon: "text-red-400",
-          button: "bg-red-500 hover:bg-red-600 text-white",
+          icon: "text-error",
+          button: "bg-error hover:bg-error/90 text-background",
         };
       case "warning":
         return {
-          icon: "text-yellow-400",
-          button: "bg-yellow-500 hover:bg-yellow-600 text-white",
+          icon: "text-warning",
+          button: "bg-warning hover:bg-warning/90 text-background",
         };
       case "info":
         return {
-          icon: "text-blue-400",
-          button: "bg-blue-500 hover:bg-blue-600 text-white",
+          icon: "text-info",
+          button: "bg-info hover:bg-info/90 text-background",
         };
       default:
         return {

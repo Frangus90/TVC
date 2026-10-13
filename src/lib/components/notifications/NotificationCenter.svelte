@@ -2,6 +2,7 @@
   import { Flag, Play, Tv, Download, Info, Check, Trash2, Settings, BellOff } from "lucide-svelte";
   import { onMount } from "svelte";
   import { formatDistanceToNow } from "date-fns";
+  import { formatDateTime } from "../../utils/dateFormat";
   import {
     getNotifications,
     getUnreadCount,
@@ -36,11 +37,15 @@
   };
 
   const typeColors: Record<string, string> = {
-    racing: "text-red-400",
-    plex: "text-orange-400",
-    premiere: "text-accent",
-    update: "text-green-400",
-    system: "text-blue-400",
+    racing: "text-info",
+    plex: "text-info",
+    premiere: "text-premiere",
+    update: "text-success",
+    system: "text-info",
+  };
+
+  const typeLabels: Record<string, string> = {
+    racing: "Racing", plex: "Plex", premiere: "Premiere", update: "Update", system: "System",
   };
 
   onMount(() => {
@@ -163,17 +168,8 @@
           role="button"
           tabindex="0"
           onclick={() => handleNotificationClick(notif)}
-          onkeydown={(e) => { if (e.key === 'Enter') handleNotificationClick(notif); }}
+          onkeydown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); handleNotificationClick(notif); } }}
         >
-          <!-- Unread indicator -->
-          <div class="flex-shrink-0 mt-1.5">
-            {#if !notif.read}
-              <div class="w-2 h-2 rounded-full bg-accent"></div>
-            {:else}
-              <div class="w-2 h-2"></div>
-            {/if}
-          </div>
-
           <!-- Type icon -->
           <div class="flex-shrink-0 mt-0.5 {typeColors[notif.type] || 'text-text-muted'}">
             <IconComponent class="w-4 h-4" />
@@ -181,15 +177,19 @@
 
           <!-- Content -->
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium text-text truncate">{notif.title}</p>
+            <p class="text-sm {!notif.read ? 'font-semibold' : 'font-medium'} text-text truncate">{notif.title}</p>
             <p class="text-xs text-text-muted mt-0.5 line-clamp-2">{notif.body}</p>
-            <p class="text-xs text-text-muted/60 mt-1">{formatTime(notif.created_at)}</p>
+            <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-muted mt-1">
+              <span>{typeLabels[notif.type] || "System"}</span>
+              <time datetime={notif.created_at} title={formatDateTime(notif.created_at)}>{formatTime(notif.created_at)}</time>
+              {#if !notif.read}<span class="rounded border border-info/40 px-1.5 py-0.5 text-info font-semibold">Unread</span>{/if}
+            </div>
           </div>
 
           <!-- Dismiss button -->
           <button
             onclick={(e) => handleDismiss(e, notif.id)}
-            class="flex-shrink-0 p-1 rounded hover:bg-background transition-colors text-text-muted hover:text-text opacity-0 group-hover:opacity-100"
+            class="flex-shrink-0 p-1 rounded hover:bg-background transition-colors text-text-muted hover:text-text opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
             title="Dismiss"
           >
             <Trash2 class="w-3.5 h-3.5" />

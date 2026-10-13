@@ -77,7 +77,7 @@
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-3">
         <div
-          class="w-3 h-3 rounded-full {serverStatus.running ? 'bg-available animate-pulse' : 'bg-text-muted'}"
+          class="w-3 h-3 rounded-full {serverStatus.running ? 'bg-success animate-pulse' : 'bg-text-muted'}"
         ></div>
         <div>
           <p class="font-medium">
@@ -93,8 +93,8 @@
         onclick={handleToggle}
         disabled={loading}
         class="px-4 py-2 text-sm rounded-lg transition-colors flex items-center gap-2 {serverStatus.running
-          ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-          : 'bg-available/20 text-available hover:bg-available/30'} disabled:opacity-50"
+          ? 'bg-error/20 text-error hover:bg-error/30'
+          : 'bg-success/20 text-success hover:bg-success/30'} disabled:opacity-50"
       >
         {#if loading}
           <RefreshCw class="w-4 h-4 animate-spin" />
@@ -131,7 +131,7 @@
           <p class="text-sm text-text-muted self-center">Stop server to change port</p>
         {/if}
       </div>
-      {#if portError}<p role="alert" class="text-sm text-red-400 mt-1">{portError}</p>{/if}
+      {#if portError}<p role="alert" class="text-sm text-error mt-1">{portError}</p>{/if}
     </div>
 
     <!-- Webhook URL -->
@@ -147,7 +147,7 @@
           class="px-3 py-2 bg-surface-hover hover:bg-surface-hover/80 rounded transition-colors flex items-center gap-2 text-sm"
         >
           {#if copied}
-            <Check class="w-4 h-4 text-available" />
+            <Check class="w-4 h-4 text-success" />
             Copied!
           {:else}
             <Copy class="w-4 h-4" />
@@ -155,7 +155,7 @@
           {/if}
         </button>
       </div>
-      {#if copyError}<p role="alert" class="text-sm text-red-400 mt-1">{copyError}</p>{/if}
+      {#if copyError}<p role="alert" class="text-sm text-error mt-1">{copyError}</p>{/if}
     </div>
 
     <!-- Setup Instructions -->
@@ -218,11 +218,11 @@
               </div>
               <div class="flex-shrink-0">
                 {#if entry.matched_entity_id}
-                  <span class="px-2 py-0.5 bg-available/20 text-available text-xs font-medium rounded">
+                  <span class="px-2 py-0.5 bg-success/20 text-success text-xs font-medium rounded">
                     Matched
                   </span>
                 {:else}
-                  <span class="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs font-medium rounded">
+                  <span class="px-2 py-0.5 bg-warning/20 text-warning text-xs font-medium rounded">
                     Not Found
                   </span>
                 {/if}
@@ -236,7 +236,7 @@
 
   <!-- Error -->
   {#if error}
-    <div class="p-3 rounded-lg bg-red-500/10 text-red-400 text-sm text-center">
+    <div class="p-3 rounded-lg bg-error/10 text-error text-sm text-center">
       {error}
     </div>
   {/if}

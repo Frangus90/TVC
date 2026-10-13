@@ -21,7 +21,6 @@
     promoteMovieToTracked,
     demoteShowToTierOnly,
     demoteMovieToTierOnly,
-    type Tier,
     type TierListShow,
     type TierListMovie,
   } from "../../stores/tiers.svelte";
@@ -256,12 +255,6 @@
     }
   }
 
-  function getTierLabelStyle(tier: Tier): string {
-    if (tier.color) {
-      return `color: ${tier.color};`;
-    }
-    return '';
-  }
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -405,7 +398,7 @@
         >
           <!-- Tier label -->
           <div class="focus-tier-label w-28 flex-shrink-0 flex flex-col items-center justify-center py-3 px-2 bg-surface-hover border-r border-border rounded-l-xl">
-            <span class="text-sm font-bold" style={getTierLabelStyle(tier)}>{tier.name}</span>
+            <span class="text-sm font-bold text-text">{tier.name}</span>
             <span class="text-[10px] text-text-muted mt-0.5">#{tier.position}</span>
           </div>
 
@@ -416,7 +409,7 @@
                 items: showZone?.items ?? [],
                 type: "tier-shows",
                 flipDurationMs: 200,
-                dropTargetStyle: { outline: "2px dashed var(--color-accent)", outlineOffset: "-2px" },
+                dropTargetStyle: { outline: "2px dashed var(--accent-focus)", outlineOffset: "-2px" },
               }}
               onconsider={(e) => handleShowConsider(tier.id, e as CustomEvent<DndEvent<TierListShow>>)}
               onfinalize={(e) => handleShowFinalize(tier.id, e as CustomEvent<DndEvent<TierListShow>>)}
@@ -490,7 +483,7 @@
                         <button
                           type="button"
                           onclick={() => handlePromote("show", show.id)}
-                          class="w-full px-3 py-1.5 text-left text-xs hover:bg-surface-hover flex items-center gap-2 text-green-400"
+                          class="w-full px-3 py-1.5 text-left text-xs hover:bg-surface-hover flex items-center gap-2 text-success"
                         >
                           <ArrowUpCircle class="w-3 h-3" />
                           Start tracking
@@ -499,7 +492,7 @@
                         <button
                           type="button"
                           onclick={() => handleDemote("show", show.id)}
-                          class="w-full px-3 py-1.5 text-left text-xs hover:bg-surface-hover flex items-center gap-2 text-yellow-400"
+                          class="w-full px-3 py-1.5 text-left text-xs hover:bg-surface-hover flex items-center gap-2 text-warning"
                         >
                           <ArrowDownCircle class="w-3 h-3" />
                           Tier only (stop tracking)
@@ -520,7 +513,7 @@
                         <button
                           type="button"
                           onclick={() => handleRemoveFromTierList("show", show.id)}
-                          class="w-full px-3 py-1.5 text-left text-xs text-red-400 hover:bg-surface-hover flex items-center gap-2"
+                          class="w-full px-3 py-1.5 text-left text-xs text-error hover:bg-surface-hover flex items-center gap-2"
                         >
                           <Trash2 class="w-3 h-3" />
                           Remove from tier list
@@ -537,7 +530,7 @@
                 items: movieZone?.items ?? [],
                 type: "tier-movies",
                 flipDurationMs: 200,
-                dropTargetStyle: { outline: "2px dashed var(--color-accent)", outlineOffset: "-2px" },
+                dropTargetStyle: { outline: "2px dashed var(--accent-focus)", outlineOffset: "-2px" },
               }}
               onconsider={(e) => handleMovieConsider(tier.id, e as CustomEvent<DndEvent<TierListMovie>>)}
               onfinalize={(e) => handleMovieFinalize(tier.id, e as CustomEvent<DndEvent<TierListMovie>>)}
@@ -609,7 +602,7 @@
                         <button
                           type="button"
                           onclick={() => handlePromote("movie", movie.id)}
-                          class="w-full px-3 py-1.5 text-left text-xs hover:bg-surface-hover flex items-center gap-2 text-green-400"
+                          class="w-full px-3 py-1.5 text-left text-xs hover:bg-surface-hover flex items-center gap-2 text-success"
                         >
                           <ArrowUpCircle class="w-3 h-3" />
                           Start tracking
@@ -618,7 +611,7 @@
                         <button
                           type="button"
                           onclick={() => handleDemote("movie", movie.id)}
-                          class="w-full px-3 py-1.5 text-left text-xs hover:bg-surface-hover flex items-center gap-2 text-yellow-400"
+                          class="w-full px-3 py-1.5 text-left text-xs hover:bg-surface-hover flex items-center gap-2 text-warning"
                         >
                           <ArrowDownCircle class="w-3 h-3" />
                           Tier only (stop tracking)
@@ -637,7 +630,7 @@
                         <button
                           type="button"
                           onclick={() => handleRemoveFromTierList("movie", movie.id)}
-                          class="w-full px-3 py-1.5 text-left text-xs text-red-400 hover:bg-surface-hover flex items-center gap-2"
+                          class="w-full px-3 py-1.5 text-left text-xs text-error hover:bg-surface-hover flex items-center gap-2"
                         >
                           <Trash2 class="w-3 h-3" />
                           Remove from tier list
@@ -661,7 +654,7 @@
               items: untieredShows,
               type: "tier-shows",
               flipDurationMs: 200,
-              dropTargetStyle: { outline: "2px dashed var(--color-accent)", outlineOffset: "-2px" },
+              dropTargetStyle: { outline: "2px dashed var(--accent-focus)", outlineOffset: "-2px" },
             }}
             onconsider={(e) => handleShowConsider(null, e as CustomEvent<DndEvent<TierListShow>>)}
             onfinalize={(e) => handleShowFinalize(null, e as CustomEvent<DndEvent<TierListShow>>)}
@@ -716,7 +709,7 @@
                       {/each}
                       <div class="border-t border-border my-1"></div>
                       {#if show.tier_only}
-                        <button type="button" onclick={() => handleRemoveFromTierList("show", show.id)} class="w-full px-3 py-1.5 text-left text-xs text-red-400 hover:bg-surface-hover flex items-center gap-2">
+                        <button type="button" onclick={() => handleRemoveFromTierList("show", show.id)} class="w-full px-3 py-1.5 text-left text-xs text-error hover:bg-surface-hover flex items-center gap-2">
                           <Trash2 class="w-3 h-3" />
                           Remove from tier list
                         </button>
@@ -732,7 +725,7 @@
               items: untieredMovies,
               type: "tier-movies",
               flipDurationMs: 200,
-              dropTargetStyle: { outline: "2px dashed var(--color-accent)", outlineOffset: "-2px" },
+              dropTargetStyle: { outline: "2px dashed var(--accent-focus)", outlineOffset: "-2px" },
             }}
             onconsider={(e) => handleMovieConsider(null, e as CustomEvent<DndEvent<TierListMovie>>)}
             onfinalize={(e) => handleMovieFinalize(null, e as CustomEvent<DndEvent<TierListMovie>>)}
@@ -787,7 +780,7 @@
                     {/each}
                     <div class="border-t border-border my-1"></div>
                     {#if movie.tier_only}
-                      <button type="button" onclick={() => handleRemoveFromTierList("movie", movie.id)} class="w-full px-3 py-1.5 text-left text-xs text-red-400 hover:bg-surface-hover flex items-center gap-2">
+                      <button type="button" onclick={() => handleRemoveFromTierList("movie", movie.id)} class="w-full px-3 py-1.5 text-left text-xs text-error hover:bg-surface-hover flex items-center gap-2">
                         <Trash2 class="w-3 h-3" />
                         Remove from tier list
                       </button>

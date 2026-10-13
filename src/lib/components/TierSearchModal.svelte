@@ -413,7 +413,7 @@
           </button>
 
           {#if addedIds.size > 0}
-            <p class="text-sm text-green-400">Added successfully!</p>
+            <p class="text-sm text-success">Added successfully!</p>
           {/if}
         </div>
       {:else if searchMode === "shows"}

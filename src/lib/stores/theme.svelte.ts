@@ -1,5 +1,6 @@
 import { getDatabase } from "../utils/database";
 import { logger } from "../utils/logger";
+import { accentAppearance } from "../utils/appearanceColors";
 
 export type PosterSize = "small" | "medium" | "large";
 
@@ -132,9 +133,13 @@ function applyTheme() {
   const root = document.documentElement;
 
   // Apply accent color
-  root.style.setProperty("--accent-color", themeSettings.accentColor);
-  root.style.setProperty("--accent-hover", adjustBrightness(themeSettings.accentColor, -10));
-  root.style.setProperty("--accent-foreground", accentForeground(themeSettings.accentColor));
+  const accent = accentAppearance(themeSettings.accentColor);
+  root.style.setProperty("--accent-color", accent.color);
+  root.style.setProperty("--accent-hover", accent.hover);
+  root.style.setProperty("--accent-foreground", accent.foreground);
+  root.style.setProperty("--accent-hover-foreground", accent.hoverForeground);
+  root.style.setProperty("--accent-text", accent.text);
+  root.style.setProperty("--accent-focus", accent.focus);
 
   root.style.setProperty("--poster-size-scale", String({ small: 0.8, medium: 1, large: 1.2 }[themeSettings.posterSize]));
 
@@ -154,29 +159,6 @@ function applyTheme() {
   } else {
     root.classList.remove("colorblind-friendly");
   }
-}
-
-function adjustBrightness(color: string, percent: number): string {
-  // Simple brightness adjustment for hover colors
-  // This is a simplified version - in production, use a proper color manipulation library
-  const num = parseInt((normalizeAccentColor(color) ?? defaultTheme.accentColor).slice(1), 16);
-  const amt = Math.round(2.55 * percent);
-  const R = Math.max(0, Math.min(255, (num >> 16) + amt));
-  const G = Math.max(0, Math.min(255, ((num >> 8) & 0x00ff) + amt));
-  const B = Math.max(0, Math.min(255, (num & 0x0000ff) + amt));
-  return `#${((1 << 24) + (R << 16) + (G << 8) + B).toString(16).slice(1)}`;
-}
-
-// Keep text readable on both the Focus default and saved custom accent colours.
-function accentForeground(color: string): string {
-  const value = color.replace("#", "");
-  const hex = value.length === 3 ? value.split("").map(c => c + c).join("") : value;
-  const components = [0, 2, 4].map(index => {
-    const channel = parseInt(hex.slice(index, index + 2), 16) / 255;
-    return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
-  });
-  const luminance = components[0] * 0.2126 + components[1] * 0.7152 + components[2] * 0.0722;
-  return luminance > 0.179 ? "#121318" : "#ffffff";
 }
 
 // Initialize theme on load

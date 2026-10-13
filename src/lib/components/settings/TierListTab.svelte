@@ -134,7 +134,7 @@
         <h2 class="font-semibold">Tier layout draft</h2>
         <p class="text-sm text-text-muted">Changes here stay in this draft until you apply them.</p>
       </div>
-      <span class="text-xs {dirty ? 'text-amber-400' : 'text-text-muted'}" aria-live="polite">{loading ? "Loading…" : dirty ? "Unapplied changes" : "Matches your current layout"}</span>
+      <span class="text-xs {dirty ? 'text-warning' : 'text-text-muted'}" aria-live="polite">{loading ? "Loading…" : dirty ? "Unapplied changes" : "Matches your current layout"}</span>
     </div>
     <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Draft tier preset">
       <span class="text-sm text-text-muted mr-1">Start from</span>
@@ -145,7 +145,7 @@
     </div>
   </div>
 
-  {#if error}<p role="alert" class="text-sm text-red-400">{error}</p>{/if}
+  {#if error}<p role="alert" class="text-sm text-error">{error}</p>{/if}
   {#if loading}
     <p class="text-sm text-text-muted">Loading your current tiers…</p>
   {:else}
@@ -166,7 +166,7 @@
           {#if tier.color}<button type="button" disabled={applying} onclick={() => editTier(tier.key, { color: "" })} class="text-xs text-text-muted hover:text-text">Clear colour</button>{/if}
           <button type="button" disabled={applying || index === 0} onclick={() => moveTier(index, index - 1)} aria-label={`Move ${tier.name || 'tier'} up`} class="p-1.5 rounded hover:bg-surface-hover disabled:opacity-30"><ArrowUp size={16} /></button>
           <button type="button" disabled={applying || index === draft.length - 1} onclick={() => moveTier(index, index + 1)} aria-label={`Move ${tier.name || 'tier'} down`} class="p-1.5 rounded hover:bg-surface-hover disabled:opacity-30"><ArrowDown size={16} /></button>
-          <button type="button" disabled={applying} onclick={() => deleteTier(tier.key)} aria-label={`Delete ${tier.name || 'tier'} from draft`} class="p-1.5 rounded text-text-muted hover:text-red-400 hover:bg-surface-hover"><Trash2 size={16} /></button>
+          <button type="button" disabled={applying} onclick={() => deleteTier(tier.key)} aria-label={`Delete ${tier.name || 'tier'} from draft`} class="p-1.5 rounded text-text-muted hover:text-error hover:bg-surface-hover"><Trash2 size={16} /></button>
         </li>
       {:else}<li class="p-4 text-sm text-text-muted">Add at least one tier before applying.</li>{/each}
     </ul>
@@ -189,7 +189,7 @@
     <button type="button" class="focus-button" aria-expanded={importOpen} disabled={applying} onclick={() => importOpen = !importOpen}>Import from Tiermaker</button>
     {#if importOpen}
       <div class="mt-4">
-        {#if dirty}<p class="text-sm text-amber-400 mb-3">This import uses your saved tiers, independently of the unapplied draft above.</p>{/if}
+        {#if dirty}<p class="text-sm text-warning mb-3">This import uses your saved tiers, independently of the unapplied draft above.</p>{/if}
         <TiermakerImport />
       </div>
     {/if}

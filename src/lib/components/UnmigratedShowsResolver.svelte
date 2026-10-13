@@ -137,13 +137,13 @@
 
 {#snippet rowList()}
   {#if lastError}
-    <div class="p-3 rounded bg-red-500/10 border border-red-500/30 text-sm text-red-400">
+    <div class="p-3 rounded bg-error/10 border border-error/30 text-sm text-error">
       {lastError}
     </div>
   {/if}
 
   {#if getUnmigratedShowsError()}
-    <div role="alert" class="p-3 rounded bg-red-500/10 border border-red-500/30 text-sm text-red-400">
+    <div role="alert" class="p-3 rounded bg-error/10 border border-error/30 text-sm text-error">
       Could not load unmapped shows: {getUnmigratedShowsError()}
       <button type="button" class="underline ml-2" onclick={() => loadUnmigratedShows()}>Retry</button>
     </div>
@@ -195,7 +195,7 @@
             {/if}
 
             {#if searchErrors[show.id]}
-              <p role="alert" class="text-xs text-red-400 mt-2">{searchErrors[show.id]} <button type="button" class="underline" onclick={() => handleQueryInput(show.id, queries[show.id] ?? show.name)}>Retry search</button></p>
+              <p role="alert" class="text-xs text-error mt-2">{searchErrors[show.id]} <button type="button" class="underline" onclick={() => handleQueryInput(show.id, queries[show.id] ?? show.name)}>Retry search</button></p>
             {/if}
             {#if results[show.id] && results[show.id].length > 0}
               <ul class="mt-3 max-h-60 overflow-auto border border-border rounded divide-y divide-border">
@@ -243,7 +243,7 @@
             type="button"
             disabled={rowBusy(show.id)}
             onclick={() => handleDelete(show)}
-            class="p-2 rounded-lg hover:bg-red-500/10 text-text-muted hover:text-red-400 transition-colors self-start disabled:opacity-50"
+            class="p-2 rounded-lg hover:bg-error/10 text-text-muted hover:text-error transition-colors self-start disabled:opacity-50"
             aria-label="Delete show"
             title="Delete this show"
           >

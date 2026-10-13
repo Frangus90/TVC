@@ -11,7 +11,7 @@
     parseISO,
     isSameDay,
   } from "date-fns";
-  import { Check, Plus, Film } from "lucide-svelte";
+  import { Check, Plus, Film, Clock, PlayCircle } from "lucide-svelte";
   import { getCurrentDate, getCalendarFilter } from "../../stores/calendar.svelte";
   import { getNow } from "../../stores/now.svelte";
   import { logger } from "../../utils/logger";
@@ -263,7 +263,11 @@
                   {#if item.type === "movie"}<Film class="w-3 h-3" />{:else}<Tv class="w-3 h-3" />{/if}
                   {item.type === "movie" ? 'Movie' : 'TV episode'}
                   {#if item.watched}<WatchedBadge />{/if}
-                  {#if !item.watched && !item.hasAired}<span class="text-upcoming">· Upcoming</span>{/if}
+                  {#if !item.watched}
+                    <span class="inline-flex items-center gap-1 {item.hasAired ? 'text-available' : 'text-upcoming'}">
+                      {#if item.hasAired}<PlayCircle class="w-3 h-3" aria-hidden="true" />Available{:else}<Clock class="w-3 h-3" aria-hidden="true" />Upcoming{/if}
+                    </span>
+                  {/if}
                 </span>
                 <span class="focus-event-title">{item.title}</span>
               </button>
@@ -402,7 +406,8 @@
 {/if}
 
 <style>
-  .focus-month { border: 1px solid var(--color-border); border-radius: 0.875rem; background: var(--color-surface); overflow: hidden; }
+  .focus-month { border: 1px solid var(--color-border); border-radius: 0.875rem; background: var(--color-surface); overflow-x: auto; }
+  .focus-weekdays, .focus-month-grid { min-width: 49rem; }
   .focus-month-grid { grid-auto-rows: minmax(6.25rem, auto); }
   .focus-month-day:nth-child(7n) { border-right: 0; }
   .focus-month-day:nth-last-child(-n+7) { border-bottom: 0; }

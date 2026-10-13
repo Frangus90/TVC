@@ -20,7 +20,7 @@
       {@render fallback(asError(error), reset)}
     {:else}
       <div class="flex flex-col items-center justify-center gap-4 p-8 text-center" role="alert">
-        <AlertTriangle class="w-16 h-16 text-red-400" />
+        <AlertTriangle class="w-16 h-16 text-error" />
         <h3 class="text-lg font-semibold text-text">Something went wrong</h3>
         <p class="text-sm text-text-muted">{asError(error).message}</p>
         <button onclick={reset} class="px-4 py-2 bg-accent text-white rounded-lg flex items-center gap-2">

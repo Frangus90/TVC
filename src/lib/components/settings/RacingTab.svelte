@@ -131,7 +131,7 @@
       <p>Last attempt: {formatDateTime(report.attempted_at)} — {report.succeeded} series refreshed.</p>
       <p>Last complete success: {getRacingConfig()?.last_refreshed ? formatDateTime(getRacingConfig()!.last_refreshed!) : "Never"}</p>
       {#each report.failures as failure}
-        <div class="text-red-400">{failure.name}: {failure.error}
+        <div class="text-error">{failure.name}: {failure.error}
           <button class="underline ml-2" onclick={() => refreshSingleSeries(failure.slug)}>Retry</button>
         </div>
       {/each}
@@ -196,7 +196,7 @@
       {#if isDev}
         <button
           onclick={() => testNotification()}
-          class="flex items-center gap-2 px-4 py-2 rounded-lg bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20 transition-colors text-sm font-medium"
+          class="flex items-center gap-2 px-4 py-2 rounded-lg bg-warning/10 text-warning hover:bg-warning/20 transition-colors text-sm font-medium"
         >
           <Zap class="w-4 h-4" />
           Test Notification

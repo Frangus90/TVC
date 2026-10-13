@@ -30,6 +30,14 @@ All notable changes to TVC will be documented in this file.
 - Plex and Sonarr/Radarr are together under **Integrations**. You can test saved servers without editing them, and Plex setup instructions stay out of the way once connected.
 - Racing settings let you switch between followed series and all series, and explain when notification settings prevent reminders.
 
+### Colourblind Support and Readability
+
+- **Settings → Appearance → Colourblind-friendly colours** now uses blue and orange for results across the app, with a small preview to help you choose.
+- Calendar states, award picks, sync results and notifications use clearer words and symbols. Award picks say **Correct**, **Incorrect** or **Pending**, and new notifications show **Unread**.
+- Brighter status text, clearer selection checks and readable button text make the dark theme easier to use, including with custom accent colours.
+- Calendar Month and Week views keep day columns readable in smaller windows, with horizontal scrolling when needed.
+- Tier and racing names stay readable alongside their chosen colours. Your saved tier colours and rankings are kept.
+
 ### Data Management
 
 - Data is organised into **Overview**, **Sync**, **Backups**, **Archive**, and **Maintenance**, with shorter headers and clearer status summaries.

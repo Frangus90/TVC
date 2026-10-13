@@ -3,7 +3,7 @@
   import { open, save } from "@tauri-apps/plugin-dialog";
   import { readTextFile } from "@tauri-apps/plugin-fs";
   import { relaunch } from "@tauri-apps/plugin-process";
-  import { Download, Upload, FolderOpen, RefreshCw, AlertTriangle } from "lucide-svelte";
+  import { Download, Upload, FolderOpen, RefreshCw, AlertTriangle, Check, CircleX } from "lucide-svelte";
   import { getBackupStatus, getBackupError, isBackupLoading, isBackupSaving, isBackupRestartRequired, loadBackupStatus, updateBackupPreferences, createBackupFile, createLocalBackup, restoreBackup, type BackupFrequency } from "../../stores/backups.svelte";
   import { describeBackup, parseBackup } from "../../utils/backup";
   import { formatDateTime } from "../../utils/dateFormat";
@@ -83,14 +83,14 @@
     </div>
   </div>
   {#if actionError || getBackupError()}
-    <div role="alert" class="p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 text-sm break-words">
-      {actionError ?? getBackupError()}
+    <div role="alert" class="p-3 rounded-lg border border-error/30 bg-error/10 text-error text-sm break-words">
+      <p class="flex items-start gap-2"><CircleX size={16} class="shrink-0 mt-0.5" /><span>{actionError ?? getBackupError()}</span></p>
       {#if getBackupError()}<button type="button" class="underline ml-2" disabled={isBackupLoading()} onclick={() => loadBackupStatus()}>Reload status</button>{/if}
     </div>
   {/if}
   {#if result}
-    <div role="status" class="p-3 rounded-lg border text-sm whitespace-pre-line break-words {warning ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400' : 'border-available/30 bg-available/10 text-available'}">
-      {result}
+    <div role="status" class="p-3 rounded-lg border text-sm whitespace-pre-line break-words {warning ? 'border-warning/30 bg-warning/10 text-warning' : 'border-success/30 bg-success/10 text-success'}">
+      <p class="flex items-start gap-2">{#if warning}<AlertTriangle size={16} class="shrink-0 mt-0.5" />{:else}<Check size={16} class="shrink-0 mt-0.5" />{/if}<span>{result}</span></p>
       {#if restartRequired}<button type="button" class="focus-button mt-3" onclick={restart}><RefreshCw size={16} />Restart now</button>{/if}
     </div>
   {/if}
@@ -107,7 +107,7 @@
       {#if status?.running || working}<span role="status" class="flex items-center gap-2 text-accent"><RefreshCw size={14} class="animate-spin" />Working…</span>{/if}
     </div>
     {#if status?.last_success_path}<p class="text-xs text-text-muted break-all">{status.last_success_path}</p>{/if}
-    {#if status?.last_error}<p class="flex items-start gap-2 text-sm text-yellow-400 break-words"><AlertTriangle size={16} class="shrink-0 mt-0.5" />{status.last_error}</p>{/if}
+    {#if status?.last_error}<p class="flex items-start gap-2 text-sm text-warning break-words"><AlertTriangle size={16} class="shrink-0 mt-0.5" />{status.last_error}</p>{/if}
   </section>
   {#if status}
     <section class="focus-panel p-4 space-y-4" aria-label="Automatic backups">

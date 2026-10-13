@@ -567,7 +567,7 @@
     </p>
   </div>
 
-  {#if previewError}<p role="alert" class="text-sm text-red-400">{previewError}</p>{/if}
+  {#if previewError}<p role="alert" class="text-sm text-error">{previewError}</p>{/if}
   {#if step === "paste"}
     <!-- Content type toggle -->
     <div class="flex gap-2">
@@ -637,10 +637,10 @@
     <!-- Review header -->
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <span class="flex items-center gap-1 text-xs text-green-400">
+        <span class="flex items-center gap-1 text-xs text-success">
           <Check class="w-3.5 h-3.5" /> {matchedCount} matched
         </span>
-        <span class="flex items-center gap-1 text-xs text-yellow-400">
+        <span class="flex items-center gap-1 text-xs text-warning">
           <AlertTriangle class="w-3.5 h-3.5" /> {unmatchedCount} unmatched
         </span>
         {#if skippedCount > 0}
@@ -662,7 +662,7 @@
       {#each matchedItems as item, index (index)}
         <div class="flex items-start gap-3 px-3 py-2 border-b border-border last:border-b-0 text-xs
           {item.status === 'skipped' ? 'opacity-40' : ''}
-          {item.status === 'unmatched' ? 'bg-yellow-500/5' : ''}">
+          {item.status === 'unmatched' ? 'bg-warning/5' : ''}">
 
           <!-- Poster thumbnail -->
           <div class="w-8 h-12 rounded overflow-hidden bg-border flex-shrink-0">
@@ -675,9 +675,9 @@
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2">
               {#if item.status === "matched" || item.status === "manual"}
-                <Check class="w-3 h-3 text-green-400 flex-shrink-0" />
+                <Check class="w-3 h-3 text-success flex-shrink-0" />
               {:else if item.status === "unmatched"}
-                <AlertTriangle class="w-3 h-3 text-yellow-400 flex-shrink-0" />
+                <AlertTriangle class="w-3 h-3 text-warning flex-shrink-0" />
               {:else}
                 <X class="w-3 h-3 text-text-muted flex-shrink-0" />
               {/if}
@@ -783,7 +783,7 @@
               <button
                 type="button"
                 onclick={() => skipItem(index)}
-                class="p-1 rounded hover:bg-surface-hover text-text-muted hover:text-red-400 transition-colors"
+                class="p-1 rounded hover:bg-surface-hover text-text-muted hover:text-error transition-colors"
                 title="Skip"
               >
                 <X class="w-3.5 h-3.5" />
@@ -835,7 +835,7 @@
 
   {:else if step === "done"}
     <div class="flex flex-col items-center gap-3 py-8">
-      <Check class="w-8 h-8 text-green-400" />
+      <Check class="w-8 h-8 text-success" />
       <p class="text-sm text-text">
         Imported {importTotal - importErrors.length} {contentType === "movies" ? "movies" : "shows"} successfully!
         {#if createdTierCount > 0}
@@ -844,7 +844,7 @@
       </p>
       {#if importErrors.length > 0}
         <div class="w-full max-w-md">
-          <p class="text-xs text-red-400 mb-1">{importErrors.length} errors:</p>
+          <p class="text-xs text-error mb-1">{importErrors.length} errors:</p>
           <div class="max-h-[100px] overflow-y-auto text-xs text-text-muted bg-background rounded p-2 border border-border">
             {#each importErrors as error}
               <p>{error}</p>

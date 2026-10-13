@@ -6,7 +6,7 @@
 </script>
 
 <div class="flex flex-col items-center justify-center gap-3 p-6">
-  <AlertCircle class="w-12 h-12 text-red-400" />
+  <AlertCircle class="w-12 h-12 text-error" />
   <p class="text-sm text-text-muted text-center">{error}</p>
   {#if onRetry}
     <button

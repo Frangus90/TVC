@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy, onMount } from "svelte";
-  import { Archive, RotateCcw, Tv, Film, Search, RefreshCw } from "lucide-svelte";
+  import { Archive, RotateCcw, Tv, Film, Search, RefreshCw, Check, CircleX } from "lucide-svelte";
   import {
     getArchivedShows, loadArchivedShows, unarchiveShow, isArchivedShowsLoading, loadTrackedShows, refreshCalendar,
   } from "../stores/shows.svelte";
@@ -121,8 +121,8 @@
   <p role="status" class="text-sm text-text-muted mb-3">Restoring "{restoring.name}"…</p>
 {/if}
 {#if restoreMessage}
-  <div role={restoreFailed ? 'alert' : 'status'} class="mb-3 rounded-lg border p-3 text-sm {restoreFailed ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-available/30 bg-available/10 text-available'}">
-    {restoreMessage}
+  <div role={restoreFailed ? 'alert' : 'status'} class="mb-3 rounded-lg border p-3 text-sm {restoreFailed ? 'border-error/30 bg-error/10 text-error' : 'border-success/30 bg-success/10 text-success'}">
+    <p class="flex items-start gap-2">{#if restoreFailed}<CircleX size={16} class="shrink-0 mt-0.5" />{:else}<Check size={16} class="shrink-0 mt-0.5" />{/if}<span>{restoreMessage}</span></p>
   </div>
 {/if}
 
@@ -130,7 +130,7 @@
   <div class="flex items-center justify-center py-8"><LoadingSpinner text="Loading Archive…" /></div>
 {:else if loadError}
   <div role="alert" class="focus-panel p-5 text-center">
-    <p class="text-red-400 mb-3">{loadError}</p>
+    <p class="text-error mb-3">{loadError}</p>
     <button type="button" onclick={() => void reload()} class="focus-button">Reload Archive</button>
   </div>
 {:else if items.length === 0}
@@ -159,7 +159,7 @@
           <p class="text-xs text-text-muted mt-1 flex flex-wrap gap-x-2 gap-y-1">
             <span>{item.type === 'show' ? 'TV show' : 'Movie'}</span><span>· {year(item)}</span>
             <span>· {item.tier_only ? 'Tier only' : 'Tracking'}</span>
-            {#if item.needs_matching}<span class="text-yellow-400">· Needs matching</span>{/if}
+            {#if item.needs_matching}<span class="text-warning">· Needs matching</span>{/if}
           </p>
         </div>
         <button type="button" onclick={() => void restore(item)} disabled={!!restoring}

@@ -2,6 +2,12 @@
 
 Research date: **13.10.2026**. Reviewed Focus branch at `0f2f887`.
 
+## Implementation follow-up — 13.10.2026
+
+The proposed first three implementation stages are now implemented on the Focus branch as part of [release preparation](focus-release-preparation.md): shared measured colours, readable normal/hover accent text and focus, visible status words/icons, neutral tier/racing labels with saved decorative colours, clearer unread notifications and an Appearance preview. The existing colourblind boolean preference is retained; no diagnosis selector or whole-app filter was added. A greyscale control exists only in the ignored test harness.
+
+The research below records the earlier findings. Final checks, installer builds, visual evidence and any remaining manual limits are recorded in the release-preparation document.
+
 ## Scope and conclusion
 
 Improve support for **red–green colour vision deficiency** while keeping TVC simple for its two users. This is research and a proposed implementation order; no app behaviour has changed.

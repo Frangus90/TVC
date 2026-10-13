@@ -2,7 +2,7 @@
   import { onDestroy, onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { openUrl } from "@tauri-apps/plugin-opener";
-  import { X, RefreshCw, ChevronDown, ExternalLink, Check } from "lucide-svelte";
+  import { X, RefreshCw, ChevronDown, ExternalLink, Check, AlertTriangle, CircleX } from "lucide-svelte";
   import UnmigratedShowsResolver from "../UnmigratedShowsResolver.svelte";
   import { getMaintenanceSection, getError, isLoading, isDataWriting, getDatabaseStats, getDuplicates, getOrphanedEpisodes, getUnairedEpisodes, getCleanupPreviewError, isCleanupPreviewLoading, loadDatabaseStats, loadCleanupPreviews, setActiveTab, cleanupOrphaned, cleanupUnaired, optimizeDatabase, runFullCleanup, mergeDuplicates, formatBytes, type DuplicatePair } from "../../stores/dataManagement.svelte";
   import { openConfirmDialog } from "../../stores/confirmDialog.svelte";
@@ -138,20 +138,20 @@
     {/each}
   </nav>
   {#if cleanupMessage}
-    <div role={messageKind === "error" ? "alert" : "status"} class="p-3 rounded-lg border text-sm flex items-start justify-between gap-3 {messageKind === 'error' ? 'border-red-500/30 bg-red-500/10 text-red-400' : messageKind === 'warning' ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400' : 'border-available/30 bg-available/10 text-available'}">
-      <span>{cleanupMessage}</span><button type="button" aria-label="Dismiss result" onclick={() => { if (messageTimer) clearTimeout(messageTimer); cleanupMessage = null; }}><X size={16} /></button>
+    <div role={messageKind === "error" ? "alert" : "status"} class="p-3 rounded-lg border text-sm flex items-start justify-between gap-3 {messageKind === 'error' ? 'border-error/30 bg-error/10 text-error' : messageKind === 'warning' ? 'border-warning/30 bg-warning/10 text-warning' : 'border-success/30 bg-success/10 text-success'}">
+      <span class="flex items-start gap-2">{#if messageKind === 'error'}<CircleX size={16} class="shrink-0 mt-0.5" />{:else if messageKind === 'warning'}<AlertTriangle size={16} class="shrink-0 mt-0.5" />{:else}<Check size={16} class="shrink-0 mt-0.5" />{/if}<span>{cleanupMessage}</span></span><button type="button" aria-label="Dismiss result" onclick={() => { if (messageTimer) clearTimeout(messageTimer); cleanupMessage = null; }}><X size={16} /></button>
     </div>
   {/if}
   {#if section === "unmapped"}
     <div><h2 class="font-medium">Match shows to TMDB</h2><p class="text-sm text-text-muted mt-1">Search by title, then compare the year and description before choosing a match. Matching keeps your existing watch history.</p></div>
     <UnmigratedShowsResolver open={true} variant="inline" />
   {:else if getError()}
-    <div role="alert" class="focus-panel p-4 text-red-400"><p>{getError()}</p><button type="button" class="focus-button mt-3" disabled={busy} onclick={() => setActiveTab(section)}>Reload maintenance</button></div>
+    <div role="alert" class="focus-panel p-4 text-error"><p>{getError()}</p><button type="button" class="focus-button mt-3" disabled={busy} onclick={() => setActiveTab(section)}>Reload maintenance</button></div>
   {:else if isLoading() && !busy}
     <p class="text-sm text-text-muted flex items-center gap-2"><RefreshCw size={16} class="animate-spin" /> Loading maintenance…</p>
   {:else if section === "duplicates"}
     <p class="text-sm text-text-muted">Compare likely duplicate shows before combining them. Choose which entry to keep.</p>
-    {#if getDuplicates().length === 0}<div class="focus-panel p-6 flex items-center gap-3"><Check size={22} class="text-available" /><p>No possible duplicates found.</p></div>{/if}
+    {#if getDuplicates().length === 0}<div class="focus-panel p-6 flex items-center gap-3"><Check size={22} class="text-success" /><p>No possible duplicates found.</p></div>{/if}
     {#each getDuplicates() as pair}
       <article class="focus-panel p-4 space-y-3">
         <p class="text-sm text-text-muted">{pair.similarity_reason}</p>
@@ -171,7 +171,7 @@
     {/each}
   {:else if stats}
     <p class="text-sm text-text-muted">Optional removal of unused episode records. Watch history, schedules, ratings, tags and change history are protected, along with tier-only and unmatched shows.</p>
-    {#if getCleanupPreviewError()}<div role="alert" class="p-3 border border-red-500/30 rounded-lg text-sm text-red-400"><p>{getCleanupPreviewError()}</p><button type="button" class="focus-button mt-2" disabled={busy} onclick={loadCleanupPreviews}>Retry previews</button></div>{/if}
+    {#if getCleanupPreviewError()}<div role="alert" class="p-3 border border-error/30 rounded-lg text-sm text-error"><p>{getCleanupPreviewError()}</p><button type="button" class="focus-button mt-2" disabled={busy} onclick={loadCleanupPreviews}>Retry previews</button></div>{/if}
     {#each [{ kind: "orphaned", label: "Episodes without a linked show", count: stats.orphaned_episodes, note: "These records no longer belong to a show in your library.", rows: getOrphanedEpisodes(), run: handleCleanupOrphaned }, { kind: "undated", label: "Unused episodes without an air date", count: stats.unaired_unscheduled_episodes, note: "Future episodes can legitimately have no date. Remove these only if you want to tidy unused records; syncing can add them again.", rows: getUnairedEpisodes(), run: handleCleanupUnaired }] as group}
       <article class="focus-panel p-4 space-y-3">
         <div class="flex flex-wrap justify-between items-start gap-3"><div><h3 class="font-medium">{group.label} <span class="text-text-muted">({group.count})</span></h3><p class="text-sm text-text-muted mt-1">{group.note}</p></div><button type="button" class="focus-button" disabled={busy || isCleanupPreviewLoading() || !!getCleanupPreviewError() || group.count === 0} onclick={group.run}>Remove unused records</button></div>
@@ -187,9 +187,9 @@
     {#if advanced}
       <div class="mt-4 space-y-4">
         <p class="text-sm text-text-muted">Database size: {stats ? formatBytes(stats.database_size_bytes) : "Unavailable"}</p>
-        {#if getDatabaseSummaryError()}<div role="alert" class="text-sm text-red-400"><p>{getDatabaseSummaryError()}</p><button type="button" class="focus-button mt-2" disabled={busy} onclick={loadDatabaseStats}>Retry database summary</button></div>{/if}
+        {#if getDatabaseSummaryError()}<div role="alert" class="text-sm text-error"><p>{getDatabaseSummaryError()}</p><button type="button" class="focus-button mt-2" disabled={busy} onclick={loadDatabaseStats}>Retry database summary</button></div>{/if}
         <div class="flex flex-wrap items-center justify-between gap-3"><div><h3 class="text-sm font-medium">Optimize database</h3><p class="text-xs text-text-muted">Reclaim unused space without deleting your library.</p></div><button type="button" class="focus-button" disabled={busy} onclick={handleOptimize}>Optimize</button></div>
-        <div class="flex flex-wrap items-center justify-between gap-3"><div><h3 class="text-sm font-medium">Full cleanup</h3><p class="text-xs text-text-muted">Remove both eligible groups, then optimize. Review the Cleanup previews first.</p></div><button type="button" class="focus-button text-red-400" disabled={busy || !stats || !stats.orphaned_episodes && !stats.unaired_unscheduled_episodes} onclick={handleFullCleanup}>Run full cleanup</button></div>
+        <div class="flex flex-wrap items-center justify-between gap-3"><div><h3 class="text-sm font-medium">Full cleanup</h3><p class="text-xs text-text-muted">Remove both eligible groups, then optimize. Review the Cleanup previews first.</p></div><button type="button" class="focus-button text-error" disabled={busy || !stats || !stats.orphaned_episodes && !stats.unaired_unscheduled_episodes} onclick={handleFullCleanup}>Run full cleanup</button></div>
         {#if import.meta.env.DEV}
           <details class="border-t border-border pt-3"><summary class="text-sm text-text-muted cursor-pointer">Development tools</summary><div class="mt-3 space-y-3">
             <div><label for="dummy-version" class="block text-xs text-text-muted mb-1">Test update version</label><input id="dummy-version" class="focus-input" bind:value={dummyUpdateVersion} /></div>

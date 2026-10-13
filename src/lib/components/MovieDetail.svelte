@@ -22,6 +22,7 @@
   import { openUrl } from "@tauri-apps/plugin-opener";
   import CastCrew from "./CastCrew.svelte";
   import TierPicker from "./TierPicker.svelte";
+  import WatchedBadge from "./common/WatchedBadge.svelte";
   import { updateMovieTier, promoteMovieToTracked, loadTiers } from "../stores/tiers.svelte";
   import { openConfirmDialog } from "../stores/confirmDialog.svelte";
   import { logger } from "../utils/logger";
@@ -203,7 +204,7 @@
       </div>
     {:else if getMovieDetailError()}
       <div class="p-6">
-        <p class="text-red-400">{getMovieDetailError()}</p>
+        <p class="text-error">{getMovieDetailError()}</p>
         <button
           type="button"
           onclick={closeMovieDetail}
@@ -234,7 +235,7 @@
               {#if movie.tagline}
                 <p class="text-sm text-text-muted italic mb-2">"{movie.tagline}"</p>
               {/if}
-              <div class="flex items-center gap-3 text-sm text-text-muted">
+              <div class="flex flex-wrap items-center gap-3 text-sm text-text-muted">
                 {#if movie.runtime}
                   <span>{formatRuntime(movie.runtime)}</span>
                 {/if}
@@ -244,10 +245,7 @@
                   </span>
                 {/if}
                 {#if movie.watched}
-                  <span class="flex items-center gap-1 text-watched">
-                    <Eye class="w-3.5 h-3.5" />
-                    Watched
-                  </span>
+                  <WatchedBadge />
                 {/if}
               </div>
             </div>
@@ -314,7 +312,7 @@
             <button
               type="button"
               onclick={handlePromoteToTracked}
-              class="px-3 py-1.5 text-sm bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg transition-colors flex items-center gap-2"
+              class="px-3 py-1.5 text-sm bg-success/20 hover:bg-success/30 text-success rounded-lg transition-colors flex items-center gap-2"
             >
               <ArrowUpCircle class="w-4 h-4" />
               Start Tracking
@@ -379,7 +377,7 @@
         <button
           type="button"
           onclick={handleRemove}
-          class="px-3 py-1.5 text-sm bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors flex items-center gap-2 {movie.tier_only ? 'ml-auto' : ''}"
+          class="px-3 py-1.5 text-sm bg-error/20 hover:bg-error/30 text-error rounded-lg transition-colors flex items-center gap-2 {movie.tier_only ? 'ml-auto' : ''}"
         >
           <Trash2 class="w-4 h-4" />
           Remove
@@ -460,7 +458,7 @@
                   </div>
                 </button>
               {:else if localTrailerError}
-                <p class="text-sm text-red-400 text-center py-4 bg-red-500/10 rounded-lg">
+                <p class="text-sm text-error text-center py-4 bg-error/10 rounded-lg">
                   {localTrailerError}
                 </p>
               {:else}
@@ -494,7 +492,7 @@
             <button
               type="button"
               onclick={() => unscheduleMovie(movie.id)}
-              class="text-xs text-text-muted hover:text-red-400"
+              class="text-xs text-text-muted hover:text-error"
             >
               Remove from schedule
             </button>

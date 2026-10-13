@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { Award, Trophy, RefreshCw, ChevronLeft, ChevronDown, Check, Download } from "lucide-svelte";
+  import { Award, Trophy, RefreshCw, ChevronLeft, ChevronDown, Check, X, Clock, Download } from "lucide-svelte";
   import { exportPredictionsAsImage } from "../../utils/predictionExport";
   import { predictionOutcome } from "../../utils/awardPredictions";
   import { formatDate, formatDateTime } from "../../utils/dateFormat";
@@ -149,12 +149,12 @@
         {@const report = getAwardsSyncReport()!}
         <span class="text-xs text-text-muted">Last attempt: {formatDateTime(report.attempted_at)}</span>
         {#if report.errors.length}
-          <details class="focus-awards-sync text-xs text-red-400">
+          <details class="focus-awards-sync text-xs text-error">
             <summary>{report.errors.length} sync issues</summary>
             <ul>{#each report.errors as error}<li>{error}</li>{/each}</ul>
           </details>
           {#if report.failed_ceremonies?.length}
-            <button class="text-xs text-red-400 underline" disabled={isSyncing()} onclick={() => doRefresh(false, true)}>Retry failed ceremonies</button>
+            <button class="text-xs text-error underline" disabled={isSyncing()} onclick={() => doRefresh(false, true)}>Retry failed ceremonies</button>
           {/if}
         {/if}
       {/if}
@@ -243,15 +243,17 @@
                   disabled={!canPick}
                   onclick={() => togglePick(cat.id, nom.id)}
                   class="focus-nominee w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors
-                    {nom.is_winner ? 'bg-available/10' : ''}
+                    {nom.is_winner ? 'bg-success/10' : ''}
                     {picked && outcome === null ? 'ring-1 ring-accent bg-accent/10' : ''}
-                    {picked && outcome === 'miss' ? 'bg-red-500/10' : ''}
+                    {picked && outcome === 'miss' ? 'bg-error/10' : ''}
                     {canPick ? 'hover:bg-surface-hover cursor-pointer' : 'cursor-default'}"
                 >
                   {#if nom.is_winner}
-                    <Trophy class="w-4 h-4 text-available flex-shrink-0" />
+                    <Trophy class="w-4 h-4 text-success flex-shrink-0" />
+                  {:else if picked && outcome === 'miss'}
+                    <X class="w-4 h-4 text-error flex-shrink-0" />
                   {:else if picked}
-                    <Check class="w-4 h-4 text-accent flex-shrink-0" />
+                    <Clock class="w-4 h-4 text-warning flex-shrink-0" />
                   {:else}
                     <span class="w-4 flex-shrink-0"></span>
                   {/if}
@@ -266,11 +268,13 @@
                   </span>
                   {#if picked}
                     <span
-                      class="ml-auto text-xs flex-shrink-0 {outcome === 'win' ? 'text-available'
-                        : outcome === 'miss' ? 'text-red-400' : 'text-accent'}"
+                      class="ml-auto text-xs flex-shrink-0 {outcome === 'win' ? 'text-success'
+                        : outcome === 'miss' ? 'text-error' : 'text-warning'}"
                     >
-                      your pick{outcome === 'win' ? " ✓" : outcome === 'miss' ? " ✗" : " · pending"}
+                      Your pick · {outcome === 'win' ? "✓ Correct" : outcome === 'miss' ? "✗ Incorrect" : "… Pending"}
                     </span>
+                  {:else if nom.is_winner}
+                    <span class="ml-auto text-xs text-success flex-shrink-0">Winner</span>
                   {/if}
                 </button>
               </li>

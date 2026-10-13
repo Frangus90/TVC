@@ -171,9 +171,9 @@
   .setting-row p, .settings-note { margin: .3rem 0 0; font-size: .8125rem; line-height: 1.5; color: var(--color-text-muted); }
   select { flex-shrink: 0; max-width: 100%; width: 13rem; padding: .45rem .65rem; border: 1px solid var(--color-border); border-radius: .5rem; background: var(--color-background); color: var(--color-text); font-size: .875rem; }
   .setting-toggle { position: relative; flex-shrink: 0; width: 2.5rem; height: 1.25rem; border-radius: 999px; background: var(--color-border); transition: background .15s; }
-  .setting-toggle.enabled { background: var(--accent-color); }
+  .setting-toggle.enabled { background: var(--accent-color); outline: 1px solid var(--accent-focus); }
   .setting-toggle span { position: absolute; top: .125rem; left: .125rem; width: 1rem; height: 1rem; border-radius: 50%; background: white; transition: transform .15s; }
-  .setting-toggle.enabled span { transform: translateX(1.25rem); }
+  .setting-toggle.enabled span { transform: translateX(1.25rem); background: var(--accent-foreground); }
   button:disabled, select:disabled { opacity: .5; cursor: default; }
   .settings-message { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; font-size: .875rem; }
   .save-status { min-height: 1.5rem; margin: 1rem 0 0; }

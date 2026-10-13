@@ -17,6 +17,11 @@
     appVersion: string;
     date: string;
   } = $props();
+
+  const theme = getComputedStyle(document.documentElement);
+  const success = theme.getPropertyValue("--color-success").trim() || "#a0e5bf";
+  const error = theme.getPropertyValue("--color-error").trim() || "#ffbcbc";
+  const warning = theme.getPropertyValue("--color-warning").trim() || "#f4d47c";
 </script>
 
 <div
@@ -40,11 +45,11 @@
           <div style="font-size:15px; font-weight:600; line-height:1.4;">{p.pick}</div>
         </div>
         {#if p.result === "win"}
-          <div style="color:#8ed4b0; font-size:16px; font-weight:600; line-height:1.4;">✓</div>
+          <div style="color:{success}; font-size:11px; font-weight:600; line-height:1.4; white-space:nowrap;">✓ Correct</div>
         {:else if p.result === "miss"}
-          <div style="color:#ed9fae; font-size:16px; font-weight:600; line-height:1.4;">✗</div>
+          <div style="color:{error}; font-size:11px; font-weight:600; line-height:1.4; white-space:nowrap;">✗ Incorrect</div>
         {:else}
-          <div style="color:#e4c17a; font-size:11px; line-height:1.4;">Pending</div>
+          <div style="color:{warning}; font-size:11px; line-height:1.4; white-space:nowrap;">… Pending</div>
         {/if}
       </div>
     {/each}

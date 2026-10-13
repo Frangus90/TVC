@@ -194,7 +194,7 @@
         {#if getScheduledCount() > 0}
           <button
             onclick={handleClearAll}
-            class="px-3 py-1.5 text-sm bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors flex items-center gap-2"
+            class="px-3 py-1.5 text-sm bg-error/20 hover:bg-error/30 text-error rounded-lg transition-colors flex items-center gap-2"
             title="Restore air dates for episodes with custom schedules"
           >
             <Trash2 class="w-4 h-4" />

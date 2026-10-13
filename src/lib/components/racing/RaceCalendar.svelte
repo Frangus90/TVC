@@ -9,7 +9,7 @@
     isToday,
     isSameMonth,
   } from "date-fns";
-  import { Clock, ChevronLeft, ChevronRight, RefreshCw, Settings, X } from "lucide-svelte";
+  import { Check, Clock, ChevronLeft, ChevronRight, RefreshCw, Settings, X } from "lucide-svelte";
   import { getCurrentDate, getViewMode, setViewMode, previousPeriod, nextPeriod, goToToday } from "../../stores/calendar.svelte";
   import {
     getRacingEvents,
@@ -171,22 +171,20 @@
             Configure series
           </button>
         {:else}
-          <button type="button" class="focus-series-all" aria-pressed={activeSeriesFilter === null} onclick={() => activeSeriesFilter = null}>All series</button>
+          <button type="button" class="focus-series-all" aria-pressed={activeSeriesFilter === null} onclick={() => activeSeriesFilter = null}>{#if activeSeriesFilter === null}<Check size={12} aria-hidden="true" />{/if}All series</button>
           {#each getEnabledSeries() as series}
             <button
               onclick={() => toggleSeriesFilter(series.slug)}
               aria-pressed={activeSeriesFilter === null || activeSeriesFilter === series.slug}
-              class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap
-                {activeSeriesFilter === null || activeSeriesFilter === series.slug
-                  ? 'opacity-100'
-                  : 'opacity-40'}"
-              style="background-color: {getSeriesColor(series)}20; color: {getSeriesColor(series)}; border: 1px solid {getSeriesColor(series)}40;"
+              class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap"
+              style="background-color: var(--color-surface-hover); color: var(--color-text); border: 1px solid {activeSeriesFilter === null || activeSeriesFilter === series.slug ? 'var(--color-text-muted)' : 'var(--color-border)'};"
             >
               <span
                 class="w-2 h-2 rounded-full flex-shrink-0"
                 style="background-color: {getSeriesColor(series)};"
               ></span>
               {series.name}
+              {#if activeSeriesFilter === series.slug}<Check size={12} aria-hidden="true" />{/if}
             </button>
           {/each}
         {/if}
@@ -244,7 +242,7 @@
                 title="{event.event_title}{event.session_name ? ': ' + event.session_name : ''}{event.circuit ? ' at ' + event.circuit : ''}"
               >
                 <span class="flex items-center gap-1.5">
-                  <span class="font-semibold truncate" style="color: {color};">{getSeriesAbbrev(event.series_slug)}</span>
+                  <span class="font-semibold truncate text-text">{getSeriesAbbrev(event.series_slug)}</span>
                   {#if sessionLabel}<span class="text-text-muted truncate">{sessionLabel}</span>{/if}
                   {#if time}<span class="text-text-muted ml-auto flex-shrink-0">{time}</span>{/if}
                 </span>
@@ -310,7 +308,7 @@
           <div class="flex items-center gap-2 mb-1">
             <span
               class="px-2 py-0.5 rounded text-xs font-bold"
-              style="background-color: {color}25; color: {color};"
+              style="background-color: var(--color-surface-hover); color: var(--color-text); border-left: 3px solid {color};"
             >
               {series?.name || event.series_slug}
             </span>
@@ -354,8 +352,8 @@
   .focus-racing-day:nth-child(7n) { border-right: 0; }
   .focus-racing-day:nth-last-child(-n+7) { border-bottom: 0; }
   .focus-racing-session { background: var(--color-surface-hover); border: 1px solid var(--color-border); }
-  .focus-series-all { padding: 0.35rem 0.8rem; border: 1px solid var(--color-border); border-radius: 2rem; font-size: 0.75rem; color: var(--color-text-muted); }
-  .focus-series-all[aria-pressed="true"] { color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface)); }
+  .focus-series-all { display: inline-flex; align-items: center; gap: .35rem; padding: 0.35rem 0.8rem; border: 1px solid var(--color-border); border-radius: 2rem; font-size: 0.75rem; color: var(--color-text-muted); }
+  .focus-series-all[aria-pressed="true"] { color: var(--accent-text); background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface)); border-color: var(--accent-focus); }
   :global(.compact-spacing) .focus-racing-grid { grid-auto-rows: minmax(5.75rem, auto); }
   :global(.compact-spacing) .focus-racing-day { min-height: 5.75rem; }
 </style>

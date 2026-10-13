@@ -250,8 +250,8 @@
           {#if testResult}
             <div
               class="p-3 rounded-lg text-sm {testResult.success
-                ? 'bg-available/10 text-available'
-                : 'bg-red-500/10 text-red-400'}"
+                ? 'bg-success/10 text-success'
+                : 'bg-error/10 text-error'}"
             >
               <div class="flex items-center gap-2">
                 {#if testResult.success}
@@ -360,10 +360,10 @@
                 <button
                   type="button"
                   onclick={() => handleDeleteServer(server)}
-                  class="p-2 rounded-lg hover:bg-red-500/20 transition-colors"
+                  class="p-2 rounded-lg hover:bg-error/20 transition-colors"
                   aria-label="Delete server"
                 >
-                  <Trash2 class="w-4 h-4 text-red-400" />
+                  <Trash2 class="w-4 h-4 text-error" />
                 </button>
               </div>
             </div>
@@ -371,7 +371,7 @@
             {#if server.last_synced}
               <p class="text-xs text-text-muted mt-2">Last imported: {formatDateTime(server.last_synced)}</p>
             {/if}
-            {#if connection}<p role={connection.state === "failed" ? "alert" : "status"} class="text-sm mt-2 {connection.state === 'failed' ? 'text-red-400' : connection.state === 'connected' ? 'text-available' : 'text-text-muted'}">
+            {#if connection}<p role={connection.state === "failed" ? "alert" : "status"} class="text-sm mt-2 {connection.state === 'failed' ? 'text-error' : connection.state === 'connected' ? 'text-success' : 'text-text-muted'}">
               {connection.message}{#if connection.checked_at}<span class="text-xs text-text-muted"> · {formatDateTime(connection.checked_at)}</span>{/if}
             </p>{/if}
           </div>
@@ -579,7 +579,7 @@
                 <!-- Checkbox -->
                 <div class="flex-shrink-0">
                   {#if item.already_tracked}
-                    <Check class="w-5 h-5 text-available" />
+                    <Check class="w-5 h-5 text-success" />
                   {:else if isSelected}
                     <CheckSquare class="w-5 h-5 text-accent" />
                   {:else}
@@ -612,7 +612,7 @@
 
                 <!-- Tracked Badge -->
                 {#if item.already_tracked}
-                  <span class="flex-shrink-0 px-2 py-0.5 bg-available/20 text-available text-xs font-medium rounded">
+                  <span class="flex-shrink-0 px-2 py-0.5 bg-success/20 text-success text-xs font-medium rounded">
                     Tracked
                   </span>
                 {/if}
@@ -641,8 +641,8 @@
           {/if}
 
           {#if importResult}
-            <div class="p-4 rounded-lg bg-available/10 border border-available/30">
-              <div class="flex items-center gap-2 text-available">
+            <div class="p-4 rounded-lg bg-success/10 border border-success/30">
+              <div class="flex items-center gap-2 text-success">
                 <Check class="w-5 h-5" />
                 <span class="font-medium">Import Complete</span>
               </div>
@@ -650,7 +650,7 @@
                 Imported: {importResult.imported} | Skipped: {importResult.skipped} | Failed: {importResult.failed}
               </p>
               {#if importResult.errors.length > 0}
-                <details class="mt-2 text-sm text-red-400">
+                <details class="mt-2 text-sm text-error">
                   <summary class="cursor-pointer">Import issues ({importResult.errors.length})</summary>
                   {#each importResult.errors as err}
                     <p>{err}</p>
@@ -666,11 +666,11 @@
 
   <!-- Footer messages -->
   {#if error}
-    <div class="p-3 mt-4 rounded-lg bg-red-500/10 text-red-400 text-sm text-center">
+    <div class="p-3 mt-4 rounded-lg bg-error/10 text-error text-sm text-center">
       {error}
     </div>
   {:else if successMessage}
-    <div class="p-3 mt-4 rounded-lg bg-available/10 text-available text-sm text-center">
+    <div class="p-3 mt-4 rounded-lg bg-success/10 text-success text-sm text-center">
       {successMessage}
     </div>
   {/if}

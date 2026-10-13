@@ -17,12 +17,12 @@
   let animationFrame: number | undefined;
   let startTime: number | undefined;
 
-  const typeConfig: Record<string, { icon: typeof Flag; color: string }> = {
-    racing: { icon: Flag, color: "text-red-400 bg-red-500/20 border-red-500/30" },
-    plex: { icon: Play, color: "text-orange-400 bg-orange-500/20 border-orange-500/30" },
-    premiere: { icon: Tv, color: "text-accent bg-accent/20 border-accent/30" },
-    update: { icon: Download, color: "text-green-400 bg-green-500/20 border-green-500/30" },
-    system: { icon: Info, color: "text-blue-400 bg-blue-500/20 border-blue-500/30" },
+  const typeConfig: Record<string, { icon: typeof Flag; color: string; label: string }> = {
+    racing: { icon: Flag, color: "text-info bg-info/20 border-info/30", label: "Racing" },
+    plex: { icon: Play, color: "text-info bg-info/20 border-info/30", label: "Plex" },
+    premiere: { icon: Tv, color: "text-premiere bg-premiere/20 border-premiere/30", label: "Premiere" },
+    update: { icon: Download, color: "text-success bg-success/20 border-success/30", label: "Update" },
+    system: { icon: Info, color: "text-info bg-info/20 border-info/30", label: "System" },
   };
 
   const config = $derived(typeConfig[notification.type] || typeConfig.system);
@@ -75,6 +75,7 @@
       <div class="flex-1 min-w-0">
         <p class="text-sm font-semibold text-text truncate">{notification.title}</p>
         <p class="text-sm text-text-muted mt-0.5 line-clamp-2">{notification.body}</p>
+        <p class="text-xs text-text-muted mt-1">{config.label}</p>
       </div>
 
       <button

@@ -41,11 +41,7 @@
   }
 
   function getCompletionColor(percentage: number): string {
-    if (percentage === 100) return "bg-green-500";
-    if (percentage >= 75) return "bg-blue-500";
-    if (percentage >= 50) return "bg-yellow-500";
-    if (percentage >= 25) return "bg-orange-500";
-    return "bg-red-500";
+    return percentage === 100 ? "bg-success" : "bg-info";
   }
 </script>
 
@@ -142,8 +138,8 @@
 
             <div class="focus-panel bg-surface rounded-xl border border-border p-5">
               <div class="flex items-center gap-3 mb-2">
-                <div class="p-2 bg-blue-500/20 rounded-lg">
-                  <Tv class="w-5 h-5 text-blue-500" />
+                <div class="p-2 bg-info/20 rounded-lg">
+                  <Tv class="w-5 h-5 text-info" />
                 </div>
                 <span class="text-sm text-text-muted">Episodes Watched</span>
               </div>
@@ -162,8 +158,8 @@
 
             <div class="focus-panel bg-surface rounded-xl border border-border p-5">
               <div class="flex items-center gap-3 mb-2">
-                <div class="p-2 bg-green-500/20 rounded-lg">
-                  <CheckCircle class="w-5 h-5 text-green-500" />
+                <div class="p-2 bg-success/20 rounded-lg">
+                  <CheckCircle class="w-5 h-5 text-success" />
                 </div>
                 <span class="text-sm text-text-muted">Shows Completed</span>
               </div>
@@ -172,8 +168,8 @@
 
             <div class="focus-panel bg-surface rounded-xl border border-border p-5">
               <div class="flex items-center gap-3 mb-2">
-                <div class="p-2 bg-yellow-500/20 rounded-lg">
-                  <PlayCircle class="w-5 h-5 text-yellow-500" />
+                <div class="p-2 bg-info/20 rounded-lg">
+                  <PlayCircle class="w-5 h-5 text-info" />
                 </div>
                 <span class="text-sm text-text-muted">Shows In Progress</span>
               </div>

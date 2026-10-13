@@ -9,7 +9,7 @@
     parseISO,
     isSameDay,
   } from "date-fns";
-  import { Check, Plus, Film } from "lucide-svelte";
+  import { Check, Plus, Film, Clock, PlayCircle } from "lucide-svelte";
   import { getCurrentDate, getCalendarFilter } from "../../stores/calendar.svelte";
   import { getNow } from "../../stores/now.svelte";
   import { logger } from "../../utils/logger";
@@ -227,7 +227,11 @@
                 {#if item.subtitle}<span class="focus-event-subtitle">{item.subtitle}</span>{/if}
               </button>
               <div class="focus-event-bottom">
-                {#if item.watched}<WatchedBadge />{:else}<span>{item.hasAired ? 'Available' : 'Upcoming'}</span>{/if}
+                {#if item.watched}<WatchedBadge />{:else}
+                  <span class="inline-flex items-center gap-1 {item.hasAired ? 'text-available' : 'text-upcoming'}">
+                    {#if item.hasAired}<PlayCircle class="w-3 h-3" aria-hidden="true" />Available{:else}<Clock class="w-3 h-3" aria-hidden="true" />Upcoming{/if}
+                  </span>
+                {/if}
                 <button type="button" class="focus-watch-button" aria-pressed={item.watched} aria-label="{item.watched ? 'Mark unwatched' : 'Mark watched'}: {item.title}" onclick={() => handleItemClick(item)}>
                   {#if item.watched}<Check class="w-4 h-4" />{:else}<span class="focus-watch-circle"></span>{/if}
                 </button>
@@ -355,7 +359,7 @@
 {/if}
 
 <style>
-  .focus-week-grid { min-height: 0; }
+  .focus-week-grid { min-height: 0; grid-template-columns: repeat(7, minmax(8rem, 1fr)); overflow-x: auto; }
   .focus-week-column { min-width: 0; }
   .focus-event { border: 1px solid var(--color-border); border-radius: 0.625rem; background: var(--color-surface-hover); }
   .focus-event.is-watched { background: var(--focus-watched-background); border-color: var(--focus-watched-border); }

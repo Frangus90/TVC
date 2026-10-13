@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ChevronDown } from "lucide-svelte";
+  import { Check, ChevronDown } from "lucide-svelte";
   import { getTiers, getTierById } from "../stores/tiers.svelte";
 
   interface Props {
@@ -57,6 +57,7 @@
         <button
           type="button"
           onclick={() => handleSelect(tier.id)}
+          aria-pressed={tier.id === tierId}
           class="w-full px-3 py-1.5 text-left text-xs hover:bg-surface-hover flex items-center gap-2
             {tier.id === tierId ? 'text-accent font-medium' : 'text-text'}"
         >
@@ -66,6 +67,7 @@
             <span class="w-2.5 h-2.5 rounded-full bg-border"></span>
           {/if}
           {tier.name}
+          {#if tier.id === tierId}<Check class="w-3.5 h-3.5 ml-auto shrink-0" aria-hidden="true" />{/if}
         </button>
       {/each}
       {#if tierId !== null}
@@ -73,7 +75,7 @@
         <button
           type="button"
           onclick={() => handleSelect(null)}
-          class="w-full px-3 py-1.5 text-left text-xs text-red-400 hover:bg-surface-hover"
+          class="w-full px-3 py-1.5 text-left text-xs text-error hover:bg-surface-hover"
         >
           Remove from tier
         </button>

@@ -12,6 +12,7 @@ function load(path, dependencies, globals = {}) {
   return exports;
 }
 const quietHours = load('src/lib/utils/quietHours.ts', {});
+const appearanceColors = load('src/lib/utils/appearanceColors.ts', {});
 const logger = { error() {}, warn() {}, debug() {} };
 const baseline = { enabled:true,sound_enabled:true,sound_volume:50,sound_choice:'chime',popup_position:'top-right',popup_duration:8000,max_visible:3,os_fallback:false,tray_notifications:true,racing_enabled:true,plex_enabled:true,premiere_enabled:true,update_enabled:true,system_enabled:true };
 const settle = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
@@ -59,7 +60,7 @@ test('notification preference loading failures remain visible and can be retried
 function theme(rows=[]) {
   const writes=[],styles=new Map(); let fail=false;
   const database={select:async()=>rows,execute:async(_sql,args)=>{writes.push(args);if(fail)throw new Error('disk unavailable');}};
-  const api=load('src/lib/stores/theme.svelte.ts', {'../utils/database':{getDatabase:async()=>database},'../utils/logger':{logger}},
+  const api=load('src/lib/stores/theme.svelte.ts', {'../utils/database':{getDatabase:async()=>database},'../utils/logger':{logger},'../utils/appearanceColors':appearanceColors},
     {document:{documentElement:{style:{setProperty:(k,v)=>styles.set(k,v)},classList:{add(){},remove(){}}}}});
   return {api,writes,styles,setFail:value=>fail=value};
 }
@@ -88,7 +89,7 @@ test('appearance slider changes cannot finish writing older values after a newer
       persisted.set(key,value);
     },
   };
-  const api=load('src/lib/stores/theme.svelte.ts', {'../utils/database':{getDatabase:async()=>database},'../utils/logger':{logger}},
+  const api=load('src/lib/stores/theme.svelte.ts', {'../utils/database':{getDatabase:async()=>database},'../utils/logger':{logger},'../utils/appearanceColors':appearanceColors},
     {document:{documentElement:{style:{setProperty(){}},classList:{add(){},remove(){}}}}});
   await api.loadThemeSettings();
   const first=api.updateThemeSettings({fontSize:1.1});

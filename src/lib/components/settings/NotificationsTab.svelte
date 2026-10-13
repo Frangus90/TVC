@@ -85,7 +85,7 @@
 </script>
 
 {#if getNotificationSettingsLoadError()}
-  <div role="alert" class="p-3 rounded-lg border border-red-500/30 text-red-400 text-sm mb-4">
+  <div role="alert" class="p-3 rounded-lg border border-error/30 text-error text-sm mb-4">
     <p>{getNotificationSettingsLoadError()}</p><button type="button" onclick={() => loadNotificationSettings()} class="underline mt-1">Retry loading</button>
   </div>
 {:else if !settings || isNotificationSettingsLoading()}
@@ -94,7 +94,7 @@
 {#if settings}
   <div class="space-y-4">
     {#if getNotificationSettingsSaveError()}
-      <div role="alert" class="p-3 rounded-lg border border-red-500/30 text-red-400 text-sm">
+      <div role="alert" class="p-3 rounded-lg border border-error/30 text-error text-sm">
         <p>{getNotificationSettingsSaveError()}</p><button type="button" disabled={isNotificationSettingsSaving()} onclick={() => retryNotificationSettingsSave()} class="underline mt-1">Retry saving</button>
       </div>
     {/if}
@@ -142,7 +142,7 @@
         </div>
       </div>
     </div>
-    <p id="quiet-hours-help" class="text-xs text-text-muted">Quiet hours use your computer's local 24-hour clock and can run overnight.{#if quietError}<span role="alert" class="text-red-400 block mt-1">{quietError}</span>{/if}</p>
+    <p id="quiet-hours-help" class="text-xs text-text-muted">Quiet hours use your computer's local 24-hour clock and can run overnight.{#if quietError}<span role="alert" class="text-error block mt-1">{quietError}</span>{/if}</p>
     {#if settings.quiet_hours_enabled && isWithinQuietHours(settings, getNow())}<p class="text-xs text-text-muted">Quiet hours are active. New notifications appear in the bell's history without alerts.</p>{/if}
 
     <div class="flex flex-wrap items-center justify-between gap-3">
@@ -167,9 +167,9 @@
     </details>
     {#if isDev}
       <details class="settings-group">
-        <summary class="cursor-pointer text-sm text-yellow-500 py-2">Development · notification tests</summary>
+        <summary class="cursor-pointer text-sm text-warning py-2">Development · notification tests</summary>
         <div class="flex flex-wrap gap-2 mt-2">{#each ['racing', 'plex', 'premiere', 'update', 'system'] as type}<button type="button" onclick={() => testNotification(type)} class="px-3 py-1.5 text-sm border border-border rounded-lg hover:bg-surface-hover">{type[0].toUpperCase() + type.slice(1)}</button>{/each}</div>
-        <button type="button" onclick={fireAll} disabled={testingAll} class="flex items-center gap-2 px-3 py-1.5 mt-3 text-sm rounded-lg bg-yellow-500/10 text-yellow-500 disabled:opacity-50"><Zap size={15} />{testingAll ? 'Testing…' : 'Test all types'}</button>
+        <button type="button" onclick={fireAll} disabled={testingAll} class="flex items-center gap-2 px-3 py-1.5 mt-3 text-sm rounded-lg bg-warning/10 text-warning disabled:opacity-50"><Zap size={15} />{testingAll ? 'Testing…' : 'Test all types'}</button>
       </details>
     {/if}
   </div>

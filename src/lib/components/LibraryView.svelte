@@ -22,6 +22,7 @@
   import { openConfirmDialog } from "../stores/confirmDialog.svelte";
   import { formatDate } from "../utils/dateFormat";
   import UnmigratedShowsResolver from "./UnmigratedShowsResolver.svelte";
+  import WatchedBadge from "./common/WatchedBadge.svelte";
 
   interface Props { mediaType: "shows" | "movies" }
   interface LibraryItem {
@@ -245,7 +246,7 @@
 
   {#if mediaType === "shows" && unmappedCount > 0}
     <div class="focus-panel library-notice">
-      <AlertTriangle size={18} class="text-amber-400 shrink-0" />
+      <AlertTriangle size={18} class="text-warning shrink-0" />
       <p>{unmappedCount} {unmappedCount === 1 ? "show needs" : "shows need"} a TMDB match before their episodes can sync.</p>
       <button type="button" class="library-button" onclick={() => resolverOpen = true}>Resolve shows</button>
     </div>
@@ -299,7 +300,7 @@
               <span class="library-title">{#if item.color}<span class="library-color" style:background={item.color}></span>{/if}{item.title}</span>
               {#if metadata(item)}<span class="library-metadata">{metadata(item)}</span>{/if}
               <span class="library-state">
-                <span>{item.tierOnly ? "Tier only" : mediaType === "movies" && item.watched ? "Watched" : "Tracking"}</span>
+                {#if !item.tierOnly && mediaType === "movies" && item.watched}<WatchedBadge />{:else}<span>{item.tierOnly ? "Tier only" : "Tracking"}</span>{/if}
                 {#if item.unmigrated}<span class="library-unmapped">Needs matching</span>{/if}
                 {#if tier}<span class="library-tier" style:--tier-color={tier.color}>{tier.name}</span>{/if}
               </span>
@@ -330,8 +331,8 @@
   .library-button:hover { background: var(--color-surface-hover); }
   .library-button:disabled, .library-actions button:disabled { opacity: .45; cursor: default; }
   .library-primary { color: var(--accent-foreground); background: var(--color-accent); border-color: transparent; }
-  .library-primary:hover { background: var(--color-accent-hover); }
-  .library-danger { color: #f28b94; }
+  .library-primary:hover { background: var(--color-accent-hover); color: var(--accent-hover-foreground); }
+  .library-danger { color: var(--color-error); }
   .library-notice { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem; margin-bottom: 1.25rem; padding: .85rem 1rem; font-size: .85em; }
   .library-notice p { flex: 1; }
   .library-toolbar { justify-content: flex-start; }
@@ -340,14 +341,14 @@
   .library-tools { flex-wrap: wrap; margin-left: auto; }
   .library-filters button { display: flex; align-items: center; gap: .45rem; padding: .55rem .8rem; border-radius: .55rem; font-size: .8em; color: var(--color-text-muted); }
   .library-filters button:hover, .library-layout button:hover { background: var(--color-surface-hover); color: var(--color-text); }
-  .library-filters button.active { background: color-mix(in srgb, var(--color-accent) 13%, transparent); color: var(--color-accent); }
+  .library-filters button.active { background: color-mix(in srgb, var(--color-accent) 13%, transparent); color: var(--accent-text); }
   .library-filters span { opacity: .8; font-size: .9em; }
   .library-search { display: flex; align-items: center; gap: .6rem; color: var(--color-text-muted); padding: .6rem .8rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: .6rem; }
-  .library-search:focus-within { border-color: var(--color-accent); }
+  .library-search:focus-within { border-color: var(--accent-focus); }
   .library-search input { background: transparent; border: none; outline: none; color: var(--color-text); font-size: .8em; width: 12rem; min-width: 0; }
   .library-layout { border: 1px solid var(--color-border); border-radius: .6rem; padding: .2rem; gap: .15rem; }
   .library-layout button { padding: .4rem; border-radius: .4rem; color: var(--color-text-muted); }
-  .library-layout button[aria-pressed="true"] { color: var(--color-accent); background: var(--color-surface-hover); }
+  .library-layout button[aria-pressed="true"] { color: var(--accent-text); background: var(--color-surface-hover); }
   .library-selection { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; padding: .7rem 1rem; margin-bottom: 1.2rem; font-size: .85em; }
   .library-selection-spacer { flex: 1; }
   .library-loading, .library-empty { display: flex; align-items: center; justify-content: center; gap: 1rem; padding: 5rem 1rem; color: var(--color-text-muted); }
@@ -356,7 +357,7 @@
   .library-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(165px * var(--poster-size-scale, 1)), 1fr)); gap: 1.6rem 1.25rem; list-style: none; margin: 0; padding: 0; }
   .library-card { position: relative; min-width: 0; padding: .45rem; border: 1px solid transparent; border-radius: .85rem; }
   .library-card:hover { background: var(--color-surface); }
-  .library-card.selected { background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface)); border-color: var(--color-accent); }
+  .library-card.selected { background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface)); border-color: var(--accent-focus); }
   .library-open { display: flex; flex-direction: column; width: 100%; text-align: left; border-radius: .65rem; }
   .library-poster { display: flex; width: 100%; aspect-ratio: 2 / 3; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--color-border); border-radius: .65rem; background: var(--color-surface-hover); color: var(--color-text-muted); }
   .library-poster img { width: 100%; height: 100%; object-fit: cover; }
@@ -364,16 +365,16 @@
   .library-title { display: block; font-size: .85em; font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; }
   .library-color { display: inline-block; width: .55rem; height: .55rem; border-radius: 50%; margin-right: .4rem; }
   .library-metadata, .library-schedule { color: var(--color-text-muted); font-size: .72em; }
-  .library-schedule { color: var(--color-accent); }
+  .library-schedule { color: var(--accent-text); }
   .library-state { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; font-size: .7em; color: var(--color-text-muted); margin-top: .2rem; }
-  .library-tier { border: 1px solid color-mix(in srgb, var(--tier-color) 30%, transparent); background: color-mix(in srgb, var(--tier-color) 10%, transparent); color: var(--tier-color); padding: .15rem .45rem; border-radius: .3rem; }
-  .library-unmapped { color: #f3c478; }
+  .library-tier { border: 1px solid var(--color-border); border-left: 3px solid var(--tier-color, var(--color-border)); background: var(--color-surface); color: var(--color-text); padding: .15rem .45rem; border-radius: .3rem; }
+  .library-unmapped { color: var(--color-warning); }
   .library-actions { display: flex; justify-content: flex-end; gap: .15rem; padding-top: .4rem; }
   .library-actions button { padding: .35rem; border-radius: .4rem; color: var(--color-text-muted); }
-  .library-actions button:hover { background: var(--color-surface-hover); color: var(--color-accent); }
-  .library-actions button.library-danger:hover { color: #f28b94; }
+  .library-actions button:hover { background: var(--color-surface-hover); color: var(--accent-text); }
+  .library-actions button.library-danger:hover { color: var(--color-error); }
   .library-checkbox { position: absolute; top: .9rem; left: .9rem; display: flex; align-items: center; justify-content: center; width: 1.3rem; height: 1.3rem; border: 1px solid var(--color-text-muted); border-radius: .3rem; background: var(--color-surface); }
-  .library-checkbox.checked { background: var(--color-accent); color: white; border-color: var(--color-accent); }
+  .library-checkbox.checked { background: var(--color-accent); color: var(--accent-foreground); border-color: var(--accent-focus); }
   .library-count { margin-top: 1.75rem; font-size: .75em; color: var(--color-text-muted); }
   .library-list { grid-template-columns: 1fr; gap: .5rem; }
   .library-list .library-card { display: flex; align-items: center; gap: 1rem; padding: .8rem 1rem; border-color: var(--color-border); background: var(--color-surface); }
