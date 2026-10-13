@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { RefreshCw, Tv, Film, AlertTriangle, Check, CircleX } from "lucide-svelte";
   import type { LibraryKind, LibrarySyncStatus, SyncFrequency, SyncReport } from "../../stores/librarySync";
+  import { unacceptedSyncFailures, acceptedSyncFailures } from "../../stores/librarySync";
   import { formatDateTime } from "../../utils/dateFormat";
   import { setActiveTab as setDataTab } from "../../stores/dataManagement.svelte";
   import { setSidebarTab } from "../../stores/sidebar.svelte";
@@ -13,6 +14,9 @@
   let pending = $state(false);
   let saving = $state<LibraryKind | null>(null);
   let stopping = $state(false);
+  let changingFailure = $state<string | null>(null);
+  let failureFeedback = $state<string | null>(null);
+  let failureFeedbackElement = $state<HTMLParagraphElement>();
   let savedScheduleStatusUnavailable = $state(false);
   let histories = $state<Record<LibraryKind, SyncReport[]>>({ shows: [], movies: [] });
   let historyLoading = $state<Record<LibraryKind, boolean>>({ shows: false, movies: false });
@@ -92,6 +96,7 @@
   async function sync(kind: LibraryKind | null = null, retryFailed = false) {
     pending = true;
     actionError = null;
+    failureFeedback = null;
     try {
       await invoke("run_library_sync", { kind, retryFailed });
     } catch (error) {
@@ -101,6 +106,36 @@
       await refresh();
       pending = false;
     }
+  }
+
+  async function setFailureAccepted(kind: LibraryKind, report: SyncReport, failure: SyncReport['failures'][number], accepted: boolean) {
+    if (busy || changingFailure) return;
+    changingFailure = `${kind}:${failure.id}`;
+    actionError = null;
+    failureFeedback = null;
+    try {
+      const saved = await invoke<SyncReport>("set_library_sync_failure_accepted", {
+        kind, startedAt: report.started_at, id: failure.id, accepted,
+      });
+      // Finish any older status read before publishing the persisted change.
+      await refreshPromise;
+      if (disposed) return;
+      libraries = libraries.map(library => library.kind !== kind ? library : {
+        ...library,
+        report: library.report?.started_at === saved.started_at ? saved : library.report,
+        last_full_report: library.last_full_report?.started_at === saved.started_at ? saved : library.last_full_report,
+      });
+      failureFeedback = accepted ? `Failure accepted for ${failure.title}. This title stays included in future full syncs.` : `Acceptance undone for ${failure.title}. You can retry this failure.`;
+      // The clicked row moves to another list; keep keyboard focus in the page.
+      await tick();
+      if (!disposed) failureFeedbackElement?.focus();
+      if (historyOpen.has(kind)) {
+        await historyRequests.get(kind);
+        if (!disposed) await loadHistory(kind);
+      }
+    } catch (error) {
+      if (!disposed) actionError = `Could not ${accepted ? 'accept this failure' : 'undo acceptance'}: ${error}`;
+    } finally { if (!disposed) changingFailure = null; }
   }
 
   async function saveSchedule(library: LibrarySyncStatus, select: HTMLSelectElement) {
@@ -137,7 +172,7 @@
         <h2 class="text-base font-semibold text-text">TMDB sync</h2>
         <p class="text-sm text-text-muted">Automatic sync runs while TVC is open or in the tray.</p>
       </div>
-      <button type="button" onclick={() => sync()} disabled={busy || saving !== null || !libraries.length || !!loadError}
+      <button type="button" onclick={() => sync()} disabled={busy || changingFailure !== null || saving !== null || !libraries.length || !!loadError}
         class="shrink-0 flex items-center gap-2 px-3 py-2 text-sm bg-accent/20 hover:bg-accent/30 text-accent rounded-lg disabled:opacity-50">
         <RefreshCw class="w-4 h-4 {busy ? 'animate-spin' : ''}" />
         Sync All
@@ -163,6 +198,8 @@
     </div>
   {/if}
 
+  {#if failureFeedback}<p role="status" tabindex="-1" bind:this={failureFeedbackElement} class="text-sm text-text-muted">{failureFeedback}</p>{/if}
+
   {#if !libraries.length && !loadError}
     <div class="flex items-center justify-center gap-2 py-8 text-text-muted">
       <RefreshCw class="w-5 h-5 animate-spin" /> Loading sync status…
@@ -173,13 +210,15 @@
   {#each libraries as library (library.kind)}
     {@const report = library.report}
     {@const processed = report ? completed(report) : 0}
+    {@const failures = unacceptedSyncFailures(report)}
+    {@const accepted = acceptedSyncFailures(report)}
     <section class="focus-panel bg-surface rounded-xl border border-border p-5 space-y-4" aria-label={library.kind === 'shows' ? 'TV show sync' : 'Movie sync'}>
       <div class="flex flex-wrap items-center justify-between gap-3">
         <h3 class="font-semibold flex items-center gap-2">
           {#if library.kind === "shows"}<Tv class="w-5 h-5 text-accent" />TV shows
           {:else}<Film class="w-5 h-5 text-accent" />Movies{/if}
         </h3>
-        <button type="button" onclick={() => sync(library.kind)} disabled={busy || !!loadError}
+        <button type="button" onclick={() => sync(library.kind)} disabled={busy || changingFailure !== null || !!loadError}
           class="px-3 py-1.5 text-sm bg-accent/20 hover:bg-accent/30 text-accent rounded disabled:opacity-50">
           {library.running ? "Syncing…" : "Sync now"}
         </button>
@@ -211,9 +250,9 @@
           {#if report.release_country}<p class="text-xs text-text-muted">Movie release country: {report.release_country}</p>{/if}
           <div class="flex items-center gap-2 text-sm">
             {#if library.running}<RefreshCw class="w-4 h-4 animate-spin text-accent" />
-            {:else if library.interrupted || report.stopped || report.error || report.failures.length}<AlertTriangle class="w-4 h-4 text-warning" />
-            {:else}<Check class="w-4 h-4 text-success" />{/if}
-            <span>{runLabel(report)} · {formatDateTime(report.started_at)} · {library.running ? 'Syncing' : report.stopped ? 'Stopped' : library.interrupted ? 'Interrupted' : report.error || report.failures.length ? 'Needs attention' : 'Completed'}</span>
+            {:else if library.interrupted || report.stopped || report.error || failures.length}<AlertTriangle class="w-4 h-4 text-warning" />
+            {:else}<Check class="w-4 h-4 {accepted.length ? 'text-text-muted' : 'text-success'}" />{/if}
+            <span>{runLabel(report)} · {formatDateTime(report.started_at)} · {library.running ? 'Syncing' : report.stopped ? 'Stopped' : library.interrupted ? 'Interrupted' : report.error || failures.length ? 'Needs attention' : accepted.length ? 'Failures accepted' : 'Completed'}</span>
           </div>
           {#if library.running}
             <p class="text-sm text-text-muted break-words">{processed} / {report.total} processed{report.current_title ? ` · ${report.current_title}` : ''}</p>
@@ -228,7 +267,7 @@
           {/if}
           <p class="text-sm text-text-muted">
             <span class="text-success">{report.succeeded} synced</span> ·
-            <span class={report.failures.length ? 'text-error' : ''}>{report.failures.length} failed</span> ·
+            <span class={failures.length ? 'text-error' : ''}>{report.failures.length} failed{accepted.length ? ` (${accepted.length} accepted)` : ''}</span> ·
             {report.skipped} skipped
           </p>
           {#if report.total === 0 && report.finished_at && !report.error}
@@ -253,20 +292,47 @@
               {:else}<p class="text-xs text-text-muted mt-2">This older run recorded a count without the title details.</p>{/if}
             </details>
           {/if}
-          {#if report.failures.length}
+          {#if failures.length}
             <details open class="text-sm">
-              <summary class="cursor-pointer text-error py-1">Failed titles ({report.failures.length})</summary>
+              <summary class="cursor-pointer text-error py-1">Needs attention ({failures.length})</summary>
               <ul class="mt-2 space-y-2 max-h-56 overflow-auto">
-                {#each report.failures as failure (failure.id)}
+                {#each failures as failure (failure.id)}
                   <li class="rounded bg-error/5 border border-error/20 p-2 break-words">
-                    <p class="font-medium">{failure.title}</p>
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                      <p class="font-medium">{failure.title}</p>
+                      <button type="button" class="focus-button text-xs" disabled={busy || changingFailure !== null || !!loadError || !report.finished_at}
+                        aria-label={`Accept failure for ${failure.title}`} onclick={() => setFailureAccepted(library.kind, report, failure, true)}>
+                        <Check size={14} aria-hidden="true" />{changingFailure === `${library.kind}:${failure.id}` ? 'Saving…' : 'Accept failure'}
+                      </button>
+                    </div>
                     <p class="text-xs text-text-muted mt-1">{failure.error}</p>
                   </li>
                 {/each}
               </ul>
             </details>
-            <button type="button" onclick={() => sync(library.kind, true)} disabled={busy || !!loadError}
+            <p class="text-xs text-text-muted">Accept a failure to clear its reminder for this run. Full syncs will still try the title again.</p>
+            <button type="button" onclick={() => sync(library.kind, true)} disabled={busy || changingFailure !== null || !!loadError}
               class="px-3 py-1.5 text-sm border border-border hover:bg-surface-hover rounded disabled:opacity-50">Retry failed</button>
+          {/if}
+          {#if accepted.length}
+            <details class="text-sm">
+              <summary class="cursor-pointer text-text-muted py-1">Accepted failures ({accepted.length})</summary>
+              <p class="text-xs text-text-muted mt-2">Kept for your records. Full syncs still include these titles; any new failure will need attention again.</p>
+              <ul class="mt-2 space-y-2 max-h-56 overflow-auto">
+                {#each accepted as failure (failure.id)}
+                  <li class="rounded bg-background border border-border p-2 break-words">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                      <p class="font-medium flex items-center gap-2"><Check size={14} aria-hidden="true" />{failure.title} <span class="text-xs text-text-muted">Accepted</span></p>
+                      <button type="button" class="focus-button text-xs" disabled={busy || changingFailure !== null || !!loadError}
+                        aria-label={`Undo acceptance for ${failure.title}`} onclick={() => setFailureAccepted(library.kind, report, failure, false)}>
+                        {changingFailure === `${library.kind}:${failure.id}` ? 'Saving…' : 'Undo'}
+                      </button>
+                    </div>
+                    <p class="text-xs text-text-muted mt-1">{failure.error}</p>
+                  </li>
+                {/each}
+              </ul>
+            </details>
           {/if}
         </div>
       {:else}
@@ -295,13 +361,13 @@
             <details class="rounded border border-border bg-background p-3">
               <summary class="cursor-pointer">
                 <span>{runLabel(run)} · {formatDateTime(run.started_at)}</span>
-                <span class="text-xs {run.stopped || !run.finished_at || run.error || run.failures.length ? 'text-warning' : 'text-success'}">{run.stopped ? 'Stopped' : !run.finished_at ? 'Interrupted' : run.error || run.failures.length ? 'Needs attention' : 'Completed'}</span>
+                <span class="text-xs {run.stopped || !run.finished_at || run.error || unacceptedSyncFailures(run).length ? 'text-warning' : acceptedSyncFailures(run).length ? 'text-text-muted' : 'text-success'}">{run.stopped ? 'Stopped' : !run.finished_at ? 'Interrupted' : run.error || unacceptedSyncFailures(run).length ? 'Needs attention' : acceptedSyncFailures(run).length ? 'Failures accepted' : 'Completed'}</span>
               </summary>
               <p class="text-xs text-text-muted mt-2">{completed(run)} / {run.total} processed · {run.succeeded} synced · {run.failures.length} failed · {run.skipped} skipped</p>
               {#if run.release_country}<p class="text-xs text-text-muted mt-1">Movie release country: {run.release_country}</p>{/if}
               {#if run.error}<p class="text-xs text-error mt-2 break-words">{run.error}</p>{/if}
               {#if run.failures.length}
-                <ul class="space-y-1 mt-2 max-h-40 overflow-auto">{#each run.failures as failure}<li class="text-xs break-words"><span class="font-medium">{failure.title}</span> · {failure.error}</li>{/each}</ul>
+                <ul class="space-y-1 mt-2 max-h-40 overflow-auto">{#each run.failures as failure}<li class="text-xs break-words"><span class="font-medium">{failure.title}</span>{failure.accepted ? ' · Accepted' : ''} · {failure.error}</li>{/each}</ul>
               {/if}
               {#if run.skipped_titles?.length}
                 <ul class="space-y-1 mt-2 max-h-40 overflow-auto">{#each run.skipped_titles as title}<li class="text-xs text-text-muted"><span class="font-medium">{title.title}</span> · {title.reason === 'needs_matching' ? 'Needs a TMDB match' : 'Manual title'}</li>{/each}</ul>
@@ -318,7 +384,9 @@
     <summary class="cursor-pointer py-1">How sync works</summary>
     <p class="mt-2 leading-relaxed">
     Includes archived and tier-list titles. Manual entries and unresolved TVDB matches are skipped.
-    The last five runs and the latest full result are kept. Retries only refresh failed titles and keep the full-sync schedule.
+    The last five runs and the latest full result are kept. Retries only refresh failures that have not been accepted and keep the full-sync schedule.
+    Accepting a failure keeps its error in history and clears its reminder for that run. Use Undo before starting another run to make it available for retry again.
+    Full syncs always include accepted titles. A new failure needs attention again.
     Every day means 24 hours, every week means 7 days, and every month means one calendar month after the last full attempt.
     Movie runs keep the release country chosen when they started. Changing it applies to the next run.
     Stopping finishes the current title, skips any queued library, and postpones automatic sync until the next scheduled interval.

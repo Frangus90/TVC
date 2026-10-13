@@ -68,6 +68,8 @@ pub struct Failure {
     id: i64,
     title: String,
     error: String,
+    #[serde(default)]
+    accepted: bool,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -304,6 +306,104 @@ pub async fn set_library_sync_schedule(
     Ok(())
 }
 
+fn lock_for_failure_update() -> Result<tokio::sync::MutexGuard<'static, ()>, String> {
+    SYNC_LOCK.try_lock().map_err(|_| {
+        "Wait for the current library sync or restore before accepting a failure".into()
+    })
+}
+
+#[tauri::command]
+pub async fn set_library_sync_failure_accepted(
+    app: AppHandle,
+    kind: Library,
+    started_at: DateTime<Utc>,
+    id: i64,
+    accepted: bool,
+) -> Result<Report, String> {
+    let _guard = lock_for_failure_update()?;
+    let pool = connection::get_pool(&app)
+        .await
+        .map_err(|error| error.to_string())?;
+    let report = set_failure_accepted(&pool, kind, started_at, id, accepted).await?;
+    if let Err(error) = app.emit("library-sync-status-changed", kind) {
+        // The choice is already saved. A missed UI notification must not suggest
+        // that accepting the failure failed or encourage a duplicate action.
+        eprintln!("[library-sync] Cannot notify the UI of saved failure acceptance: {error}");
+    }
+    Ok(report)
+}
+
+// Called with SYNC_LOCK held, so a newer sync or restore cannot replace these
+// reports between validation and their atomic update.
+async fn set_failure_accepted(
+    pool: &SqlitePool,
+    kind: Library,
+    started_at: DateTime<Utc>,
+    id: i64,
+    accepted: bool,
+) -> Result<Report, String> {
+    let mut report: Report = read_setting(pool, &kind.key("report"))
+        .await?
+        .ok_or("No sync result to update")?;
+    if report.kind != kind || report.started_at != started_at {
+        return Err("The sync result has changed. Refresh it before accepting a failure".into());
+    }
+    if report.finished_at.is_none() {
+        return Err("Finish or rerun the interrupted sync before accepting its failures".into());
+    }
+    report
+        .failures
+        .iter_mut()
+        .find(|failure| failure.id == id)
+        .ok_or("This title is no longer a failure in the latest sync")?
+        .accepted = accepted;
+
+    let mut runs: Option<Vec<Report>> = read_setting(pool, &kind.key("history")).await?;
+    if let Some(runs) = &mut runs {
+        for run in runs
+            .iter_mut()
+            .filter(|run| run.kind == kind && run.started_at == started_at)
+        {
+            if let Some(failure) = run.failures.iter_mut().find(|failure| failure.id == id) {
+                failure.accepted = accepted;
+            }
+        }
+    }
+    let mut full: Option<Report> = read_setting(pool, &kind.key("last_full_report")).await?;
+    let matching_full = full
+        .as_ref()
+        .is_some_and(|run| run.kind == kind && run.started_at == started_at);
+    if matching_full {
+        if let Some(failure) = full
+            .as_mut()
+            .and_then(|run| run.failures.iter_mut().find(|failure| failure.id == id))
+        {
+            failure.accepted = accepted;
+        }
+    }
+    let mut transaction = pool.begin().await.map_err(|error| error.to_string())?;
+    let mut updates = vec![(kind.key("report"), serde_json::to_string(&report))];
+    if let Some(runs) = runs {
+        updates.push((kind.key("history"), serde_json::to_string(&runs)));
+    }
+    if matching_full {
+        updates.push((kind.key("last_full_report"), serde_json::to_string(&full)));
+    }
+    for (key, value) in updates {
+        sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+            .bind(key)
+            .bind(value.map_err(|error| error.to_string())?)
+            .execute(&mut *transaction)
+            .await
+            .map_err(|error| format!("Cannot save sync failure acceptance: {error}"))?;
+    }
+    transaction
+        .commit()
+        .await
+        .map_err(|error| format!("Cannot save sync failure acceptance: {error}"))?;
+    Ok(report)
+}
+
 // The callback keeps network requests separate from report persistence, so failure/retry
 // behavior can be tested against a disposable database without contacting TMDB.
 async fn sync_library<F, Fut>(
@@ -335,7 +435,10 @@ where
             .as_ref()
             .ok_or("No previous sync to retry")?
             .failures
-            .clone()
+            .iter()
+            .filter(|failure| !failure.accepted)
+            .cloned()
+            .collect()
     } else {
         Vec::new()
     };
@@ -437,7 +540,12 @@ where
                 }
                 match sync_item(id, release_country.clone()).await {
                     Ok(()) => report.succeeded += 1,
-                    Err(error) => report.failures.push(Failure { id, title, error }),
+                    Err(error) => report.failures.push(Failure {
+                        id,
+                        title,
+                        error,
+                        accepted: false,
+                    }),
                 }
             } else {
                 report.failures.retain(|failure| failure.id != id);
@@ -983,6 +1091,259 @@ mod tests {
         assert!(report.processed.is_none());
         assert_eq!(report.succeeded, 1);
         assert_eq!(report.failures[0].id, 5);
+        assert!(!report.failures[0].accepted);
+    }
+
+    #[tokio::test]
+    async fn accepting_and_undoing_persists_without_changing_sync_results_or_schedule() {
+        let pool = database().await;
+        sync_library(
+            &pool,
+            Library::Shows,
+            "manual",
+            &AtomicBool::new(false),
+            |_, _| async { Ok(()) },
+        )
+        .await
+        .unwrap();
+        let failed = sync_library(
+            &pool,
+            Library::Shows,
+            "manual",
+            &AtomicBool::new(false),
+            |_, _| async { Err("offline".into()) },
+        )
+        .await
+        .unwrap();
+        sqlx::query("INSERT INTO settings VALUES (?, ?)")
+            .bind(Library::Shows.key("frequency"))
+            .bind(json!("weekly").to_string())
+            .execute(&pool)
+            .await
+            .unwrap();
+        let before = status(&pool, Library::Shows).await.unwrap();
+        let original = serde_json::to_value(&failed).unwrap();
+        let accepted = set_failure_accepted(&pool, Library::Shows, failed.started_at, 1, true)
+            .await
+            .unwrap();
+        let reloaded = status(&pool, Library::Shows).await.unwrap();
+        assert!(accepted.failures[0].accepted);
+        assert!(reloaded.report.unwrap().failures[0].accepted);
+        assert!(reloaded.last_full_report.unwrap().failures[0].accepted);
+        let runs = history(&pool, Library::Shows).await.unwrap();
+        assert!(runs[0].failures[0].accepted);
+        assert!(runs[1].failures.is_empty());
+        assert_eq!(reloaded.last_success_at, before.last_success_at);
+        assert_eq!(reloaded.frequency, before.frequency);
+        assert_eq!(reloaded.next_sync_at, before.next_sync_at);
+        let mut expected = original.clone();
+        expected["failures"][0]["accepted"] = json!(true);
+        assert_eq!(serde_json::to_value(accepted).unwrap(), expected);
+
+        let undone = set_failure_accepted(&pool, Library::Shows, failed.started_at, 1, false)
+            .await
+            .unwrap();
+        assert_eq!(serde_json::to_value(undone).unwrap(), original);
+        assert!(!history(&pool, Library::Shows).await.unwrap()[0].failures[0].accepted);
+        assert!(
+            !status(&pool, Library::Shows)
+                .await
+                .unwrap()
+                .last_full_report
+                .unwrap()
+                .failures[0]
+                .accepted
+        );
+    }
+
+    #[tokio::test]
+    async fn acceptance_rejects_stale_missing_and_unfinished_results_without_writing() {
+        let pool = database().await;
+        assert!(
+            set_failure_accepted(&pool, Library::Shows, Utc::now(), 1, true)
+                .await
+                .unwrap_err()
+                .contains("No sync result")
+        );
+        let mut failed = sync_library(
+            &pool,
+            Library::Shows,
+            "manual",
+            &AtomicBool::new(false),
+            |_, _| async { Err("offline".into()) },
+        )
+        .await
+        .unwrap();
+        let original = serde_json::to_value(&failed).unwrap();
+        assert!(set_failure_accepted(
+            &pool,
+            Library::Shows,
+            failed.started_at - Duration::seconds(1),
+            1,
+            true,
+        )
+        .await
+        .unwrap_err()
+        .contains("changed"));
+        assert!(
+            set_failure_accepted(&pool, Library::Shows, failed.started_at, 999, true)
+                .await
+                .unwrap_err()
+                .contains("no longer a failure")
+        );
+        assert_eq!(
+            serde_json::to_value(status(&pool, Library::Shows).await.unwrap().report).unwrap(),
+            original
+        );
+        failed.finished_at = None;
+        save_report(&pool, &failed).await.unwrap();
+        assert!(
+            set_failure_accepted(&pool, Library::Shows, failed.started_at, 1, true)
+                .await
+                .unwrap_err()
+                .contains("interrupted")
+        );
+        assert!(
+            !status(&pool, Library::Shows)
+                .await
+                .unwrap()
+                .report
+                .unwrap()
+                .failures[0]
+                .accepted
+        );
+    }
+
+    #[tokio::test]
+    async fn acceptance_is_local_to_one_run_and_library_and_retry_skips_accepted_failures() {
+        let pool = database().await;
+        sqlx::query("INSERT INTO movies VALUES (1, 'Same ID movie')")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let movies = sync_library(
+            &pool,
+            Library::Movies,
+            "manual",
+            &AtomicBool::new(false),
+            |_, _| async { Err("movie offline".into()) },
+        )
+        .await
+        .unwrap();
+        let failed = sync_library(
+            &pool,
+            Library::Shows,
+            "manual",
+            &AtomicBool::new(false),
+            |_, _| async { Err("offline".into()) },
+        )
+        .await
+        .unwrap();
+        set_failure_accepted(&pool, Library::Shows, failed.started_at, 1, true)
+            .await
+            .unwrap();
+        assert_eq!(
+            serde_json::to_value(status(&pool, Library::Movies).await.unwrap().report).unwrap(),
+            serde_json::to_value(movies).unwrap()
+        );
+        let mut retried = Vec::new();
+        let retry = sync_library(
+            &pool,
+            Library::Shows,
+            "retry",
+            &AtomicBool::new(false),
+            |id, _| {
+                retried.push(id);
+                async { Err("still offline".into()) }
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(retried, vec![2]);
+        assert_eq!(retry.total, 1);
+        assert_eq!(retry.failures.len(), 1);
+        assert!(!retry.failures[0].accepted);
+        let retained = status(&pool, Library::Shows)
+            .await
+            .unwrap()
+            .last_full_report
+            .unwrap();
+        assert!(retained.failures[0].accepted);
+        assert!(history(&pool, Library::Shows).await.unwrap()[1].failures[0].accepted);
+        set_failure_accepted(&pool, Library::Shows, retry.started_at, 2, true)
+            .await
+            .unwrap();
+        assert!(
+            !status(&pool, Library::Shows)
+                .await
+                .unwrap()
+                .last_full_report
+                .unwrap()
+                .failures[1]
+                .accepted
+        );
+        let mut full_visited = Vec::new();
+        let next_full = sync_library(
+            &pool,
+            Library::Shows,
+            "manual",
+            &AtomicBool::new(false),
+            |id, _| {
+                full_visited.push(id);
+                async { Err("new failure".into()) }
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(full_visited, vec![1, 2]);
+        assert!(next_full.failures.iter().all(|failure| !failure.accepted));
+    }
+
+    #[tokio::test]
+    async fn failed_acceptance_save_rolls_back_report_history_and_full_report() {
+        let pool = database().await;
+        let failed = sync_library(
+            &pool,
+            Library::Shows,
+            "manual",
+            &AtomicBool::new(false),
+            |_, _| async { Err("offline".into()) },
+        )
+        .await
+        .unwrap();
+        let before: Vec<(String, String)> =
+            sqlx::query_as("SELECT key, value FROM settings ORDER BY key")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        sqlx::raw_sql(
+            "CREATE TRIGGER reject_history BEFORE INSERT ON settings
+             WHEN NEW.key = 'library_sync_shows_history'
+             BEGIN SELECT RAISE(ABORT, 'history unavailable'); END;",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        assert!(
+            set_failure_accepted(&pool, Library::Shows, failed.started_at, 1, true)
+                .await
+                .unwrap_err()
+                .contains("Cannot save sync failure acceptance")
+        );
+        let after: Vec<(String, String)> =
+            sqlx::query_as("SELECT key, value FROM settings ORDER BY key")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert_eq!(before, after);
+    }
+
+    #[test]
+    fn acceptance_waits_for_sync_or_restore_lock() {
+        let guard = SYNC_LOCK.try_lock().unwrap();
+        assert!(lock_for_failure_update().unwrap_err().contains("Wait for"));
+        drop(guard);
+        assert!(lock_for_failure_update().is_ok());
     }
 
     #[tokio::test]

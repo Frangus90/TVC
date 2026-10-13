@@ -11,33 +11,38 @@
   import { openWhatsNew, getAppVersion, hasUnseenChanges } from "../../stores/whatsNew.svelte";
   import { setActiveTab as setDataTab } from "../../stores/dataManagement.svelte";
   import type { LibrarySyncStatus } from "../../stores/librarySync";
-  import { allLibrariesHaveSynced } from "../../stores/librarySync";
+  import { allLibrariesHaveSynced, unacceptedSyncFailures, acceptedSyncFailures } from "../../stores/librarySync";
   import { logger } from "../../utils/logger";
 
   let syncStatus = $state<LibrarySyncStatus[]>([]);
   let syncError = $state(false);
-  const failed = $derived(syncStatus.reduce((sum, library) => sum + (library.report?.failures.length ?? 0), 0));
+  const failed = $derived(syncStatus.reduce((sum, library) => sum + unacceptedSyncFailures(library.report).length, 0));
+  const accepted = $derived(syncStatus.some(library => acceptedSyncFailures(library.report).length > 0));
   const stopped = $derived(syncStatus.some(library => library.report?.stopped || library.last_full_report?.stopped));
   const needsAttention = $derived(failed > 0 || syncStatus.some(library => library.interrupted || library.report?.error || library.report?.stopped || library.last_full_report?.stopped || library.last_full_report?.finished_at === null));
   const hasSynced = $derived(allLibrariesHaveSynced(syncStatus));
-  const syncLabel = $derived(syncError ? "Sync status unavailable" : needsAttention ? (failed ? `${failed} title${failed === 1 ? " needs" : "s need"} syncing` : stopped ? "Sync stopped" : "Sync needs attention") : hasSynced ? "Library synced" : "Library sync");
+  const syncLabel = $derived(syncError ? "Sync status unavailable" : needsAttention ? (failed ? `${failed} title${failed === 1 ? " needs" : "s need"} syncing` : stopped ? "Sync stopped" : "Sync needs attention") : accepted ? "Sync failures accepted" : hasSynced ? "Library synced" : "Library sync");
 
   onMount(() => {
     let disposed = false;
+    let requestId = 0;
     const refresh = async () => {
+      const request = ++requestId;
       try {
         const result = await invoke<LibrarySyncStatus[]>("get_library_sync_status");
-        if (!disposed) { syncStatus = result; syncError = false; }
-      } catch { if (!disposed) syncError = true; }
+        if (!disposed && request === requestId) { syncStatus = result; syncError = false; }
+      } catch { if (!disposed && request === requestId) syncError = true; }
     };
     void loadSidebarWidth();
     void refresh();
-    const listener = listen("library-sync-finished", () => { void refresh(); }).catch(error => {
-      if (!disposed) syncError = true;
-      logger.error("Live sync status could not be connected; open Data to check sync", error);
-      return undefined;
-    });
-    return () => { disposed = true; void listener.then(stop => stop?.()); };
+    const listeners = ["library-sync-finished", "library-sync-status-changed"].map(event =>
+      listen(event, () => { void refresh(); }).catch(error => {
+        if (!disposed) syncError = true;
+        logger.error("Live sync status could not be connected; open Data to check sync", error);
+        return undefined;
+      })
+    );
+    return () => { disposed = true; for (const listener of listeners) void listener.then(stop => stop?.()); };
   });
 
   function showSync() { setDataTab("sync"); setSidebarTab("data"); }

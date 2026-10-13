@@ -7,6 +7,7 @@
   import { getUnmigratedShows, getUnmigratedShowsError as getUnmigratedError, loadUnmigratedShows } from "../../stores/migration.svelte";
   import { getBackupStatus, getBackupError, loadBackupStatus } from "../../stores/backups.svelte";
   import type { LibrarySyncStatus } from "../../stores/librarySync";
+  import { unacceptedSyncFailures, acceptedSyncFailures } from "../../stores/librarySync";
   import { formatDateTime } from "../../utils/dateFormat";
 
   let sync = $state<LibrarySyncStatus[]>([]);
@@ -16,7 +17,8 @@
   let healthRequest: Promise<void> | null = null;
   const stats = $derived(getDatabaseStats());
   const backup = $derived(getBackupStatus());
-  const failed = $derived(sync.reduce((sum, item) => sum + (item.report?.failures.length ?? 0), 0));
+  const failed = $derived(sync.reduce((sum, item) => sum + unacceptedSyncFailures(item.report).length, 0));
+  const accepted = $derived(sync.reduce((sum, item) => sum + acceptedSyncFailures(item.report).length, 0));
   function loadHealth(): Promise<void> {
     if (healthRequest) return healthRequest;
     healthLoading = true;
@@ -28,11 +30,13 @@
   }
   onMount(() => {
     let disposed = false;
-    let stop: UnlistenFn | undefined;
+    const stops: UnlistenFn[] = [];
     void loadHealth();
-    listen("library-sync-finished", () => { if (!disposed) void loadHealth(); }).then(unlisten => { if (disposed) unlisten(); else stop = unlisten; }).catch(error => { syncError = `Could not listen for sync updates: ${String(error)}`; });
+    for (const event of ["library-sync-finished", "library-sync-status-changed"]) {
+      listen(event, async () => { await healthRequest; if (!disposed) await loadHealth(); }).then(unlisten => { if (disposed) unlisten(); else stops.push(unlisten); }).catch(error => { syncError = `Could not listen for sync updates: ${String(error)}`; });
+    }
     const timer = setInterval(() => { void loadHealth(); }, 10000);
-    return () => { disposed = true; stop?.(); clearInterval(timer); };
+    return () => { disposed = true; for (const stop of stops) stop(); clearInterval(timer); };
   });
 </script>
 
@@ -55,7 +59,7 @@
       <div class="flex items-start gap-3"><CloudDownload size={19} class="text-accent mt-0.5" /><div><h2 class="font-medium">Sync with TMDB</h2>
         {#if syncError}<p role="alert" class="text-sm text-error">{syncError}</p>
         {:else if healthLoading && !sync.length}<p class="text-sm text-text-muted">Loading sync status…</p>
-        {:else}<p class="text-sm text-text-muted">{sync.some(item => item.running) ? "Your library is syncing." : sync.some(item => item.report?.error) ? "The latest sync failed. Open its results to retry." : failed ? `${failed} title${failed === 1 ? " needs" : "s need"} another sync attempt.` : sync.some(item => item.interrupted || item.report?.stopped || item.last_full_report?.stopped || item.last_full_report && !item.last_full_report.finished_at) ? "A sync stopped before finishing. Review its results." : sync.every(item => item.last_success_at) && sync.length === 2 ? "Both libraries have completed a full sync." : "Review sync results and choose an automatic schedule."}</p>{/if}
+        {:else}<p class="text-sm text-text-muted">{sync.some(item => item.running) ? "Your library is syncing." : sync.some(item => item.report?.error) ? "The latest sync failed. Open its results to retry." : failed ? `${failed} title${failed === 1 ? " needs" : "s need"} another sync attempt.` : sync.some(item => item.interrupted || item.report?.stopped || item.last_full_report?.stopped || item.last_full_report && !item.last_full_report.finished_at) ? "A sync stopped before finishing. Review its results." : accepted ? `${accepted} sync failure${accepted === 1 ? " is" : "s are"} accepted. ${accepted === 1 ? "This title stays" : "These titles stay"} included in future full syncs.` : sync.every(item => item.last_success_at) && sync.length === 2 ? "Both libraries have completed a full sync." : "Review sync results and choose an automatic schedule."}</p>{/if}
       </div></div>
       <button type="button" class="focus-button" onclick={() => setActiveTab("sync")}>Open sync <ArrowRight size={15} /></button>
     </div>

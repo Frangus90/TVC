@@ -16,13 +16,21 @@ export interface SyncReport {
   total: number;
   succeeded: number;
   skipped: number;
-  failures: { id: number; title: string; error: string }[];
+  failures: { id: number; title: string; error: string; accepted?: boolean }[];
   current_title: string | null;
   error: string | null;
   release_country?: string | null;
   stopped?: boolean;
   skipped_titles?: { id: number; title: string; reason: "manual_entry" | "needs_matching" }[];
   processed?: number | null;
+}
+
+export function unacceptedSyncFailures(report: SyncReport | null | undefined) {
+  return report?.failures.filter(failure => !failure.accepted) ?? [];
+}
+
+export function acceptedSyncFailures(report: SyncReport | null | undefined) {
+  return report?.failures.filter(failure => failure.accepted) ?? [];
 }
 
 export function allLibrariesHaveSynced(statuses: LibrarySyncStatus[]): boolean {

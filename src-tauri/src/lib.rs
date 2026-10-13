@@ -320,6 +320,7 @@ pub fn run() {
             commands::movies::sync_movie,
             library_sync::get_library_sync_status,
             library_sync::set_library_sync_schedule,
+            library_sync::set_library_sync_failure_accepted,
             library_sync::run_library_sync,
             library_sync::get_library_sync_history,
             library_sync::request_library_sync_stop,

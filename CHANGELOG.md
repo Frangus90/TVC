@@ -2,6 +2,12 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.15.1] - Unreleased
+
+### Data Management
+
+- In **Data → Sync**, choose **Accept failure** when a title's sync error is acceptable. It clears the reminder and moves the error into a separate list with **Undo**. The error stays in history, and future full syncs still try that title again.
+
 ## [0.15.0] - 13.10.2026
 
 ### Focus Redesign
