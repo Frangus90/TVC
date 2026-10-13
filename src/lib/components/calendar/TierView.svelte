@@ -829,9 +829,9 @@
   .focus-tier-label { text-align: center; overflow-wrap: anywhere; background: color-mix(in srgb, var(--color-surface-hover) 65%, var(--color-surface)); }
   .focus-tier-label > span:first-child { font-size: 0.9375rem; }
   .focus-tier-zone { min-width: 0; }
-  .focus-tier-board :global(.context-menu-container) { width: 5.5rem; }
+  .focus-tier-board :global(.context-menu-container) { width: calc(5.5rem * var(--poster-size-scale, 1)); }
   .focus-tier-board :global(.context-menu-container img:not(.context-menu-btn img)),
-  .focus-tier-board :global(.context-menu-container [role="button"] > div) { width: 5.5rem; height: 8.25rem; border-radius: 0.5rem; }
+  .focus-tier-board :global(.context-menu-container [role="button"] > div) { width: calc(5.5rem * var(--poster-size-scale, 1)); height: calc(8.25rem * var(--poster-size-scale, 1)); border-radius: 0.5rem; }
   .focus-tier-board :global(.context-menu-container [role="button"] > span) { white-space: normal; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; text-align: left; line-height: 1.4; margin-top: 0.45rem; font-size: 0.6875rem; min-height: 1.925rem; }
   .focus-tier-board :global(.context-menu-btn:focus-visible),
   .focus-tier-board :global(.context-menu-container:focus-within .context-menu-btn) { opacity: 1; }

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { modalFocus } from "../../utils/modalFocus";
   import { fade, scale } from "svelte/transition";
-  import { Palette, Bell, Flag, Play, Server, X, ListOrdered } from "lucide-svelte";
+  import { SlidersHorizontal, Palette, Bell, Flag, Server, X, ListOrdered } from "lucide-svelte";
   import {
     isSettingsOpen,
     closeSettings,
@@ -10,10 +10,10 @@
     type SettingsTab,
   } from "../../stores/settings.svelte";
   import AppearanceTab from "./AppearanceTab.svelte";
+  import GeneralTab from "./GeneralTab.svelte";
   import NotificationsTab from "./NotificationsTab.svelte";
   import RacingTab from "./RacingTab.svelte";
-  import PlexTab from "./PlexTab.svelte";
-  import ArrTab from "./ArrTab.svelte";
+  import IntegrationsTab from "./IntegrationsTab.svelte";
   import TierListTab from "./TierListTab.svelte";
 
   let { embedded = false }: { embedded?: boolean } = $props();
@@ -23,12 +23,12 @@
   }
 
   const tabs: { id: SettingsTab; label: string; icon: typeof Palette }[] = [
+    { id: 'general', label: 'General', icon: SlidersHorizontal },
     { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'tierlist', label: 'Tier List', icon: ListOrdered },
     { id: 'racing', label: 'Racing', icon: Flag },
-    { id: 'plex', label: 'Plex', icon: Play },
-    { id: 'arr', label: 'Sonarr / Radarr', icon: Server },
+    { id: 'integrations', label: 'Integrations', icon: Server },
   ];
 </script>
 
@@ -97,7 +97,9 @@
 
       <!-- Right Content Panel -->
       <div class={embedded ? "focus-panel focus-settings-content bg-surface border border-border rounded-xl p-6" : "flex-1 overflow-y-auto p-6"}>
-        {#if getActiveSettingsTab() === 'appearance'}
+        {#if getActiveSettingsTab() === 'general'}
+          <GeneralTab />
+        {:else if getActiveSettingsTab() === 'appearance'}
           <AppearanceTab />
         {:else if getActiveSettingsTab() === 'notifications'}
           <NotificationsTab />
@@ -105,10 +107,8 @@
           <TierListTab />
         {:else if getActiveSettingsTab() === 'racing'}
           <RacingTab />
-        {:else if getActiveSettingsTab() === 'plex'}
-          <PlexTab />
-        {:else if getActiveSettingsTab() === 'arr'}
-          <ArrTab />
+        {:else if getActiveSettingsTab() === 'integrations'}
+          <IntegrationsTab />
         {/if}
       </div>
     </div>

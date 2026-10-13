@@ -277,6 +277,14 @@ select {
 .focus-calendar-legend { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
 .focus-calendar-legend span { display:inline-flex; gap:.35rem; align-items:center; }
 .focus-panel { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--focus-radius); }
+.settings-group { border:1px solid var(--color-border); border-radius:.65rem; background:var(--color-background); overflow:hidden; }
+.settings-row { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.65rem 1.25rem; padding:.8rem 1rem; border-bottom:1px solid var(--color-border); }
+.settings-row:last-child { border-bottom:0; }
+.settings-row > div { min-width:0; }
+.settings-row p { max-width:62ch; }
+.settings-row input[type="range"] { accent-color:var(--color-accent); }
+.settings-group > summary { padding:.8rem 1rem; cursor:pointer; font-size:.85rem; font-weight:600; }
+.settings-group[open] > summary { border-bottom:1px solid var(--color-border); }
 .focus-tabs { display:flex; align-items:center; gap:.4rem; flex-wrap:wrap; border-bottom:1px solid var(--color-border); margin-bottom:.75rem; }
 .focus-tabs button { font-size:.85rem; padding:.45rem .65rem; border-bottom:2px solid transparent; color:var(--color-text-muted); }
 .focus-tabs button[aria-pressed="true"], .focus-tabs button[aria-selected="true"] { color:var(--color-accent); border-bottom-color:var(--color-accent); }

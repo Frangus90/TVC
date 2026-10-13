@@ -420,6 +420,11 @@ pub fn run() {
             commands::awards::get_award_prediction_results,
             // App commands
             commands::app::exit_app,
+            commands::preferences::get_general_preferences,
+            commands::preferences::update_general_preferences,
+            commands::preferences::get_start_with_windows,
+            commands::preferences::set_start_with_windows,
+            commands::preferences::apply_startup_window_preferences,
         ])
         .setup(|app| {
             // Setup system tray
@@ -493,9 +498,12 @@ pub fn run() {
         })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                // Hide window instead of closing (minimize to tray)
-                let _ = window.hide();
-                api.prevent_close();
+                if commands::preferences::close_to_tray() {
+                    let _ = window.hide();
+                    api.prevent_close();
+                } else {
+                    window.app_handle().exit(0);
+                }
             }
         })
         .run(context)

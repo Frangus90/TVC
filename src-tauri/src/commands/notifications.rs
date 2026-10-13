@@ -12,7 +12,7 @@ pub async fn get_notification_settings(app: AppHandle) -> Result<NotificationSet
         .await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    Ok(notifications::get_settings(&pool).await)
+    notifications::get_settings_checked(&pool).await
 }
 
 #[tauri::command]

@@ -24,6 +24,8 @@
     getEditingServer,
     isTestingConnection,
     getTestResult,
+    getServerConnectionCheck,
+    checkSavedServer,
     getSelectedServer,
     getLibraryItems,
     getFilteredLibraryItems,
@@ -160,10 +162,11 @@
 </script>
 <div class="flex flex-col h-full">
   <!-- Sub-tabs -->
-  <div class="flex border-b border-border -mx-6 -mt-6 px-6 mb-4">
+  <div class="focus-tabs" role="group" aria-label="Sonarr / Radarr sections">
     <button
       type="button"
       onclick={() => setActiveTab("servers")}
+      aria-pressed={activeTab === "servers"}
       class="px-4 py-3 text-sm font-medium transition-colors {activeTab === 'servers'
         ? 'text-accent border-b-2 border-accent'
         : 'text-text-muted hover:text-text'}"
@@ -173,6 +176,7 @@
     <button
       type="button"
       onclick={() => setActiveTab("import")}
+      aria-pressed={activeTab === "import"}
       class="px-4 py-3 text-sm font-medium transition-colors {activeTab === 'import'
         ? 'text-accent border-b-2 border-accent'
         : 'text-text-muted hover:text-text'}"
@@ -317,6 +321,7 @@
         </div>
 
         {#each servers as server}
+          {@const connection = getServerConnectionCheck(server.id)}
           <div class="bg-background rounded-lg p-4 border border-border">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3">
@@ -334,6 +339,8 @@
               </div>
 
               <div class="flex items-center gap-2">
+                <button type="button" onclick={() => checkSavedServer(server)} disabled={connection?.state === "checking"}
+                  class="focus-button disabled:opacity-50"><RefreshCw class="w-4 h-4 {connection?.state === 'checking' ? 'animate-spin' : ''}" />{connection?.state === "checking" ? "Checking…" : "Test connection"}</button>
                 <button
                   type="button"
                   onclick={() => handleStartImport(server)}
@@ -364,6 +371,9 @@
             {#if server.last_synced}
               <p class="text-xs text-text-muted mt-2">Last imported: {formatDateTime(server.last_synced)}</p>
             {/if}
+            {#if connection}<p role={connection.state === "failed" ? "alert" : "status"} class="text-sm mt-2 {connection.state === 'failed' ? 'text-red-400' : connection.state === 'connected' ? 'text-available' : 'text-text-muted'}">
+              {connection.message}{#if connection.checked_at}<span class="text-xs text-text-muted"> · {formatDateTime(connection.checked_at)}</span>{/if}
+            </p>{/if}
           </div>
         {/each}
       </div>

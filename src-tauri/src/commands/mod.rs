@@ -14,6 +14,7 @@ pub mod notifications;
 pub mod tiers;
 pub mod app;
 pub mod validation;
+pub mod preferences;
 
 use serde::{Deserialize, Serialize};
 use tauri::AppHandle;

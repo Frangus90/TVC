@@ -5,19 +5,13 @@ pub(super) fn select_movie_release_dates(
     release_data: &ReleaseDatesResponse,
     country: &str,
 ) -> MovieReleaseDates {
-    let Some(country_releases) = release_data
-        .results
-        .iter()
-        .find(|r| r.iso_3166_1 == country)
-    else {
-        return MovieReleaseDates::default();
-    };
-
     // TMDB can list re-releases before the original, including within one type.
-    let earliest = |types: &[i32]| {
-        country_releases
-            .release_dates
+    let earliest = |types: &[i32], preferred_country_only: bool| {
+        release_data
+            .results
             .iter()
+            .filter(|region| !preferred_country_only || region.iso_3166_1 == country)
+            .flat_map(|region| region.release_dates.iter())
             .filter(|release| types.contains(&release.release_type))
             .filter_map(|release| {
                 // Release dates represent calendar days, not local-time instants.
@@ -29,10 +23,10 @@ pub(super) fn select_movie_release_dates(
     };
 
     MovieReleaseDates {
-        // Prefer a public theatrical release to an earlier festival premiere.
-        theatrical: earliest(&[2, 3]).or_else(|| earliest(&[1])),
-        digital: earliest(&[4]),
-        physical: earliest(&[5]),
+        // Original public release/year stays stable when the preferred country changes.
+        theatrical: earliest(&[2, 3], false).or_else(|| earliest(&[1], false)),
+        digital: earliest(&[4], true),
+        physical: earliest(&[5], true),
     }
 }
 
@@ -173,7 +167,7 @@ mod tests {
     }
 
     #[test]
-    fn missing_country_or_dates_stay_unknown_without_using_other_regions() {
+    fn missing_country_keeps_original_theatrical_but_does_not_borrow_digital_dates() {
         let mut data = releases(&[(3, "1987-09-11T00:00:00Z")]);
         data.results[0].iso_3166_1 = "GB".into();
         data.results.push(CountryReleaseDates {
@@ -182,10 +176,27 @@ mod tests {
         });
         for country in ["US", "NO"] {
             let dates = select_movie_release_dates(&data, country);
-            // The caller can then fall back to the primary movie-details date.
-            assert!(dates.theatrical.is_none());
+            assert_eq!(dates.theatrical.as_deref(), Some("1987-09-11"));
             assert!(dates.digital.is_none());
             assert!(dates.physical.is_none());
         }
+    }
+
+    #[test]
+    fn country_changes_regional_dates_without_replacing_original_year_with_a_rerelease() {
+        let mut data = releases(&[(3, "1990-05-01"), (4, "2010-01-01"), (5, "1999-02-01")]);
+        let mut norway = releases(&[(3, "2026-01-16"), (4, "2026-04-01"), (5, "2026-06-01")]);
+        norway.results[0].iso_3166_1 = "NO".into();
+        data.results.extend(norway.results);
+        let mut original = releases(&[(1, "1988-12-01"), (3, "1989-01-01")]);
+        original.results[0].iso_3166_1 = "JP".into();
+        data.results.extend(original.results);
+        let us = select_movie_release_dates(&data, "US");
+        let no = select_movie_release_dates(&data, "NO");
+        assert_eq!(us.theatrical.as_deref(), Some("1989-01-01"));
+        assert_eq!(no.theatrical, us.theatrical);
+        assert_eq!(us.digital.as_deref(), Some("2010-01-01"));
+        assert_eq!(no.digital.as_deref(), Some("2026-04-01"));
+        assert_eq!(no.physical.as_deref(), Some("2026-06-01"));
     }
 }

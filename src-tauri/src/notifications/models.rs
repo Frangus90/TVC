@@ -16,6 +16,7 @@ pub struct Notification {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct NotificationSettings {
     pub enabled: bool,
     pub sound_enabled: bool,
@@ -31,6 +32,9 @@ pub struct NotificationSettings {
     pub premiere_enabled: bool,
     pub update_enabled: bool,
     pub system_enabled: bool,
+    pub quiet_hours_enabled: bool,
+    pub quiet_hours_start: String,
+    pub quiet_hours_end: String,
 }
 
 impl Default for NotificationSettings {
@@ -50,6 +54,9 @@ impl Default for NotificationSettings {
             premiere_enabled: true,
             update_enabled: true,
             system_enabled: true,
+            quiet_hours_enabled: false,
+            quiet_hours_start: "22:00".to_string(),
+            quiet_hours_end: "08:00".to_string(),
         }
     }
 }

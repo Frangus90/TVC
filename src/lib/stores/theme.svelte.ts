@@ -1,6 +1,8 @@
 import { getDatabase } from "../utils/database";
 import { logger } from "../utils/logger";
 
+export type PosterSize = "small" | "medium" | "large";
+
 export interface ThemeSettings {
   colorScheme: string;
   accentColor: string;
@@ -8,6 +10,7 @@ export interface ThemeSettings {
   compactSpacing: boolean;
   colorblindFriendly: boolean;
   hidePosters: boolean;
+  posterSize: PosterSize;
 }
 
 // Use shared database utility
@@ -21,6 +24,7 @@ export const defaultTheme: ThemeSettings = {
   compactSpacing: false,
   colorblindFriendly: false,
   hidePosters: false,
+  posterSize: "medium",
 };
 
 let themeSettings = $state<ThemeSettings>(defaultTheme);
@@ -69,6 +73,7 @@ async function readThemeSettings(): Promise<void> {
     for (const row of rows) {
       const key = row.key.replace("theme_", "");
       if (key === "accentColor") loaded.accentColor = normalizeAccentColor(row.value) ?? defaultTheme.accentColor;
+      else if (key === "posterSize" && ["small", "medium", "large"].includes(row.value)) loaded.posterSize = row.value as PosterSize;
       else if (key === "colorScheme") loaded.colorScheme = row.value;
       else if (key === "fontSize") loaded.fontSize = Math.max(0.75, Math.min(1.5, parseFloat(row.value) || 1));
       else if (key === "compactSpacing" || key === "colorblindFriendly" || key === "hidePosters") loaded[key] = row.value === "true";
@@ -129,6 +134,8 @@ function applyTheme() {
   root.style.setProperty("--accent-color", themeSettings.accentColor);
   root.style.setProperty("--accent-hover", adjustBrightness(themeSettings.accentColor, -10));
   root.style.setProperty("--accent-foreground", accentForeground(themeSettings.accentColor));
+
+  root.style.setProperty("--poster-size-scale", String({ small: 0.8, medium: 1, large: 1.2 }[themeSettings.posterSize]));
 
   // Apply font size
   root.style.setProperty("--font-size-multiplier", String(themeSettings.fontSize));

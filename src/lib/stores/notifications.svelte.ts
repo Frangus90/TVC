@@ -1,6 +1,8 @@
+import { showError } from "./toast.svelte";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { logger } from "../utils/logger";
+import { defaultQuietHours, isWithinQuietHours, type QuietHoursSettings } from "../utils/quietHours";
 import { playNotificationSound } from "../utils/notificationSound";
 
 export interface AppNotification {
@@ -17,7 +19,7 @@ export interface AppNotification {
   expires_at: string | null;
 }
 
-export interface NotificationSettings {
+export interface NotificationSettings extends QuietHoursSettings {
   enabled: boolean;
   sound_enabled: boolean;
   sound_volume: number;
@@ -122,7 +124,7 @@ export function loadNotificationSettings(): Promise<void> {
   settingsLoadError = null;
   const revision = settingsRevision;
   settingsLoadPromise = invoke<NotificationSettings>("get_notification_settings")
-    .then(result => { if (revision === settingsRevision) settings = result; })
+    .then(result => { if (revision === settingsRevision) settings = { ...defaultQuietHours, ...result }; })
     .catch(error => {
       logger.error("[Notifications] Failed to load settings", error);
       settingsLoadError = `Could not load notification settings: ${error}`;
@@ -135,6 +137,7 @@ export function loadNotificationSettings(): Promise<void> {
 export async function updateNotificationSettings(updates: Partial<NotificationSettings>): Promise<boolean> {
   if (!settings) return false;
   settings = { ...settings, ...updates };
+  if (!settings.enabled || isWithinQuietHours(settings)) clearPopups();
   const snapshot = { ...settings };
   const revision = ++settingsRevision;
   pendingSettingsSaves++;
@@ -206,16 +209,21 @@ export async function dismissAllNotifications() {
   }
 }
 
-// Test notification (dev only)
+// Test the current saved notification preferences.
 export async function testNotification(
   notificationType?: string,
-): Promise<void> {
+): Promise<boolean> {
   try {
+    await settingsSaveQueue;
+    if (settingsSaveError) return false;
     await invoke("test_in_app_notification", {
       notificationType,
     });
+    return true;
   } catch (e) {
     logger.error("[Notifications] Failed to send test notification", e);
+    showError(`Could not send a test notification: ${e}`);
+    return false;
   }
 }
 
@@ -240,30 +248,30 @@ export function removePopup(id: number) {
   activePopups = activePopups.filter((n) => n.id !== id);
 }
 
-// Setup event listener — call from App.svelte onMount
+function clearPopups() {
+  for (const id of popupTimers.keys()) removePopup(id);
+  activePopups = [];
+}
+
+// Keep history/counts during quiet hours; only delivery is suppressed.
 export function setupNotificationListener(): () => void {
   let unlisten: UnlistenFn | undefined;
-
+  let disposed = false;
+  const deliver = async (notification: AppNotification) => {
+    if (!settings) await loadNotificationSettings();
+    if (disposed || !settings?.enabled || isWithinQuietHours(settings)) return;
+    addPopup(notification);
+    if (settings.sound_enabled) playNotificationSound(settings.sound_choice, settings.sound_volume);
+  };
   listen<AppNotification>("notification", (event) => {
     const notif = event.payload;
-
-    // Add to notifications list
     notifications = [notif, ...notifications];
     unreadCount++;
-
-    // Show popup
-    addPopup(notif);
-
-    // Play sound
-    if (settings?.sound_enabled) {
-      playNotificationSound(
-        settings.sound_choice,
-        settings.sound_volume,
-      );
-    }
+    void deliver(notif);
   }).then((fn) => {
-    unlisten = fn;
-  });
-
-  return () => unlisten?.();
+    if (disposed) fn(); else unlisten = fn;
+  }).catch(error => showError(`Could not listen for notifications: ${error}`));
+  // Remove persistent popups when quiet hours begin, even without a new event.
+  const timer = setInterval(() => { if (settings && isWithinQuietHours(settings)) clearPopups(); }, 1000);
+  return () => { disposed = true; clearInterval(timer); unlisten?.(); clearPopups(); };
 }

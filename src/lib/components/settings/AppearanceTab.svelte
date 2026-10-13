@@ -2,80 +2,55 @@
   import { onDestroy } from "svelte";
   import { RotateCcw } from "lucide-svelte";
   import {
-    getThemeSettings,
-    updateThemeSettings,
-    type ThemeSettings,
-    defaultTheme,
-    normalizeAccentColor,
-    isThemeSaving,
-    getThemeSaveError,
-    getThemeLoadError,
-    loadThemeSettings,
-    retryThemeSave,
+    getThemeSettings, updateThemeSettings, defaultTheme, normalizeAccentColor,
+    isThemeSaving, getThemeSaveError, getThemeLoadError, loadThemeSettings, retryThemeSave,
+    type PosterSize,
   } from "../../stores/theme.svelte";
 
   let colourError = $state<string | null>(null);
   let fontInput = $state(1);
   let fontTimer: ReturnType<typeof setTimeout> | null = null;
-  $effect(() => { if (!fontTimer) fontInput = getThemeSettings().fontSize; });
-  onDestroy(() => { if (fontTimer) { clearTimeout(fontTimer); fontTimer = null; void updateThemeSettings({ fontSize: fontInput }); } });
+  $effect(() => { const font = getThemeSettings().fontSize; if (!fontTimer) fontInput = font; });
+  onDestroy(() => { if (fontTimer) flushFontSize(); });
 
   const accentPresets = [
-    { color: "#bba4ff", name: "Focus" },
-    { color: "#3b82f6", name: "Blue" },
-    { color: "#8b5cf6", name: "Purple" },
-    { color: "#ec4899", name: "Pink" },
-    { color: "#ef4444", name: "Red" },
-    { color: "#f97316", name: "Orange" },
-    { color: "#eab308", name: "Yellow" },
-    { color: "#22c55e", name: "Green" },
+    { color: "#bba4ff", name: "Focus" }, { color: "#3b82f6", name: "Blue" },
+    { color: "#8b5cf6", name: "Purple" }, { color: "#ec4899", name: "Pink" },
+    { color: "#ef4444", name: "Red" }, { color: "#f97316", name: "Orange" },
+    { color: "#eab308", name: "Yellow" }, { color: "#22c55e", name: "Green" },
     { color: "#06b6d4", name: "Cyan" },
   ];
+  const settings = $derived(getThemeSettings());
 
-  function settings() {
-    return getThemeSettings();
-  }
-
-  async function handleAccentColor(color: string) {
+  async function setAccent(color: string) {
     const normalized = normalizeAccentColor(color);
     if (!normalized) { colourError = "Use #RGB or #RRGGBB, for example #bba4ff."; return; }
     colourError = null;
     await updateThemeSettings({ accentColor: normalized });
   }
-
-  function handleFontSize(event: Event) {
+  function changeFont(event: Event) {
     fontInput = parseFloat((event.target as HTMLInputElement).value);
     if (fontTimer) clearTimeout(fontTimer);
     fontTimer = setTimeout(flushFontSize, 250);
   }
   function flushFontSize() {
     if (!fontTimer) return;
-    clearTimeout(fontTimer);
-    fontTimer = null;
+    clearTimeout(fontTimer); fontTimer = null;
     void updateThemeSettings({ fontSize: fontInput });
   }
-
-  async function handleToggle(key: keyof ThemeSettings) {
-    await updateThemeSettings({ [key]: !settings()[key] });
+  function resetDefaults() {
+    if (fontTimer) { clearTimeout(fontTimer); fontTimer = null; }
+    fontInput = defaultTheme.fontSize; colourError = null;
+    void updateThemeSettings({ ...defaultTheme });
   }
-
-  async function resetToDefaults() {
-    await updateThemeSettings({ ...defaultTheme });
-  }
-
-  function isDefault(): boolean {
-    const s = settings();
-    return (
-      s.accentColor === defaultTheme.accentColor &&
-      s.fontSize === defaultTheme.fontSize &&
-      s.compactSpacing === defaultTheme.compactSpacing &&
-      s.colorblindFriendly === defaultTheme.colorblindFriendly &&
-      s.hidePosters === defaultTheme.hidePosters
-    );
-  }
+  const isDefault = $derived(
+    settings.accentColor === defaultTheme.accentColor && settings.fontSize === defaultTheme.fontSize &&
+    settings.compactSpacing === defaultTheme.compactSpacing && settings.hidePosters === defaultTheme.hidePosters &&
+    settings.colorblindFriendly === defaultTheme.colorblindFriendly && settings.posterSize === defaultTheme.posterSize,
+  );
 </script>
 
-<div class="space-y-6">
+<div class="space-y-4">
   {#if getThemeLoadError()}
     <div role="alert" class="p-3 rounded-lg border border-red-500/30 text-red-400 text-sm">
       <p>{getThemeLoadError()}</p><button type="button" onclick={() => loadThemeSettings()} class="underline mt-1">Retry loading</button>
@@ -85,140 +60,66 @@
     <div role="alert" class="p-3 rounded-lg border border-red-500/30 text-red-400 text-sm">
       <p>{getThemeSaveError()}</p><button type="button" disabled={isThemeSaving()} onclick={() => retryThemeSave()} class="underline mt-1">Retry saving</button>
     </div>
-  {:else if isThemeSaving()}<p role="status" class="text-xs text-text-muted">Saving appearance…</p>{/if}
-  <!-- Theme -->
-  <div class="space-y-3">
-    <h3 class="text-sm font-semibold text-text-muted uppercase tracking-wider">Theme</h3>
+  {/if}
 
-    <!-- Accent Color -->
-    <div class="p-3 rounded-lg bg-background border border-border space-y-3">
-      <p class="text-sm font-medium text-text">Accent Color</p>
-      <div class="flex items-center gap-2 flex-wrap">
+  <div class="settings-group">
+    <div class="settings-row">
+      <div><p class="font-medium text-sm">Accent colour</p></div>
+      <div class="settings-controls flex flex-wrap items-center gap-2">
         {#each accentPresets as preset}
-          <button
-            onclick={() => handleAccentColor(preset.color)}
-            class="w-7 h-7 rounded-full border-2 transition-all {settings().accentColor === preset.color ? 'border-text scale-110' : 'border-transparent hover:scale-105'}"
-            style="background-color: {preset.color}"
-            title={preset.name}
-            aria-label={`${preset.name} accent colour`}
-            aria-pressed={settings().accentColor === preset.color}
-          ></button>
+          <button type="button" onclick={() => setAccent(preset.color)}
+            class="w-7 h-7 rounded-full border-2 transition-all {settings.accentColor === preset.color ? 'border-text scale-110' : 'border-transparent hover:scale-105'}"
+            style:background-color={preset.color} title={preset.name} aria-label={`${preset.name} accent colour`} aria-pressed={settings.accentColor === preset.color}></button>
+        {/each}
+        <details class="custom-colour">
+          <summary class="cursor-pointer text-sm text-text-muted hover:text-text">Custom colour</summary>
+          <div class="flex flex-wrap items-center gap-2 mt-2">
+            <input type="color" value={settings.accentColor} onchange={(event) => setAccent(event.currentTarget.value)} aria-label="Choose a custom accent colour" class="w-9 h-8 rounded border border-border bg-transparent" />
+            <input type="text" value={settings.accentColor} onchange={(event) => setAccent(event.currentTarget.value)} aria-label="Custom accent colour hexadecimal value"
+              aria-invalid={!!colourError} aria-describedby={colourError ? 'accent-colour-error' : undefined}
+              class="w-28 px-2 py-1 rounded border border-border bg-surface text-text text-sm font-mono" placeholder="#bba4ff" />
+          </div>
+          {#if colourError}<p id="accent-colour-error" role="alert" class="text-sm text-red-400 mt-1">{colourError}</p>{/if}
+        </details>
+      </div>
+    </div>
+
+    <div class="settings-row">
+      <label for="appearance-font-size" class="font-medium text-sm">Font size</label>
+      <div class="settings-controls flex items-center gap-3">
+        <input id="appearance-font-size" type="range" min="0.75" max="1.5" step="0.05" value={fontInput} oninput={changeFont} onchange={flushFontSize} class="w-44 accent-accent" />
+        <span class="text-sm text-text-muted w-12 text-right">{Math.round(fontInput * 100)}%</span>
+      </div>
+    </div>
+
+    <div class="settings-row">
+      <div><p class="font-medium text-sm">Poster size</p><p class="text-xs text-text-muted">Affects libraries and tier lists independently of font size.</p></div>
+      <div class="settings-controls flex flex-wrap items-center gap-1" role="group" aria-label="Poster size">
+        {#each ['small', 'medium', 'large'] as size}
+          <button type="button" onclick={() => updateThemeSettings({ posterSize: size as PosterSize })} aria-pressed={settings.posterSize === size}
+            class="px-3 py-1.5 rounded-lg border text-sm {settings.posterSize === size ? 'border-accent bg-accent/10 text-accent' : 'border-border text-text-muted hover:bg-surface-hover'}">{size[0].toUpperCase() + size.slice(1)}</button>
         {/each}
       </div>
-      <div class="flex items-center gap-3">
-        <input
-          type="color"
-          value={settings().accentColor}
-          onchange={(e) => handleAccentColor((e.target as HTMLInputElement).value)}
-          class="w-10 h-8 rounded border border-border cursor-pointer bg-transparent"
-          style="padding: 0;"
-          aria-label="Choose a custom accent colour"
-          title="Custom color"
-        />
-        <input
-          aria-label="Custom accent colour hexadecimal value"
-          aria-invalid={!!colourError}
-          aria-describedby={colourError ? "accent-colour-error" : undefined}
-          type="text"
-          value={settings().accentColor}
-          onchange={(e) => handleAccentColor((e.target as HTMLInputElement).value)}
-          class="w-28 px-3 py-1.5 rounded border border-border bg-surface text-text text-sm font-mono"
-          placeholder="#3b82f6"
-        />
-      </div>
-      {#if colourError}<p id="accent-colour-error" role="alert" class="text-sm text-red-400">{colourError}</p>{/if}
     </div>
+
+    {#each [
+      { key: 'compactSpacing' as const, label: 'Compact spacing', help: 'Fit more content into the same space.' },
+      { key: 'hidePosters' as const, label: 'Hide posters', help: 'Use text lists in libraries, calendars, and title pickers.' },
+      { key: 'colorblindFriendly' as const, label: 'Colourblind-friendly colours', help: 'Use clearer colours for episode statuses.' },
+    ] as option}
+      <div class="settings-row">
+        <div><p class="font-medium text-sm">{option.label}</p><p class="text-xs text-text-muted">{option.help}</p></div>
+        <button type="button" role="switch" aria-checked={settings[option.key]} aria-label={option.label}
+          onclick={() => updateThemeSettings({ [option.key]: !settings[option.key] })}
+          class="relative w-10 h-5 shrink-0 rounded-full transition-colors {settings[option.key] ? 'bg-accent' : 'bg-border'}">
+          <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform {settings[option.key] ? 'translate-x-5' : ''}"></span>
+        </button>
+      </div>
+    {/each}
   </div>
 
-  <!-- Layout -->
-  <div class="space-y-3">
-    <h3 class="text-sm font-semibold text-text-muted uppercase tracking-wider">Layout</h3>
-
-    <!-- Font Size -->
-    <div class="p-3 rounded-lg bg-background border border-border space-y-2">
-      <div class="flex items-center justify-between">
-        <p class="text-sm font-medium text-text">Font Size</p>
-        <span class="text-sm text-text-muted">{Math.round(fontInput * 100)}%</span>
-      </div>
-      <div class="flex items-center gap-3">
-        <span class="text-xs text-text-muted">75%</span>
-        <input
-          type="range"
-          min="0.75"
-          max="1.5"
-          step="0.05"
-          value={fontInput}
-          aria-label="Font size"
-          oninput={handleFontSize}
-          onchange={flushFontSize}
-          class="flex-1"
-        />
-        <span class="text-xs text-text-muted">150%</span>
-      </div>
-    </div>
-
-    <!-- Compact Spacing -->
-    <div class="flex items-center justify-between p-3 rounded-lg bg-background border border-border">
-      <div>
-        <p class="text-sm font-medium text-text">Compact Spacing</p>
-        <p class="text-xs text-text-muted">Tighter UI spacing for more content</p>
-      </div>
-      <button
-        onclick={() => handleToggle('compactSpacing')}
-        class="relative w-10 h-5 rounded-full transition-colors {settings().compactSpacing ? 'bg-accent' : 'bg-border'}"
-        aria-label="Toggle compact spacing"
-        aria-pressed={settings().compactSpacing}
-      >
-        <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform {settings().compactSpacing ? 'translate-x-5' : ''}"></span>
-      </button>
-    </div>
-
-    <!-- Hide Posters -->
-    <div class="flex items-center justify-between p-3 rounded-lg bg-background border border-border">
-      <div>
-        <p class="text-sm font-medium text-text">Hide Posters</p>
-        <p class="text-xs text-text-muted">Hide posters in library and calendar lists and title pickers</p>
-      </div>
-      <button
-        onclick={() => handleToggle('hidePosters')}
-        class="relative w-10 h-5 rounded-full transition-colors {settings().hidePosters ? 'bg-accent' : 'bg-border'}"
-        aria-label="Toggle hide posters"
-        aria-pressed={settings().hidePosters}
-      >
-        <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform {settings().hidePosters ? 'translate-x-5' : ''}"></span>
-      </button>
-    </div>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <span role="status" class="text-xs text-text-muted">{isThemeSaving() ? 'Saving appearance…' : getThemeSaveError() ? 'Changes are not saved.' : 'Changes save automatically.'}</span>
+    {#if !isDefault}<button type="button" onclick={resetDefaults} class="flex items-center gap-2 text-sm text-text-muted hover:text-text"><RotateCcw size={15} />Reset appearance</button>{/if}
   </div>
-
-  <!-- Accessibility -->
-  <div class="space-y-3">
-    <h3 class="text-sm font-semibold text-text-muted uppercase tracking-wider">Accessibility</h3>
-
-    <div class="flex items-center justify-between p-3 rounded-lg bg-background border border-border">
-      <div class="pr-4">
-        <p class="text-sm font-medium text-text">Colorblind-Friendly Palette</p>
-        <p class="text-xs text-text-muted">High-contrast colors for episode statuses that are easier to distinguish with color vision deficiencies</p>
-      </div>
-      <button
-        onclick={() => handleToggle('colorblindFriendly')}
-        class="relative w-10 h-5 rounded-full transition-colors flex-shrink-0 {settings().colorblindFriendly ? 'bg-accent' : 'bg-border'}"
-        role="switch"
-        aria-checked={settings().colorblindFriendly}
-        aria-label="Toggle colorblind-friendly palette"
-      >
-        <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform {settings().colorblindFriendly ? 'translate-x-5' : ''}"></span>
-      </button>
-    </div>
-  </div>
-
-  <!-- Reset -->
-  {#if !isDefault()}
-    <button
-      onclick={resetToDefaults}
-      class="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-hover/50 text-text-muted hover:text-text hover:bg-surface-hover transition-colors text-sm"
-    >
-      <RotateCcw class="w-4 h-4" />
-      Reset to Defaults
-    </button>
-  {/if}
 </div>

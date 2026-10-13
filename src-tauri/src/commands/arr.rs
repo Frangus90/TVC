@@ -509,7 +509,8 @@ async fn add_movie_from_tmdb(app: &AppHandle, tmdb_id: i64) -> Result<(), String
         .map_err(|e| format!("Database error: {}", e))?;
 
     // Fetch movie details from TMDB
-    let (movie_details, release_dates) = tmdb::get_movie_with_release_dates(tmdb_id, "US")
+    let country = crate::commands::preferences::release_country(&pool).await?;
+    let (movie_details, release_dates) = tmdb::get_movie_with_release_dates(tmdb_id, &country)
         .await
         .map_err(|e| format!("Failed to fetch movie from TMDB: {}", e))?;
 

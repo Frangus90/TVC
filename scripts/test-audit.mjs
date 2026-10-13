@@ -70,6 +70,25 @@ test('Plex configuration failure retains the running status and exposes unsaved 
   assert.match(api.getError(), /Settings could not be saved/);
 });
 
+test('Saved-server connection checks report failures and ignore results after server editing', async () => {
+  let resolveCheck;
+  const { api } = store('arr', { '@tauri-apps/api/core': { invoke: async command => {
+    if (command === 'test_arr_server') return new Promise(resolve => { resolveCheck = resolve; });
+    if (command === 'get_arr_servers') return [];
+  } } });
+  const server = { id: 1, name: 'Home', type: 'sonarr', base_url: 'http://example.invalid', api_key: 'fixture' };
+  const pending = api.checkSavedServer(server);
+  assert.equal(api.getServerConnectionCheck(1).state, 'checking');
+  await api.updateServer(1, { ...server, base_url: 'http://new.example.invalid' });
+  resolveCheck({ version: '4.0' });
+  await pending;
+  assert.equal(api.getServerConnectionCheck(1), undefined, 'old connection result must not describe the newly edited server');
+  const failed = store('arr', { '@tauri-apps/api/core': { invoke: async () => { throw new Error('Connection refused'); } } });
+  await failed.api.checkSavedServer(server);
+  assert.equal(failed.api.getServerConnectionCheck(1).state, 'failed');
+  assert.match(failed.api.getServerConnectionCheck(1).message, /Connection refused/);
+});
+
 for (const kind of ['shows', 'movies']) {
   test(`${kind}: removing a tier-only title clears the shared library cache; failed removal keeps it`, async () => {
     const title = kind === 'shows' ? { name: 'Tier-only show' } : { title: 'Tier-only movie' };

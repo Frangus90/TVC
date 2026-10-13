@@ -159,9 +159,10 @@
     </div>
 
     <!-- Setup Instructions -->
-    <div class="bg-accent/10 rounded-lg p-4 border border-accent/30">
-      <h4 class="font-medium text-accent mb-2">Setup Instructions</h4>
-      <ol class="text-sm text-text-muted space-y-1 list-decimal list-inside">
+    <p class="text-sm text-text-muted">Plex Media Server and TVC must run on this computer for this connection.</p>
+    <details open={!serverStatus.running} class="bg-background rounded-lg p-3 border border-border">
+      <summary class="font-medium text-accent cursor-pointer">Setup instructions</summary>
+      <ol class="text-sm text-text-muted space-y-1 list-decimal list-inside mt-3">
         <li>Start the webhook server above</li>
         <li>Open Plex Web and go to Settings</li>
         <li>Navigate to Account &rarr; Webhooks</li>
@@ -172,13 +173,13 @@
         <AlertTriangle class="w-3 h-3" />
         Requires Plex Pass subscription
       </p>
-    </div>
+    </details>
   </div>
 
   <!-- Recent Scrobbles -->
   <div>
     <div class="flex items-center justify-between mb-3">
-      <h3 class="font-medium">Recent Scrobbles</h3>
+      <h3 class="font-medium">Recent watched updates</h3>
       <button
         type="button"
         onclick={loadScrobbleLog}
@@ -191,7 +192,7 @@
 
     {#if scrobbleLog.length === 0}
       <div class="text-center py-8 text-text-muted">
-        <p>No scrobbles yet</p>
+        <p>No watched updates yet</p>
         <p class="text-sm mt-1">Watch something in Plex to see it here</p>
       </div>
     {:else}

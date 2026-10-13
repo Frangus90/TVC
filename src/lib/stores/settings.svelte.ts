@@ -1,10 +1,12 @@
-export type SettingsTab = 'appearance' | 'notifications' | 'tierlist' | 'racing' | 'plex' | 'arr';
+export type SettingsTab = 'general' | 'appearance' | 'notifications' | 'tierlist' | 'racing' | 'integrations';
+type SettingsTarget = SettingsTab | 'plex' | 'arr';
 
 let settingsOpen = $state(false);
-let activeTab = $state<SettingsTab>('appearance');
+let activeTab = $state<SettingsTab>('general');
+let integrationTab = $state<'plex' | 'arr'>('plex');
 
-export function openSettings(tab?: SettingsTab) {
-  if (tab) activeTab = tab;
+export function openSettings(tab?: SettingsTarget) {
+  if (tab) setActiveSettingsTab(tab);
   settingsOpen = true;
 }
 
@@ -20,6 +22,12 @@ export function getActiveSettingsTab() {
   return activeTab;
 }
 
-export function setActiveSettingsTab(tab: SettingsTab) {
-  activeTab = tab;
+export function setActiveSettingsTab(tab: SettingsTarget) {
+  if (tab === 'plex' || tab === 'arr') {
+    integrationTab = tab;
+    activeTab = 'integrations';
+  } else activeTab = tab;
 }
+
+export function getActiveIntegrationTab() { return integrationTab; }
+export function setActiveIntegrationTab(tab: 'plex' | 'arr') { integrationTab = tab; }

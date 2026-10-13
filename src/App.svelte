@@ -1,6 +1,6 @@
 <script lang="ts">
   import { fade } from "svelte/transition";
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { listen, type UnlistenFn } from "@tauri-apps/api/event";
   import { getCurrentWebview } from "@tauri-apps/api/webview";
@@ -9,7 +9,8 @@
   import CalendarToolbar from "./lib/components/layout/CalendarToolbar.svelte";
   import ToastContainer from "./lib/components/ToastContainer.svelte";
   import ConfirmDialog from "./lib/components/common/ConfirmDialog.svelte";
-  import { getViewMode, goToToday } from "./lib/stores/calendar.svelte";
+  import { getViewMode, setViewMode, getCalendarFilter, setCalendarFilter, goToToday } from "./lib/stores/calendar.svelte";
+  import { loadGeneralPreferences, isGeneralLoaded, getGeneralPreferences, getStartupState, rememberLastPage, rememberCalendarState } from "./lib/stores/general.svelte";
   import { startClock, stopClock, onDayChange } from "./lib/stores/now.svelte";
   import { checkForUpdates } from "./lib/stores/updates.svelte";
   import { isSearchModalOpen, refreshCalendar } from "./lib/stores/shows.svelte";
@@ -174,7 +175,31 @@
   });
 
   // Check for updates on app start and listen for Plex scrobble events
+  let preferencesReady = $state(false);
+  $effect(() => {
+    if (isGeneralLoaded() && !preferencesReady) untrack(() => {
+      const startup = getStartupState();
+      if (getSidebarTab() === "calendar") setSidebarTab(startup.page);
+      if (getViewMode() === "month" && getCalendarFilter() === "all") {
+        setViewMode(startup.viewMode);
+        setCalendarFilter(startup.filter);
+      }
+      preferencesReady = true;
+      invoke("apply_startup_window_preferences").catch(error => showError(`Could not apply startup preferences: ${error}`));
+    });
+  });
+  $effect(() => {
+    const page = getSidebarTab();
+    if (preferencesReady) untrack(() => { void rememberLastPage(page); });
+  });
+  $effect(() => {
+    const remember = getGeneralPreferences().remember_calendar;
+    const view = getViewMode();
+    const filter = getCalendarFilter();
+    if (preferencesReady && remember) untrack(() => { void rememberCalendarState(view, filter); });
+  });
   onMount(() => {
+    void loadGeneralPreferences().catch(error => showError(`Could not load startup preferences: ${error}`));
     // Libraries also feed calendar pickers, title search, and navigation counts.
     void Promise.all([loadTrackedShows(), loadTrackedMovies(), loadArchivedShows(), loadArchivedMovies(), loadTierListShows(), loadTierListMovies(), loadTiers(), loadRacingSeries(), loadRacingConfig()]).catch(error => showError(`Could not load your library: ${error}`));
     const rejected = (event: PromiseRejectionEvent) => {

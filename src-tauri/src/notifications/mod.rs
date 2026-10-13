@@ -1,5 +1,6 @@
 pub mod models;
 
+use chrono::{Local, NaiveTime};
 use sqlx::{Pool, Row, Sqlite};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_notification::NotificationExt;
@@ -7,8 +8,16 @@ use tauri_plugin_notification::NotificationExt;
 use crate::db::connection;
 use models::{CreateNotification, Notification, NotificationSettings};
 
-/// Get notification settings from database
+/// Used by the scheduler's eligibility check; delivery itself requires a successful read.
 pub async fn get_settings(pool: &Pool<Sqlite>) -> NotificationSettings {
+    get_settings_checked(pool).await.unwrap_or_else(|error| {
+        eprintln!("[Notifications] Could not load preferences: {}", error);
+        NotificationSettings::default()
+    })
+}
+
+/// Surface read failures to the Settings page instead of presenting unsaved defaults.
+pub async fn get_settings_checked(pool: &Pool<Sqlite>) -> Result<NotificationSettings, String> {
     let row = sqlx::query(
         r#"
         SELECT enabled, sound_enabled, sound_volume, sound_choice, popup_position,
@@ -19,10 +28,9 @@ pub async fn get_settings(pool: &Pool<Sqlite>) -> NotificationSettings {
     )
     .fetch_optional(pool)
     .await
-    .ok()
-    .flatten();
+    .map_err(|error| format!("Failed to read notification settings: {}", error))?;
 
-    match row {
+    let mut settings = match row {
         Some(r) => NotificationSettings {
             enabled: r.get::<i32, _>("enabled") == 1,
             sound_enabled: r.get::<i32, _>("sound_enabled") == 1,
@@ -38,8 +46,69 @@ pub async fn get_settings(pool: &Pool<Sqlite>) -> NotificationSettings {
             premiere_enabled: r.get::<i32, _>("premiere_enabled") == 1,
             update_enabled: r.get::<i32, _>("update_enabled") == 1,
             system_enabled: r.get::<i32, _>("system_enabled") == 1,
+            ..NotificationSettings::default()
         },
         None => NotificationSettings::default(),
+    };
+    // New preferences use the existing generic table; released migrations stay unchanged.
+    let rows = sqlx::query("SELECT key, value FROM settings WHERE key IN ('notification_quiet_hours_enabled', 'notification_quiet_hours_start', 'notification_quiet_hours_end')")
+        .fetch_all(pool).await.map_err(|error| format!("Failed to read quiet hours: {}", error))?;
+    for row in rows {
+        let Some(value) = row.get::<Option<String>, _>("value") else {
+            continue;
+        };
+        match row.get::<String, _>("key").as_str() {
+            "notification_quiet_hours_enabled" => settings.quiet_hours_enabled = value == "true",
+            "notification_quiet_hours_start" => settings.quiet_hours_start = value,
+            "notification_quiet_hours_end" => settings.quiet_hours_end = value,
+            _ => {}
+        }
+    }
+    validate_quiet_hours(&settings)?;
+    Ok(settings)
+}
+
+fn parse_clock(value: &str) -> Option<NaiveTime> {
+    let bytes = value.as_bytes();
+    if bytes.len() != 5
+        || bytes[2] != b':'
+        || ![bytes[0], bytes[1], bytes[3], bytes[4]]
+            .iter()
+            .all(u8::is_ascii_digit)
+    {
+        return None;
+    }
+    NaiveTime::parse_from_str(value, "%H:%M").ok()
+}
+
+fn validate_quiet_hours(settings: &NotificationSettings) -> Result<(), String> {
+    if parse_clock(&settings.quiet_hours_start).is_none()
+        || parse_clock(&settings.quiet_hours_end).is_none()
+    {
+        return Err("Quiet hours must use 24-hour HH:mm times.".to_string());
+    }
+    if settings.quiet_hours_enabled && settings.quiet_hours_start == settings.quiet_hours_end {
+        return Err("Quiet hours must have different start and end times.".to_string());
+    }
+    Ok(())
+}
+
+pub fn is_quiet_hours_at(settings: &NotificationSettings, local_time: NaiveTime) -> bool {
+    if !settings.quiet_hours_enabled {
+        return false;
+    }
+    let (Some(start), Some(end)) = (
+        parse_clock(&settings.quiet_hours_start),
+        parse_clock(&settings.quiet_hours_end),
+    ) else {
+        return false;
+    };
+    if start < end {
+        local_time >= start && local_time < end
+    } else if start > end {
+        local_time >= start || local_time < end
+    } else {
+        false
     }
 }
 
@@ -48,6 +117,11 @@ pub async fn update_settings(
     pool: &Pool<Sqlite>,
     settings: &NotificationSettings,
 ) -> Result<(), String> {
+    validate_quiet_hours(settings)?;
+    let mut transaction = pool
+        .begin()
+        .await
+        .map_err(|error| format!("Failed to save notification settings: {}", error))?;
     sqlx::query(
         r#"
         UPDATE notification_settings
@@ -72,10 +146,35 @@ pub async fn update_settings(
     .bind(if settings.premiere_enabled { 1 } else { 0 })
     .bind(if settings.update_enabled { 1 } else { 0 })
     .bind(if settings.system_enabled { 1 } else { 0 })
-    .execute(pool)
+    .execute(&mut *transaction)
     .await
     .map_err(|e| format!("Failed to update notification settings: {}", e))?;
 
+    for (key, value) in [
+        (
+            "notification_quiet_hours_enabled",
+            settings.quiet_hours_enabled.to_string(),
+        ),
+        (
+            "notification_quiet_hours_start",
+            settings.quiet_hours_start.clone(),
+        ),
+        (
+            "notification_quiet_hours_end",
+            settings.quiet_hours_end.clone(),
+        ),
+    ] {
+        sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+            .bind(key)
+            .bind(value)
+            .execute(&mut *transaction)
+            .await
+            .map_err(|error| format!("Failed to save quiet hours: {}", error))?;
+    }
+    transaction
+        .commit()
+        .await
+        .map_err(|error| format!("Failed to finish saving notification settings: {}", error))?;
     Ok(())
 }
 
@@ -157,10 +256,11 @@ pub async fn get_notifications(
 
 /// Get count of unread notifications
 pub async fn get_unread_count(pool: &Pool<Sqlite>) -> Result<i64, String> {
-    let row = sqlx::query("SELECT COUNT(*) as count FROM notifications WHERE read = 0 AND dismissed = 0")
-        .fetch_one(pool)
-        .await
-        .map_err(|e| format!("Failed to get unread count: {}", e))?;
+    let row =
+        sqlx::query("SELECT COUNT(*) as count FROM notifications WHERE read = 0 AND dismissed = 0")
+            .fetch_one(pool)
+            .await
+            .map_err(|e| format!("Failed to get unread count: {}", e))?;
 
     Ok(row.get::<i64, _>("count"))
 }
@@ -232,7 +332,7 @@ pub async fn send_notification(
         .await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    let settings = get_settings(&pool).await;
+    let settings = get_settings_checked(&pool).await?;
 
     // Check if this notification type is enabled
     if !is_type_enabled(&settings, &create.r#type) {
@@ -251,8 +351,8 @@ pub async fn send_notification(
         .and_then(|w| w.is_visible().ok())
         .unwrap_or(false);
 
-    let send_os = settings.os_fallback
-        || (settings.tray_notifications && !window_visible);
+    let send_os = !is_quiet_hours_at(&settings, Local::now().time())
+        && (settings.os_fallback || (settings.tray_notifications && !window_visible));
 
     if send_os {
         let _ = app
@@ -281,3 +381,6 @@ fn row_to_notification(r: sqlx::sqlite::SqliteRow) -> Notification {
         expires_at: r.get("expires_at"),
     }
 }
+
+#[cfg(test)]
+mod tests;

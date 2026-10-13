@@ -353,7 +353,7 @@
   .library-loading, .library-empty { display: flex; align-items: center; justify-content: center; gap: 1rem; padding: 5rem 1rem; color: var(--color-text-muted); }
   .library-empty { flex-direction: column; text-align: center; }
   .library-empty h2 { color: var(--color-text); font-weight: 600; font-size: 1.15em; }
-  .library-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 1.6rem 1.25rem; list-style: none; margin: 0; padding: 0; }
+  .library-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(165px * var(--poster-size-scale, 1)), 1fr)); gap: 1.6rem 1.25rem; list-style: none; margin: 0; padding: 0; }
   .library-card { position: relative; min-width: 0; padding: .45rem; border: 1px solid transparent; border-radius: .85rem; }
   .library-card:hover { background: var(--color-surface); }
   .library-card.selected { background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface)); border-color: var(--color-accent); }
@@ -378,24 +378,24 @@
   .library-list { grid-template-columns: 1fr; gap: .5rem; }
   .library-list .library-card { display: flex; align-items: center; gap: 1rem; padding: .8rem 1rem; border-color: var(--color-border); background: var(--color-surface); }
   .library-list .library-open { flex: 1; min-width: 0; flex-direction: row; align-items: center; gap: 1rem; }
-  .library-list .library-poster { width: 3rem; height: 4.5rem; flex-shrink: 0; }
+  .library-list .library-poster { width: calc(3rem * var(--poster-size-scale, 1)); height: calc(4.5rem * var(--poster-size-scale, 1)); flex-shrink: 0; }
   .library-list .library-copy { padding-top: 0; }
   .library-list .library-actions { flex-shrink: 0; padding-top: 0; }
   .library-list .library-checkbox { position: static; flex-shrink: 0; }
-  .library-compact .library-items:not(.library-list) { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem .85rem; }
+  .library-compact .library-items:not(.library-list) { grid-template-columns: repeat(auto-fill, minmax(calc(140px * var(--poster-size-scale, 1)), 1fr)); gap: 1rem .85rem; }
   .library-compact .library-list .library-card { padding: .5rem .75rem; }
-  .library-compact .library-list .library-poster { width: 2rem; height: 3rem; }
+  .library-compact .library-list .library-poster { width: calc(2rem * var(--poster-size-scale, 1)); height: calc(3rem * var(--poster-size-scale, 1)); }
   @media (min-width: 2400px) {
-    .library-items:not(.library-list) { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
-    .library-compact .library-items:not(.library-list) { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+    .library-items:not(.library-list) { grid-template-columns: repeat(auto-fill, minmax(calc(220px * var(--poster-size-scale, 1)), 1fr)); }
+    .library-compact .library-items:not(.library-list) { grid-template-columns: repeat(auto-fill, minmax(calc(180px * var(--poster-size-scale, 1)), 1fr)); }
   }
   @media (max-width: 700px) {
     .library-tools { width: 100%; }
     .library-search { flex: 1; }
     .library-search input { width: 100%; }
-    .library-items:not(.library-list) { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; }
+    .library-items:not(.library-list) { grid-template-columns: repeat(auto-fill, minmax(calc(140px * var(--poster-size-scale, 1)), 1fr)); gap: 1rem; }
     .library-list .library-card { gap: .5rem; padding: .65rem; }
     .library-list .library-open { gap: .65rem; }
-    .library-list .library-poster { width: 2.5rem; height: 3.75rem; }
+    .library-list .library-poster { width: calc(2.5rem * var(--poster-size-scale, 1)); height: calc(3.75rem * var(--poster-size-scale, 1)); }
   }
 </style>

@@ -30,6 +30,12 @@ export interface ArrSystemStatus {
   app_name: string | null;
 }
 
+export interface ServerConnectionCheck {
+  state: "checking" | "connected" | "failed";
+  message: string;
+  checked_at: string | null;
+}
+
 export interface LibraryItem {
   arr_id: number;
   title: string;
@@ -77,6 +83,8 @@ let servers = $state<ArrServer[]>([]);
 let editingServer = $state<ArrServer | null>(null);
 let testingConnection = $state(false);
 let testResult = $state<{ success: boolean; message: string } | null>(null);
+let connectionChecks = $state<Record<number, ServerConnectionCheck>>({});
+const connectionRequests = new Map<number, number>();
 
 // Import state
 let selectedServer = $state<ArrServer | null>(null);
@@ -120,6 +128,23 @@ export function isTestingConnection() {
 
 export function getTestResult() {
   return testResult;
+}
+
+export function getServerConnectionCheck(id: number) { return connectionChecks[id]; }
+
+export async function checkSavedServer(server: ArrServer) {
+  if (connectionChecks[server.id]?.state === "checking") return;
+  const request = (connectionRequests.get(server.id) ?? 0) + 1;
+  connectionRequests.set(server.id, request);
+  connectionChecks = { ...connectionChecks, [server.id]: { state: "checking", message: "Checking connection…", checked_at: null } };
+  try {
+    const status = await invoke<ArrSystemStatus>("test_arr_server", { baseUrl: server.base_url, apiKey: server.api_key, serverType: server.type });
+    if (connectionRequests.get(server.id) !== request) return;
+    connectionChecks = { ...connectionChecks, [server.id]: { state: "connected", message: `Connected · ${server.type === "sonarr" ? "Sonarr" : "Radarr"} ${status.version}`, checked_at: new Date().toISOString() } };
+  } catch (cause) {
+    if (connectionRequests.get(server.id) !== request) return;
+    connectionChecks = { ...connectionChecks, [server.id]: { state: "failed", message: `Could not connect: ${cause instanceof Error ? cause.message : String(cause)}`, checked_at: new Date().toISOString() } };
+  }
 }
 
 export function getSelectedServer() {
@@ -342,6 +367,8 @@ export async function updateServer(id: number, request: ArrServerRequest): Promi
 
   try {
     await invoke("update_arr_server", { id, server: request });
+    connectionRequests.set(id, (connectionRequests.get(id) ?? 0) + 1);
+    delete connectionChecks[id];
     successMessage = `${request.name} updated successfully`;
     await loadServers();
     editingServer = null;
@@ -361,6 +388,8 @@ export async function deleteServer(id: number): Promise<void> {
 
   try {
     await invoke("delete_arr_server", { id });
+    connectionRequests.set(id, (connectionRequests.get(id) ?? 0) + 1);
+    delete connectionChecks[id];
     successMessage = "Server deleted";
     await loadServers();
     setTimeout(() => (successMessage = null), 3000);

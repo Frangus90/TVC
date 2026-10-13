@@ -22,6 +22,12 @@ All notable changes to TVC will be documented in this file.
 - Tiermaker searches let you review matches before changing your saved tiers or importing titles.
 - Fixed missing racing series in Settings, unreliable preference saves, and custom colour validation.
 - Plex startup failures remain visible, and Sonarr/Radarr import results let you read every reported issue.
+- **General** lets you choose your startup page, remember the calendar view and filters, and decide whether closing TVC keeps it in the tray or quits. Installed releases can also start with Windows, including in the tray.
+- Choose a preferred movie release country for digital and physical dates. Original theatrical dates and years stay consistent; sync your movies to update saved dates.
+- **Appearance** has a separate poster-size setting and simpler controls for colours, text, and spacing.
+- **Notifications** has quiet hours, a test button, and one menu for Windows alerts. Quiet hours silence alerts while keeping their history.
+- Plex and Sonarr/Radarr are together under **Integrations**. You can test saved servers without editing them, and Plex setup instructions stay out of the way once connected.
+- Racing settings let you switch between followed series and all series, and explain when notification settings prevent reminders.
 
 ## [0.14.8] - 10.10.2026
 

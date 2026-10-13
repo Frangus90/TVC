@@ -72,14 +72,13 @@ pub async fn search_movies(query: String) -> Result<Vec<MovieSearchResult>, Stri
 pub async fn add_movie(app: AppHandle, id: i64) -> Result<(), String> {
     crate::commands::validation::validate_id(id)?;
 
-    // Get movie details and release dates from TMDB
-    let (movie_details, release_dates) = tmdb::get_movie_with_release_dates(id, "US")
-        .await
-        .map_err(|e| format!("Failed to fetch movie details: {}", e))?;
-
     let pool = connection::get_pool(&app)
         .await
         .map_err(|e| format!("Database error: {}", e))?;
+    let country = crate::commands::preferences::release_country(&pool).await?;
+    let (movie_details, release_dates) = tmdb::get_movie_with_release_dates(id, &country)
+        .await
+        .map_err(|e| format!("Failed to fetch movie details: {}", e))?;
 
     let genres_json = movie_details.genres_string();
 
@@ -361,14 +360,13 @@ pub async fn unarchive_movie(app: AppHandle, id: i64) -> Result<(), String> {
 pub async fn sync_movie(app: AppHandle, id: i64) -> Result<(), String> {
     tmdb::invalidate_movie_cache(id).await;
 
-    // Get updated movie details from TMDB
-    let (movie_details, release_dates) = tmdb::get_movie_with_release_dates(id, "US")
-        .await
-        .map_err(|e| format!("Failed to fetch movie details: {}", e))?;
-
     let pool = connection::get_pool(&app)
         .await
         .map_err(|e| format!("Database error: {}", e))?;
+    let country = crate::commands::preferences::release_country(&pool).await?;
+    let (movie_details, release_dates) = tmdb::get_movie_with_release_dates(id, &country)
+        .await
+        .map_err(|e| format!("Failed to fetch movie details: {}", e))?;
 
     let genres_json = movie_details.genres_string();
 

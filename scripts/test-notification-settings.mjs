@@ -11,6 +11,7 @@ function load(path, dependencies, globals = {}) {
   }, { filename: path });
   return exports;
 }
+const quietHours = load('src/lib/utils/quietHours.ts', {});
 const logger = { error() {}, warn() {}, debug() {} };
 const baseline = { enabled:true,sound_enabled:true,sound_volume:50,sound_choice:'chime',popup_position:'top-right',popup_duration:8000,max_visible:3,os_fallback:false,tray_notifications:true,racing_enabled:true,plex_enabled:true,premiere_enabled:true,update_enabled:true,system_enabled:true };
 const settle = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
@@ -19,7 +20,7 @@ function notifications() {
   const api = load('src/lib/stores/notifications.svelte.ts', {
     '@tauri-apps/api/core': { invoke: (command, args) => command === 'get_notification_settings' ? Promise.resolve({...baseline}) : new Promise((resolve,reject)=>saves.push({command,args,resolve,reject})) },
     '@tauri-apps/api/event': { listen: async () => () => {} },
-    '../utils/logger': {logger}, './toast.svelte': {showError(){}}, '../utils/notificationSound': {playNotificationSound(){}},
+    '../utils/logger': {logger}, './toast.svelte': {showError(){}}, '../utils/quietHours': quietHours, '../utils/notificationSound': {playNotificationSound(){}},
   });
   return {api,saves};
 }
@@ -50,7 +51,7 @@ test('notification preference loading failures remain visible and can be retried
   let failing=true;
   const api=load('src/lib/stores/notifications.svelte.ts', {
     '@tauri-apps/api/core':{invoke:async()=>{if(failing)throw new Error('read failed');return {...baseline};}},
-    '@tauri-apps/api/event':{listen:async()=>()=>{}}, '../utils/logger':{logger}, './toast.svelte':{showError(){}}, '../utils/notificationSound':{playNotificationSound(){}},
+    '@tauri-apps/api/event':{listen:async()=>()=>{}}, '../utils/logger':{logger}, './toast.svelte':{showError(){}}, '../utils/quietHours': quietHours, '../utils/notificationSound':{playNotificationSound(){}},
   });
   await api.loadNotificationSettings(); assert.match(api.getNotificationSettingsLoadError(),/read failed/); assert.equal(api.getNotificationSettings(),null);
   failing=false; await api.loadNotificationSettings(); assert.equal(api.getNotificationSettingsLoadError(),null); assert.equal(api.getNotificationSettings().enabled,true);
@@ -95,4 +96,60 @@ test('appearance slider changes cannot finish writing older values after a newer
   await settle(); assert.equal(api.getThemeSettings().fontSize,1.3);
   unblockFirst(); await Promise.all([first,newer]);
   assert.equal(persisted.get('theme_fontSize'),'1.3');
+});
+test('quiet hours use local daytime and overnight boundaries, with the end excluded', () => {
+  const daytime={quiet_hours_enabled:true,quiet_hours_start:'09:00',quiet_hours_end:'17:00'};
+  const overnight={...daytime,quiet_hours_start:'22:00',quiet_hours_end:'08:00'};
+  const at=(hour,minute=0)=>new Date(2026,9,12,hour,minute);
+  assert.equal(quietHours.isWithinQuietHours(daytime,at(8,59)),false);
+  assert.equal(quietHours.isWithinQuietHours(daytime,at(9)),true);
+  assert.equal(quietHours.isWithinQuietHours(daytime,at(17)),false);
+  assert.equal(quietHours.isWithinQuietHours(overnight,at(21,59)),false);
+  assert.equal(quietHours.isWithinQuietHours(overnight,at(22)),true);
+  assert.equal(quietHours.isWithinQuietHours(overnight,at(23,59)),true);
+  assert.equal(quietHours.isWithinQuietHours(overnight,at(0)),true);
+  assert.equal(quietHours.isWithinQuietHours(overnight,at(8)),false);
+  assert.equal(quietHours.isWithinQuietHours({...overnight,quiet_hours_enabled:false},at(23)),false);
+  assert.equal(quietHours.clockMinutes('24:00'),null);
+  assert.equal(quietHours.clockMinutes('8:00'),null);
+  assert.equal(quietHours.clockMinutes('08:60'),null);
+});
+test('quiet hours follow both repeated Oslo local hours when clocks change', () => {
+  const before=process.env.TZ;process.env.TZ='Europe/Oslo';
+  try {
+    const prefs={quiet_hours_enabled:true,quiet_hours_start:'02:00',quiet_hours_end:'03:00'};
+    assert.equal(quietHours.isWithinQuietHours(prefs,new Date('2026-10-25T00:30:00Z')),true);
+    assert.equal(quietHours.isWithinQuietHours(prefs,new Date('2026-10-25T01:30:00Z')),true);
+    assert.equal(quietHours.isWithinQuietHours(prefs,new Date('2026-10-25T02:00:00Z')),false);
+  } finally { if(before===undefined)delete process.env.TZ;else process.env.TZ=before; }
+});
+test('quiet-hour events retain history and unread counts while suppressing popup and sound', async () => {
+  let receive, sounds=0;
+  const fixedDate=class extends Date { constructor(...args){super(...(args.length?args:['2026-10-12T23:30:00']));} };
+  const api=load('src/lib/stores/notifications.svelte.ts', {
+    '@tauri-apps/api/core':{invoke:async(command)=>command==='get_notification_settings'?{...baseline,quiet_hours_enabled:true,quiet_hours_start:'22:00',quiet_hours_end:'08:00'}:undefined},
+    '@tauri-apps/api/event':{listen:async(_event,handler)=>{receive=handler;return ()=>{};}},
+    '../utils/logger':{logger},'./toast.svelte':{showError(){}},'../utils/quietHours':load('src/lib/utils/quietHours.ts',{}, {Date:fixedDate}),
+    '../utils/notificationSound':{playNotificationSound:()=>sounds++},
+  },{Date:fixedDate,setInterval,clearInterval});
+  await api.loadNotificationSettings();const stop=api.setupNotificationListener();
+  try {
+    receive({payload:{id:1,title:'Quiet reminder',read:false}});await settle();
+    assert.equal(api.getNotifications().length,1);assert.equal(api.getUnreadCount(),1);
+    assert.equal(api.getActivePopups().length,0);assert.equal(sounds,0);
+    await api.updateNotificationSettings({quiet_hours_enabled:false});
+    receive({payload:{id:2,title:'Normal reminder',read:false}});await settle();
+    assert.equal(api.getNotifications().length,2);assert.equal(api.getUnreadCount(),2);
+    assert.equal(api.getActivePopups().length,1);assert.equal(sounds,1);
+    await api.updateNotificationSettings({quiet_hours_enabled:true});
+    assert.equal(api.getActivePopups().length,0,'enabling quiet hours removes an existing popup');
+    assert.equal(api.getNotifications().length,2);
+  } finally {stop();}
+});
+test('poster size persists independently of font scale and old preferences default to medium', async () => {
+  const {api,writes,styles}=theme([{key:'theme_fontSize',value:'1.25'}]);await api.loadThemeSettings();
+  assert.equal(api.getThemeSettings().posterSize,'medium');assert.equal(styles.get('--poster-size-scale'),'1');
+  assert.equal(await api.updateThemeSettings({posterSize:'large'}),true);
+  assert.equal(api.getThemeSettings().fontSize,1.25);assert.equal(styles.get('--font-size-multiplier'),'1.25');
+  assert.equal(styles.get('--poster-size-scale'),'1.2');assert.ok(writes.some(([key,value])=>key==='theme_posterSize'&&value==='large'));
 });
