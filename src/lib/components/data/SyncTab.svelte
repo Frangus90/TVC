@@ -2,28 +2,91 @@
   import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { RefreshCw, Tv, Film, AlertTriangle, Check } from "lucide-svelte";
-  import type { LibraryKind, LibrarySyncStatus, SyncFrequency } from "../../stores/librarySync";
+  import type { LibraryKind, LibrarySyncStatus, SyncFrequency, SyncReport } from "../../stores/librarySync";
   import { formatDateTime } from "../../utils/dateFormat";
+  import { setActiveTab as setDataTab } from "../../stores/dataManagement.svelte";
+  import { setSidebarTab } from "../../stores/sidebar.svelte";
 
   let libraries = $state<LibrarySyncStatus[]>([]);
   let loadError = $state<string | null>(null);
   let actionError = $state<string | null>(null);
   let pending = $state(false);
   let saving = $state<LibraryKind | null>(null);
+  let stopping = $state(false);
+  let savedScheduleStatusUnavailable = $state(false);
+  let histories = $state<Record<LibraryKind, SyncReport[]>>({ shows: [], movies: [] });
+  let historyLoading = $state<Record<LibraryKind, boolean>>({ shows: false, movies: false });
+  let historyErrors = $state<Record<LibraryKind, string | null>>({ shows: null, movies: null });
+  const historyOpen = new Set<LibraryKind>();
+  const historyRequests = new Map<LibraryKind, Promise<void>>();
   let now = $state(Date.now());
   let disposed = false;
   let refreshPromise: Promise<void> | null = null;
   const busy = $derived(pending || libraries.some((library) => library.running));
+  const stopRequested = $derived(stopping || libraries.some(library => library.stop_requested));
+
+  function completed(report: SyncReport) {
+    return report.processed ?? report.succeeded + report.skipped + report.failures.length;
+  }
+
+  function runLabel(report: SyncReport) {
+    return report.source === 'retry' ? 'Retry' : report.source === 'automatic' ? 'Automatic sync' : 'Manual sync';
+  }
+
+  function showMatching() { setDataTab('unmapped'); setSidebarTab('data'); }
+
+  function loadHistory(kind: LibraryKind): Promise<void> {
+    const existing = historyRequests.get(kind);
+    if (existing) return existing;
+    historyLoading[kind] = true;
+    historyErrors[kind] = null;
+    const request = invoke<SyncReport[]>("get_library_sync_history", { kind })
+      .then(result => { if (!disposed) histories[kind] = result; })
+      .catch(error => { if (!disposed) historyErrors[kind] = String(error); })
+      .finally(() => { historyRequests.delete(kind); if (!disposed) historyLoading[kind] = false; });
+    historyRequests.set(kind, request);
+    return request;
+  }
+
+  function toggleHistory(kind: LibraryKind, event: Event) {
+    if ((event.currentTarget as HTMLDetailsElement).open) { historyOpen.add(kind); void loadHistory(kind); }
+    else historyOpen.delete(kind);
+  }
 
   function refresh(): Promise<void> {
     if (refreshPromise) return refreshPromise;
     refreshPromise = invoke<LibrarySyncStatus[]>("get_library_sync_status")
       .then((result) => {
-        if (!disposed) { libraries = result; loadError = null; }
+        if (!disposed) {
+          for (const library of result) {
+            const previous = libraries.find(previous => previous.kind === library.kind)?.report;
+            if (historyOpen.has(library.kind) && library.report?.finished_at &&
+              (previous?.started_at !== library.report.started_at || previous?.finished_at !== library.report.finished_at)) {
+              const existing = historyRequests.get(library.kind);
+              if (existing) void existing.then(() => { if (!disposed && historyOpen.has(library.kind)) void loadHistory(library.kind); });
+              else void loadHistory(library.kind);
+            }
+          }
+          libraries = result; loadError = null; savedScheduleStatusUnavailable = false;
+          if (!result.some(library => library.running)) stopping = false;
+        }
       })
       .catch((error) => { if (!disposed) loadError = String(error); })
       .finally(() => { refreshPromise = null; });
     return refreshPromise;
+  }
+
+  async function stopSync() {
+    stopping = true;
+    actionError = null;
+    try {
+      await invoke("request_library_sync_stop");
+      await refreshPromise;
+      await refresh();
+    } catch (error) {
+      stopping = false;
+      actionError = String(error);
+    }
   }
 
   async function sync(kind: LibraryKind | null = null, retryFailed = false) {
@@ -46,10 +109,15 @@
     select.value = library.frequency;
     saving = library.kind;
     actionError = null;
+    savedScheduleStatusUnavailable = false;
     try {
       await invoke("set_library_sync_schedule", { kind: library.kind, frequency });
+      // The write succeeded even if the following status read fails.
+      libraries = libraries.map(saved => saved.kind === library.kind ? { ...saved, frequency } : saved);
+      select.value = frequency;
       await refreshPromise;
       await refresh();
+      if (loadError) savedScheduleStatusUnavailable = true;
     } catch (error) {
       actionError = `Schedule was not saved: ${error}`;
     } finally { saving = null; }
@@ -74,6 +142,11 @@
         <RefreshCw class="w-4 h-4 {busy ? 'animate-spin' : ''}" />
         Sync All
       </button>
+      {#if libraries.some(library => library.running)}
+        <button type="button" onclick={stopSync} disabled={stopRequested} class="focus-button disabled:opacity-50">
+          {stopRequested ? 'Stopping after current title…' : 'Stop after current title'}
+        </button>
+      {/if}
     </div>
     <p class="text-xs text-text-muted">
       Shows and movies have separate schedules. After reopening, overdue syncs start within a minute once no other sync is running.
@@ -83,6 +156,7 @@
   {#if loadError || actionError}
     <div role="alert" class="text-sm text-red-400 rounded-lg border border-red-500/30 bg-red-500/10 p-3 break-words">
       {#if loadError}<p>Could not load sync status: {loadError}</p>{/if}
+      {#if savedScheduleStatusUnavailable}<p>Your schedule was saved. Sync status is temporarily unavailable.</p>{/if}
       {#if actionError}<p>{actionError}</p>{/if}
       {#if loadError}<button type="button" onclick={() => refresh()} class="underline mt-2">Reload status</button>{/if}
     </div>
@@ -97,7 +171,7 @@
   <div class="focus-sync-grid">
   {#each libraries as library (library.kind)}
     {@const report = library.report}
-    {@const completed = report ? report.succeeded + report.skipped + report.failures.length : 0}
+    {@const processed = report ? completed(report) : 0}
     <section class="focus-panel bg-surface rounded-xl border border-border p-5 space-y-4" aria-label={library.kind === 'shows' ? 'TV show sync' : 'Movie sync'}>
       <div class="flex flex-wrap items-center justify-between gap-3">
         <h3 class="font-semibold flex items-center gap-2">
@@ -122,7 +196,7 @@
         </select>
         {#if saving === library.kind}<span class="text-xs text-text-muted">Saving…</span>{/if}
       </div>
-      <p class="text-xs text-text-muted">Last complete success: {library.last_success_at ? formatDateTime(library.last_success_at) : "Never"}</p>
+      <p class="text-xs text-text-muted">Last successful full sync: {library.last_success_at ? formatDateTime(library.last_success_at) : "Never"}</p>
       {#if library.next_sync_at}
         <p class="text-xs text-text-muted">
           {#if library.running}Next scheduled sync is calculated from this run.
@@ -136,13 +210,17 @@
           {#if report.release_country}<p class="text-xs text-text-muted">Movie release country: {report.release_country}</p>{/if}
           <div class="flex items-center gap-2 text-sm">
             {#if library.running}<RefreshCw class="w-4 h-4 animate-spin text-accent" />
-            {:else if library.interrupted || report.error || report.failures.length}<AlertTriangle class="w-4 h-4 text-yellow-400" />
+            {:else if library.interrupted || report.stopped || report.error || report.failures.length}<AlertTriangle class="w-4 h-4 text-yellow-400" />
             {:else}<Check class="w-4 h-4 text-available" />{/if}
-            <span>{report.source === 'retry' ? 'Retry' : report.source === 'automatic' ? 'Automatic sync' : 'Manual sync'} · {formatDateTime(report.started_at)}</span>
+            <span>{runLabel(report)} · {formatDateTime(report.started_at)}</span>
           </div>
           {#if library.running}
-            <p class="text-sm text-text-muted break-words">{completed} / {report.total} processed{report.current_title ? ` · ${report.current_title}` : ''}</p>
-            <progress value={completed} max={Math.max(report.total, 1)} aria-label="Sync progress" class="w-full h-1.5 accent-accent"></progress>
+            <p class="text-sm text-text-muted break-words">{processed} / {report.total} processed{report.current_title ? ` · ${report.current_title}` : ''}</p>
+            {#if library.stop_requested || stopping}<p class="text-xs text-text-muted">Finishing the current title before stopping.</p>{/if}
+            <progress value={processed} max={Math.max(report.total, 1)} aria-label="Sync progress" class="w-full h-1.5 accent-accent"></progress>
+          {/if}
+          {#if report.stopped}
+            <p class="text-sm text-yellow-400">Stopped after {processed} / {report.total} titles. Sync now starts a new full run. Automatic sync waits until its next scheduled run.</p>
           {/if}
           {#if library.interrupted}
             <p class="text-sm text-yellow-400">This run was interrupted. Sync now to finish refreshing the library.</p>
@@ -156,6 +234,24 @@
             <p class="text-sm text-text-muted">{report.source === 'retry' ? 'No failed titles remain in this library.' : 'No saved titles to sync yet.'}</p>
           {/if}
           {#if report.error}<p class="text-sm text-red-400 break-words">{report.error}</p>{/if}
+          {#if report.skipped > 0}
+            <details class="text-sm">
+              <summary class="cursor-pointer text-text-muted py-1">Skipped titles ({report.skipped})</summary>
+              {#if report.skipped_titles?.length}
+                <ul class="mt-2 space-y-2 max-h-56 overflow-auto">
+                  {#each report.skipped_titles as title (title.id)}
+                    <li class="rounded bg-background border border-border p-2">
+                      <p class="font-medium">{title.title}</p>
+                      <p class="text-xs text-text-muted mt-1">{title.reason === 'needs_matching' ? 'This show needs a TMDB match before it can sync.' : 'Manual title with no TMDB record. Its saved details are kept.'}</p>
+                    </li>
+                  {/each}
+                </ul>
+                {#if report.skipped_titles.some(title => title.reason === 'needs_matching')}
+                  <button type="button" onclick={showMatching} class="focus-button mt-2">Match shows in Maintenance</button>
+                {/if}
+              {:else}<p class="text-xs text-text-muted mt-2">This older run recorded a count without the title details.</p>{/if}
+            </details>
+          {/if}
           {#if report.failures.length}
             <details open class="text-sm">
               <summary class="cursor-pointer text-red-400 py-1">Failed titles ({report.failures.length})</summary>
@@ -175,15 +271,58 @@
       {:else}
         <p class="text-sm text-text-muted">No sync recorded yet.</p>
       {/if}
+      {#if report?.source === 'retry' && library.last_full_report}
+        {@const full = library.last_full_report}
+        <details class="border-t border-border pt-3 text-sm">
+          <summary class="cursor-pointer text-text-muted">Original full-run result · {formatDateTime(full.started_at)}</summary>
+          <p class="mt-2 text-text-muted">{completed(full)} / {full.total} processed · {full.succeeded} synced · {full.failures.length} failed · {full.skipped} skipped{full.stopped ? ' · Stopped' : !full.finished_at ? ' · Interrupted' : ''}</p>
+          <p class="text-xs text-text-muted mt-1">These are the results before retries. The latest retry above shows which failures remain.</p>
+          {#if full.stopped || !full.finished_at}<p class="text-xs text-yellow-400 mt-1">This full run ended early. Start a full sync to refresh its remaining titles.</p>{/if}
+        </details>
+      {/if}
+      <details class="border-t border-border pt-3 text-sm" ontoggle={(event) => toggleHistory(library.kind, event)}>
+        <summary class="cursor-pointer text-text-muted">Recent runs · last five</summary>
+        {#if historyLoading[library.kind]}<p role="status" class="text-xs text-text-muted mt-2">Loading history…</p>{/if}
+        {#if historyErrors[library.kind]}
+          <p role="alert" class="text-xs text-red-400 mt-2">Could not load history: {historyErrors[library.kind]}</p>
+          <button type="button" class="focus-button mt-2" onclick={() => loadHistory(library.kind)}>Retry</button>
+        {:else if !historyLoading[library.kind] && !histories[library.kind].length}
+          <p class="text-xs text-text-muted mt-2">No completed runs recorded yet.</p>
+        {/if}
+        <div class="space-y-2 mt-3">
+          {#each histories[library.kind] as run (run.started_at)}
+            <details class="rounded border border-border bg-background p-3">
+              <summary class="cursor-pointer">
+                <span>{runLabel(run)} · {formatDateTime(run.started_at)}</span>
+                <span class="text-xs {run.stopped || !run.finished_at || run.error || run.failures.length ? 'text-yellow-400' : 'text-available'}">{run.stopped ? 'Stopped' : !run.finished_at ? 'Interrupted' : run.error || run.failures.length ? 'Needs attention' : 'Completed'}</span>
+              </summary>
+              <p class="text-xs text-text-muted mt-2">{completed(run)} / {run.total} processed · {run.succeeded} synced · {run.failures.length} failed · {run.skipped} skipped</p>
+              {#if run.release_country}<p class="text-xs text-text-muted mt-1">Movie release country: {run.release_country}</p>{/if}
+              {#if run.error}<p class="text-xs text-red-400 mt-2 break-words">{run.error}</p>{/if}
+              {#if run.failures.length}
+                <ul class="space-y-1 mt-2 max-h-40 overflow-auto">{#each run.failures as failure}<li class="text-xs break-words"><span class="font-medium">{failure.title}</span> · {failure.error}</li>{/each}</ul>
+              {/if}
+              {#if run.skipped_titles?.length}
+                <ul class="space-y-1 mt-2 max-h-40 overflow-auto">{#each run.skipped_titles as title}<li class="text-xs text-text-muted"><span class="font-medium">{title.title}</span> · {title.reason === 'needs_matching' ? 'Needs a TMDB match' : 'Manual title'}</li>{/each}</ul>
+              {/if}
+            </details>
+          {/each}
+        </div>
+      </details>
     </section>
   {/each}
   </div>
 
-  <p class="text-xs text-text-muted">
+  <details class="text-xs text-text-muted">
+    <summary class="cursor-pointer py-1">How sync works</summary>
+    <p class="mt-2 leading-relaxed">
     Includes archived and tier-list titles. Manual entries and unresolved TVDB matches are skipped.
-    The latest result for each library is saved. Retries only refresh failed titles and keep the full-sync schedule.
+    The last five runs and the latest full result are kept. Retries only refresh failed titles and keep the full-sync schedule.
     Every day means 24 hours, every week means 7 days, and every month means one calendar month after the last full attempt.
-  </p>
+    Movie runs keep the release country chosen when they started. Changing it applies to the next run.
+    Stopping finishes the current title, skips any queued library, and postpones automatic sync until the next scheduled interval.
+    </p>
+  </details>
 </div>
 
 <style>

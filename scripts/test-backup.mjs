@@ -39,11 +39,13 @@ test("older backups explain the records they cannot recover before import", () =
     const message = describeBackup(parsed);
     assert.match(message, /Existing awards and predictions will be kept/);
     assert.match(message, /Plex title corrections, scrobble logs, and change history will be cleared/);
+    value.tiers = null;
+    assert.deepEqual(parseBackup(JSON.stringify(value)).tiers, [], "old Option<Tiers> serialized as null stays compatible");
   }
 });
 
 test("unknown versions and incomplete current backups are rejected", () => {
-  const badVersion = backup(); badVersion.version = "4.0";
+  const badVersion = backup(); badVersion.version = "99.0";
   const badRecords = backup(); badRecords.shows = {};
   const noPersonal = backup(); delete noPersonal.personal_data;
   const noTiers = backup(); delete noTiers.tiers;
@@ -53,4 +55,32 @@ test("unknown versions and incomplete current backups are rejected", () => {
     assert.throws(() => parseBackup(JSON.stringify(value)));
   }
   assert.throws(() => parseBackup("{not valid JSON"));
+});
+
+const portable = () => ({
+  appearance: { accentColor:"#bba4ff",fontSize:1,compactSpacing:false,colorblindFriendly:false,hidePosters:false,posterSize:"medium" },
+  general: { startup_page:"calendar",remember_calendar:false,close_action:"tray",start_minimized:false,release_country:"US",last_page:"calendar",calendar_view:"month",calendar_filter:"all" },
+  notifications: { enabled:true,sound_enabled:true,sound_volume:50,sound_choice:"chime",popup_position:"top-right",popup_duration:8000,max_visible:3,os_fallback:false,tray_notifications:true,racing_enabled:true,plex_enabled:true,premiere_enabled:true,update_enabled:true,system_enabled:true,quiet_hours_enabled:false,quiet_hours_start:"22:00",quiet_hours_end:"08:00" },
+  racing: { notifications_enabled:true,default_notify_minutes:30,series:[] }, tier_preset:"10-star",
+});
+test("portable backup preview explains transferred settings and machine exclusions", () => {
+  const value = { ...backup(), version:"4.0", portable_settings:portable() };
+  const parsed = parseBackup(JSON.stringify(value));
+  const message = describeBackup(parsed);
+  assert.match(message, /Appearance, General and calendar preferences/);
+  assert.match(message, /including quiet hours/);
+  assert.match(message, /Racing series\/reminder preferences/);
+  assert.match(message, /0 supplied series; series absent from the backup are disabled/);
+  assert.match(message, /Credentials, Windows startup registration, backup folders and schedules/);
+  assert.match(message, /custom Racing feed URLs/);
+  assert.match(message, /Restart TVC/);
+});
+test("portable backup rejects missing groups and unsupported preference keys before confirmation", () => {
+  const value = () => ({ ...backup(), version:"4.0", portable_settings:portable() });
+  const missing = value(); delete missing.portable_settings.notifications;
+  const secret = value(); secret.portable_settings.general.api_key = "secret";
+  const url = value(); url.portable_settings.racing.series = [{ slug:"f1",enabled:true,notify_enabled:true,notify_minutes:30,custom_color:null,custom_ics_url:"secret" }];
+  const unsupported = value(); unsupported.version = "3.0";
+  const absent = value(); delete absent.portable_settings;
+  for (const data of [missing, secret, url, unsupported, absent]) assert.throws(() => parseBackup(JSON.stringify(data)));
 });

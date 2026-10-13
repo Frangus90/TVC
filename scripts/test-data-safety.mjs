@@ -17,6 +17,25 @@ const noop = () => {};
 const tick = async () => { for (let index = 0; index < 20; index++) await Promise.resolve(); };
 const dataSource = readFileSync('src/lib/stores/dataManagement.svelte.ts', 'utf8');
 
+test('legacy Data repair links select Maintenance and retain the intended subsection', async () => {
+  const commands = [];
+  const api = load(dataSource, {
+    '@tauri-apps/api/core': { invoke: async command => { commands.push(command); return command === 'get_database_stats' ? {} : []; } },
+    '../utils/logger': { logger: { error: noop } },
+  });
+  for (const section of ['duplicates', 'cleanup', 'unmapped']) {
+    api.setActiveTab(section);
+    assert.equal(api.getActiveTab(), 'maintenance');
+    assert.equal(api.getMaintenanceSection(), section);
+  }
+  api.setActiveTab('backups');
+  api.setActiveTab('maintenance');
+  assert.equal(api.getMaintenanceSection(), 'unmapped');
+  await tick();
+  assert.ok(commands.includes('find_duplicates'));
+  assert.ok(commands.includes('get_orphaned_episodes_preview'));
+});
+
 test('Data tab switching ignores old Overview errors and loading while Duplicates completes', async () => {
   const requests = [];
   const api = load(dataSource, {
@@ -50,6 +69,45 @@ test('cleanup preview failure is visible and retry replaces stale or failed prev
   assert.equal(api.getCleanupPreviewError(), null);
   assert.equal(api.getOrphanedEpisodes()[0].id, 1);
   assert.equal(api.getUnairedEpisodes()[0].id, 2);
+});
+
+test('advanced database summary errors cannot replace a successful duplicate list', async () => {
+  let failSummary;
+  const api = load(dataSource, {
+    '@tauri-apps/api/core': { invoke: command => command === 'find_duplicates' ? Promise.resolve([{ show1_id: 1, show2_id: 2 }]) : new Promise((resolve, reject) => { failSummary = reject; }) },
+    '../utils/logger': { logger: { error: noop } },
+  });
+  api.setActiveTab('duplicates');
+  await tick();
+  const summary = api.loadDatabaseStats();
+  failSummary(new Error('database size unavailable'));
+  assert.equal(await summary, false);
+  assert.equal(api.getError(), null);
+  assert.match(api.getDatabaseSummaryError(), /database size unavailable/);
+  assert.equal(api.getDuplicates().length, 1);
+});
+
+test('advanced cleanup reports preparation failures and ignores unrelated duplicate-read errors', async () => {
+  let previewOk = false, confirmations = 0;
+  const component = readFileSync('src/lib/components/data/MaintenanceTab.svelte', 'utf8').match(/<script lang="ts">([\s\S]*?)<\/script>/)[1];
+  const api = load(component + '\nexport const harness = { prepare:confirmCleanup, message:()=>cleanupMessage };', {
+    'svelte': { onDestroy: noop, onMount: noop }, 'lucide-svelte': {}, '@tauri-apps/api/core': {}, '@tauri-apps/plugin-opener': {},
+    '../UnmigratedShowsResolver.svelte': {}, '../../stores/theme.svelte': {}, '../../stores/updates.svelte': {},
+    '../../stores/confirmDialog.svelte': { openConfirmDialog: async () => { confirmations++; return true; } },
+    '../../stores/dataManagement.svelte': {
+      getMaintenanceSection: () => 'duplicates', isDataWriting: () => false,
+      getError: () => 'Unrelated duplicate read error',
+      getDatabaseStats: () => ({ orphaned_episodes: 2, unaired_unscheduled_episodes: 3 }),
+      loadDatabaseStats: async () => true, loadCleanupPreviews: async () => previewOk,
+      getDatabaseSummaryError: () => null, getCleanupPreviewError: () => previewOk ? null : 'Preview unavailable',
+    },
+  }, { $derived: value => value });
+  assert.equal(await api.harness.prepare('all'), false);
+  assert.equal(confirmations, 0);
+  assert.equal(api.harness.message(), 'Preview unavailable');
+  previewOk = true;
+  assert.equal(await api.harness.prepare('all'), true);
+  assert.equal(confirmations, 1);
 });
 
 function libraries(calls, failed = false) {

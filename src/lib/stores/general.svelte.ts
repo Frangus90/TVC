@@ -44,6 +44,8 @@ export function getGeneralPreferences() {
   return preferences;
 }
 
+export function waitForGeneralPreferenceSaves(): Promise<void> { return saveQueue; }
+
 export function isGeneralLoaded() {
   return loaded;
 }

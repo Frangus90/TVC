@@ -39,6 +39,7 @@ let pendingSaves = 0;
 let saveRevision = 0;
 
 export function isThemeLoading() { return loading; }
+export async function waitForThemeSaves(): Promise<void> { await loadPromise; await saveQueue; }
 export function isThemeSaving() { return saving; }
 export function getThemeLoadError() { return loadError; }
 export function getThemeSaveError() { return saveError; }

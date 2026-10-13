@@ -12,6 +12,7 @@
   import { showError } from "../../stores/toast.svelte";
   import { modalFocus } from "../../utils/modalFocus";
   import { getThemeSettings } from "../../stores/theme.svelte";
+  import { isBackupRestoring, isBackupRestartRequired } from "../../stores/backups.svelte";
 
   let searchOpen = $state(false);
   let query = $state("");
@@ -24,7 +25,7 @@
     if (!text) return [];
     return [...shows.values(), ...movies.values()].filter(item => !(item.type === "shows" ? archivedShows : archivedMovies).has(item.id) && item.title.toLowerCase().includes(text)).sort((a, b) => a.title.localeCompare(b.title));
   });
-  function openSearch() { query = ""; searchOpen = true; }
+  function openSearch() { if (isBackupRestoring() || isBackupRestartRequired()) return; query = ""; searchOpen = true; }
   function handleKeydown(event: KeyboardEvent) {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
       event.preventDefault();

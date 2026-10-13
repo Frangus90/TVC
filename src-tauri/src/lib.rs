@@ -1,4 +1,5 @@
 mod arr;
+mod automatic_backup;
 #[cfg(test)]
 mod audit_tests;
 mod awards;
@@ -320,6 +321,8 @@ pub fn run() {
             library_sync::get_library_sync_status,
             library_sync::set_library_sync_schedule,
             library_sync::run_library_sync,
+            library_sync::get_library_sync_history,
+            library_sync::request_library_sync_stop,
             commands::movies::get_movies_for_range,
             // Statistics commands
             commands::statistics::get_watch_statistics,
@@ -347,6 +350,10 @@ pub fn run() {
             // Backup commands
             commands::backup::export_database,
             commands::backup::import_database,
+            automatic_backup::get_backup_status,
+            automatic_backup::update_backup_preferences,
+            automatic_backup::create_backup_file,
+            automatic_backup::create_local_backup,
             // Arr (Sonarr/Radarr) commands
             commands::arr::get_arr_servers,
             commands::arr::add_arr_server,
@@ -475,6 +482,7 @@ pub fn run() {
 
             let app_handle_sync = app.handle().clone();
             tauri::async_runtime::spawn(library_sync::start_scheduler(app_handle_sync));
+            tauri::async_runtime::spawn(automatic_backup::start_scheduler(app.handle().clone()));
 
             // Start Plex scrobbler if enabled
             let app_handle = app.handle().clone();

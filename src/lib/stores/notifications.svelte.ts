@@ -52,6 +52,7 @@ let pendingSettingsSaves = 0;
 let settingsRevision = 0;
 
 export function isNotificationSettingsLoading() { return settingsLoading; }
+export function waitForNotificationSettingsSaves(): Promise<void> { return settingsSaveQueue; }
 export function isNotificationSettingsSaving() { return settingsSaving; }
 export function getNotificationSettingsLoadError() { return settingsLoadError; }
 export function getNotificationSettingsSaveError() { return settingsSaveError; }

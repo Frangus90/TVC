@@ -4,7 +4,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use sqlx::SqlitePool;
 use std::{
     future::Future,
-    sync::atomic::{AtomicU8, Ordering},
+    sync::atomic::{AtomicBool, AtomicU8, Ordering},
 };
 use tauri::{AppHandle, Emitter};
 use tokio::sync::Mutex;
@@ -13,6 +13,7 @@ use crate::{commands, db::connection};
 
 static SYNC_LOCK: Mutex<()> = Mutex::const_new(());
 static ACTIVE: AtomicU8 = AtomicU8::new(0);
+static STOP_REQUESTED: AtomicBool = AtomicBool::new(false);
 
 pub(crate) fn lock_for_restore() -> Result<tokio::sync::MutexGuard<'static, ()>, String> {
     SYNC_LOCK.try_lock().map_err(|_| {
@@ -70,6 +71,13 @@ pub struct Failure {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct SkippedTitle {
+    id: i64,
+    title: String,
+    reason: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Report {
     kind: Library,
     source: String,
@@ -83,6 +91,12 @@ pub struct Report {
     error: Option<String>,
     #[serde(default)]
     release_country: Option<String>,
+    #[serde(default)]
+    stopped: bool,
+    #[serde(default)]
+    skipped_titles: Vec<SkippedTitle>,
+    #[serde(default)]
+    processed: Option<usize>,
 }
 
 #[derive(Serialize)]
@@ -94,6 +108,8 @@ pub struct Status {
     running: bool,
     interrupted: bool,
     report: Option<Report>,
+    last_full_report: Option<Report>,
+    stop_requested: bool,
 }
 
 // Reset even if a task is cancelled or exits early.
@@ -155,6 +171,16 @@ async fn status(pool: &SqlitePool, kind: Library) -> Result<Status, String> {
         .unwrap_or_default();
     let last = read_setting(pool, &kind.key("last_full_attempt")).await?;
     let report: Option<Report> = read_setting(pool, &kind.key("report")).await?;
+    let last_full_report = read_setting(pool, &kind.key("last_full_report"))
+        .await?
+        .or_else(|| {
+            report
+                .as_ref()
+                .filter(|report| report.source != "retry")
+                .cloned()
+        });
+    let stopped_at: Option<DateTime<Utc>> =
+        read_setting(pool, &kind.key("last_stopped_at")).await?;
     let running = ACTIVE.load(Ordering::SeqCst) == kind.code();
     let interrupted = !running && report.as_ref().is_some_and(|r| r.finished_at.is_none());
     Ok(Status {
@@ -163,9 +189,90 @@ async fn status(pool: &SqlitePool, kind: Library) -> Result<Status, String> {
         frequency,
         running,
         interrupted,
-        next_sync_at: next_due(frequency, if interrupted { None } else { last }, Utc::now()),
+        next_sync_at: scheduled_due(
+            frequency,
+            if interrupted { None } else { last },
+            stopped_at,
+            Utc::now(),
+        ),
         report,
+        last_full_report,
+        stop_requested: running && STOP_REQUESTED.load(Ordering::SeqCst),
     })
+}
+
+fn scheduled_due(
+    frequency: Frequency,
+    last: Option<DateTime<Utc>>,
+    stopped_at: Option<DateTime<Utc>>,
+    now: DateTime<Utc>,
+) -> Option<DateTime<Utc>> {
+    let due = next_due(frequency, last, now)?;
+    Some(
+        stopped_at
+            .and_then(|stopped| next_due(frequency, Some(stopped), now))
+            .map_or(due, |resume| due.max(resume)),
+    )
+}
+
+#[tauri::command]
+pub async fn get_library_sync_history(
+    app: AppHandle,
+    kind: Library,
+) -> Result<Vec<Report>, String> {
+    let pool = connection::get_pool(&app)
+        .await
+        .map_err(|error| error.to_string())?;
+    history(&pool, kind).await
+}
+
+async fn history(pool: &SqlitePool, kind: Library) -> Result<Vec<Report>, String> {
+    let saved: Option<Vec<Report>> = read_setting(pool, &kind.key("history")).await?;
+    if let Some(mut saved) = saved {
+        saved.truncate(5);
+        return Ok(saved);
+    }
+    // Earlier versions stored only the latest report. Retain it when possible.
+    let previous: Option<Report> = read_setting(pool, &kind.key("report")).await?;
+    Ok(previous
+        .filter(|report| report.finished_at.is_some())
+        .into_iter()
+        .collect())
+}
+
+#[tauri::command]
+pub async fn request_library_sync_stop(app: AppHandle) -> Result<(), String> {
+    if ACTIVE.load(Ordering::SeqCst) == 0 {
+        return Err("No library sync is running".into());
+    }
+    STOP_REQUESTED.store(true, Ordering::SeqCst);
+    let pool = connection::get_pool(&app).await.map_err(|error| {
+        format!("Sync will stop, but its automatic schedule could not be postponed: {error}")
+    })?;
+    pause_schedules_after_stop(&pool, Utc::now())
+        .await
+        .map_err(|error| {
+            format!("Sync will stop, but its automatic schedule could not be postponed: {error}")
+        })
+}
+
+async fn pause_schedules_after_stop(
+    pool: &SqlitePool,
+    stopped_at: DateTime<Utc>,
+) -> Result<(), String> {
+    let mut transaction = pool.begin().await.map_err(|error| error.to_string())?;
+    for kind in [Library::Shows, Library::Movies] {
+        sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+            .bind(kind.key("last_stopped_at"))
+            .bind(serde_json::to_string(&stopped_at).map_err(|error| error.to_string())?)
+            .execute(&mut *transaction)
+            .await
+            .map_err(|error| format!("Cannot postpone automatic sync after stopping: {error}"))?;
+    }
+    transaction
+        .commit()
+        .await
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -203,6 +310,7 @@ async fn sync_library<F, Fut>(
     pool: &SqlitePool,
     kind: Library,
     source: &str,
+    stop_requested: &AtomicBool,
     mut sync_item: F,
 ) -> Result<Report, String>
 where
@@ -215,20 +323,28 @@ where
         Library::Movies => Some(commands::preferences::release_country(pool).await?),
         Library::Shows => None,
     };
-    let retry_ids = if source == "retry" {
-        let previous: Report = read_setting(pool, &kind.key("report"))
-            .await?
-            .ok_or("No previous sync to retry")?;
-        Some(
-            previous
-                .failures
-                .into_iter()
-                .map(|f| f.id)
-                .collect::<Vec<_>>(),
-        )
+    let previous: Option<Report> = read_setting(pool, &kind.key("report")).await?;
+    let mut runs = history(pool, kind).await?;
+    if let Some(previous) = &previous {
+        if !runs.iter().any(|run| run.started_at == previous.started_at) {
+            runs.insert(0, previous.clone());
+        }
+    }
+    let previous_failures = if source == "retry" {
+        previous
+            .as_ref()
+            .ok_or("No previous sync to retry")?
+            .failures
+            .clone()
     } else {
-        None
+        Vec::new()
     };
+    let retry_ids = (source == "retry").then(|| {
+        previous_failures
+            .iter()
+            .map(|failure| failure.id)
+            .collect::<Vec<_>>()
+    });
     let mut report = Report {
         kind,
         source: source.into(),
@@ -237,13 +353,30 @@ where
         total: 0,
         succeeded: 0,
         skipped: 0,
-        failures: vec![],
+        // On a retry, unprocessed failures remain available if the run is stopped.
+        failures: previous_failures,
         current_title: None,
         error: None,
         release_country: release_country.clone(),
+        stopped: false,
+        skipped_titles: Vec::new(),
+        processed: Some(0),
     };
     // Store the attempt and report together. A failed run won't retry every scheduler tick.
+    let needs_full_report = read_setting::<Report>(pool, &kind.key("last_full_report"))
+        .await?
+        .is_none();
     let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+    if needs_full_report {
+        if let Some(previous) = previous.as_ref().filter(|report| report.source != "retry") {
+            sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+                .bind(kind.key("last_full_report"))
+                .bind(serde_json::to_string(previous).map_err(|error| error.to_string())?)
+                .execute(&mut *tx)
+                .await
+                .map_err(|error| error.to_string())?;
+        }
+    }
     if retry_ids.is_none() {
         sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
             .bind(kind.key("last_full_attempt"))
@@ -251,7 +384,22 @@ where
             .execute(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
+        if !stop_requested.load(Ordering::SeqCst) {
+            sqlx::query("DELETE FROM settings WHERE key = ?")
+                .bind(kind.key("last_stopped_at"))
+                .execute(&mut *tx)
+                .await
+                .map_err(|error| error.to_string())?;
+        }
     }
+    // Preserve a previous interrupted run before replacing the live report.
+    runs.truncate(5);
+    sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+        .bind(kind.key("history"))
+        .bind(serde_json::to_string(&runs).map_err(|error| error.to_string())?)
+        .execute(&mut *tx)
+        .await
+        .map_err(|error| format!("Cannot save sync history: {error}"))?;
     sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
         .bind(kind.key("report"))
         .bind(serde_json::to_string(&report).map_err(|e| e.to_string())?)
@@ -271,31 +419,57 @@ where
             .map_err(|e| format!("Cannot read library: {e}"))?;
         if let Some(ids) = retry_ids {
             items.retain(|item| ids.contains(&item.0));
+            report
+                .failures
+                .retain(|failure| items.iter().any(|item| item.0 == failure.id));
         }
         report.total = items.len();
         for (id, title, eligible) in items {
+            if stop_requested.load(Ordering::SeqCst) {
+                report.stopped = true;
+                break;
+            }
             report.current_title = Some(title.clone());
             save_report(pool, &report).await?;
             if eligible {
+                if report.source == "retry" {
+                    report.failures.retain(|failure| failure.id != id);
+                }
                 match sync_item(id, release_country.clone()).await {
                     Ok(()) => report.succeeded += 1,
                     Err(error) => report.failures.push(Failure { id, title, error }),
                 }
             } else {
+                report.failures.retain(|failure| failure.id != id);
                 report.skipped += 1;
+                report.skipped_titles.push(SkippedTitle {
+                    id,
+                    title,
+                    reason: if id <= 0 {
+                        "manual_entry"
+                    } else {
+                        "needs_matching"
+                    }
+                    .into(),
+                });
             }
+            report.processed = Some(report.processed.unwrap_or(0) + 1);
             report.current_title = None;
             save_report(pool, &report).await?;
         }
         Ok(())
     }
     .await;
+    if stop_requested.load(Ordering::SeqCst) {
+        report.stopped = true;
+    }
     report.finished_at = Some(Utc::now());
     report.error = result.err();
     if report.source != "retry"
         && report.failures.is_empty()
         && report.error.is_none()
         && report.succeeded > 0
+        && !report.stopped
     {
         sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
             .bind(kind.key("last_success"))
@@ -306,6 +480,28 @@ where
     }
     report.current_title = None;
     save_report(pool, &report).await?;
+    runs.retain(|run| run.started_at != report.started_at);
+    runs.insert(0, report.clone());
+    runs.truncate(5);
+    let mut transaction = pool.begin().await.map_err(|error| error.to_string())?;
+    sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+        .bind(kind.key("history"))
+        .bind(serde_json::to_string(&runs).map_err(|error| error.to_string())?)
+        .execute(&mut *transaction)
+        .await
+        .map_err(|error| format!("Cannot save sync history: {error}"))?;
+    if report.source != "retry" {
+        sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+            .bind(kind.key("last_full_report"))
+            .bind(serde_json::to_string(&report).map_err(|error| error.to_string())?)
+            .execute(&mut *transaction)
+            .await
+            .map_err(|error| error.to_string())?;
+    }
+    transaction
+        .commit()
+        .await
+        .map_err(|error| error.to_string())?;
     Ok(report)
 }
 
@@ -317,17 +513,25 @@ async fn run_one(
 ) -> Result<(), String> {
     ACTIVE.store(kind.code(), Ordering::SeqCst);
     let _active = ActiveRun;
-    let report = sync_library(pool, kind, source, |id, country| async move {
-        let result = match kind {
-            Library::Shows => commands::episodes::sync_show_episodes(app.clone(), id).await,
-            Library::Movies => match country {
-                Some(country) => commands::movies::sync_movie_for_country(pool, id, &country).await,
-                None => Err("Movie sync has no release country".into()),
-            },
-        };
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-        result
-    })
+    let report = sync_library(
+        pool,
+        kind,
+        source,
+        &STOP_REQUESTED,
+        |id, country| async move {
+            let result = match kind {
+                Library::Shows => commands::episodes::sync_show_episodes(app.clone(), id).await,
+                Library::Movies => match country {
+                    Some(country) => {
+                        commands::movies::sync_movie_for_country(pool, id, &country).await
+                    }
+                    None => Err("Movie sync has no release country".into()),
+                },
+            };
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            result
+        },
+    )
     .await;
     // Even if saving the final report fails, completed items need a frontend refresh.
     app.emit("library-sync-finished", kind)
@@ -337,6 +541,27 @@ async fn run_one(
         return Err(error);
     }
     Ok(())
+}
+
+async fn run_batch<F, Fut>(
+    kinds: Vec<Library>,
+    stop_requested: &AtomicBool,
+    mut run: F,
+) -> Vec<String>
+where
+    F: FnMut(Library) -> Fut,
+    Fut: Future<Output = Result<(), String>>,
+{
+    let mut errors = Vec::new();
+    for kind in kinds {
+        if stop_requested.load(Ordering::SeqCst) {
+            break;
+        }
+        if let Err(error) = run(kind).await {
+            errors.push(format!("{kind:?}: {error}"));
+        }
+    }
+    errors
 }
 
 #[tauri::command]
@@ -351,22 +576,22 @@ pub async fn run_library_sync(
     let pool = connection::get_pool(&app)
         .await
         .map_err(|e| e.to_string())?;
+    STOP_REQUESTED.store(false, Ordering::SeqCst);
     if retry_failed && kind.is_none() {
         return Err("Choose a library to retry".into());
     }
     let kinds = kind.map_or_else(|| vec![Library::Shows, Library::Movies], |kind| vec![kind]);
-    let mut errors = vec![];
-    for kind in kinds {
-        if let Err(error) = run_one(
+    let errors = run_batch(kinds, &STOP_REQUESTED, |kind| {
+        run_one(
             &app,
             &pool,
             kind,
             if retry_failed { "retry" } else { "manual" },
         )
-        .await
-        {
-            errors.push(format!("{kind:?}: {error}"));
-        }
+    })
+    .await;
+    if STOP_REQUESTED.load(Ordering::SeqCst) {
+        pause_schedules_after_stop(&pool, Utc::now()).await?;
     }
     if errors.is_empty() {
         Ok(())
@@ -380,7 +605,11 @@ async fn sync_due(app: &AppHandle) -> Result<(), String> {
         return Ok(());
     };
     let pool = connection::get_pool(app).await.map_err(|e| e.to_string())?;
+    STOP_REQUESTED.store(false, Ordering::SeqCst);
     for kind in [Library::Shows, Library::Movies] {
+        if STOP_REQUESTED.load(Ordering::SeqCst) {
+            break;
+        }
         let status = status(&pool, kind).await?;
         if status.next_sync_at.is_some_and(|due| due <= Utc::now()) {
             if let Err(error) = run_one(app, &pool, kind, "automatic").await {
@@ -389,6 +618,9 @@ async fn sync_due(app: &AppHandle) -> Result<(), String> {
                 eprintln!("[library-sync] {kind:?}: {error}");
             }
         }
+    }
+    if STOP_REQUESTED.load(Ordering::SeqCst) {
+        pause_schedules_after_stop(&pool, Utc::now()).await?;
     }
     Ok(())
 }
@@ -459,16 +691,22 @@ mod tests {
     async fn partial_failures_persist_and_retry_only_failed_titles() {
         let pool = database().await;
         let mut visited = vec![];
-        let report = sync_library(&pool, Library::Shows, "manual", |id, _| {
-            visited.push(id);
-            async move {
-                if id == 1 {
-                    Err("TMDB timed out".into())
-                } else {
-                    Ok(())
+        let report = sync_library(
+            &pool,
+            Library::Shows,
+            "manual",
+            &AtomicBool::new(false),
+            |id, _| {
+                visited.push(id);
+                async move {
+                    if id == 1 {
+                        Err("TMDB timed out".into())
+                    } else {
+                        Ok(())
+                    }
                 }
-            }
-        })
+            },
+        )
         .await
         .unwrap();
         assert_eq!(visited, vec![1, 2]); // manual and unresolved rows never hit TMDB
@@ -488,16 +726,31 @@ mod tests {
         let saved_report = saved.report.unwrap();
         assert_eq!(saved_report.failures[0].title, "Alpha");
         assert_eq!(saved_report.failures[0].error, "TMDB timed out");
+        assert_eq!(saved_report.skipped_titles.len(), 2);
+        assert!(saved_report
+            .skipped_titles
+            .iter()
+            .any(|title| title.id == -1 && title.reason == "manual_entry"));
+        assert!(saved_report
+            .skipped_titles
+            .iter()
+            .any(|title| title.id == 3 && title.reason == "needs_matching"));
         assert!(saved_report.finished_at.is_some());
         let anchor: Option<DateTime<Utc>> =
             read_setting(&pool, &Library::Shows.key("last_full_attempt"))
                 .await
                 .unwrap();
         let mut retried = vec![];
-        let retry = sync_library(&pool, Library::Shows, "retry", |id, _| {
-            retried.push(id);
-            async { Ok(()) }
-        })
+        let retry = sync_library(
+            &pool,
+            Library::Shows,
+            "retry",
+            &AtomicBool::new(false),
+            |id, _| {
+                retried.push(id);
+                async { Ok(()) }
+            },
+        )
         .await
         .unwrap();
         assert_eq!(retried, vec![1]);
@@ -536,10 +789,16 @@ mod tests {
                 <= Utc::now()
         );
         let mut visited = vec![];
-        let report = sync_library(&pool, Library::Movies, "automatic", |id, _| {
-            visited.push(id);
-            async { Err("offline".into()) }
-        })
+        let report = sync_library(
+            &pool,
+            Library::Movies,
+            "automatic",
+            &AtomicBool::new(false),
+            |id, _| {
+                visited.push(id);
+                async { Err("offline".into()) }
+            },
+        )
         .await
         .unwrap();
         assert_eq!(visited, vec![4]);
@@ -561,9 +820,15 @@ mod tests {
     #[tokio::test]
     async fn interrupted_and_overdue_runs_catch_up_after_reopening() {
         let pool = database().await;
-        let mut report = sync_library(&pool, Library::Shows, "manual", |_, _| async { Ok(()) })
-            .await
-            .unwrap();
+        let mut report = sync_library(
+            &pool,
+            Library::Shows,
+            "manual",
+            &AtomicBool::new(false),
+            |_, _| async { Ok(()) },
+        )
+        .await
+        .unwrap();
         sqlx::query("INSERT INTO settings VALUES (?, ?)")
             .bind(Library::Shows.key("frequency"))
             .bind(json!("monthly").to_string())
@@ -595,9 +860,13 @@ mod tests {
             .execute(&pool)
             .await
             .unwrap();
-        let report = sync_library(&pool, Library::Movies, "manual", |_, _| async {
-            panic!("no titles can be loaded")
-        })
+        let report = sync_library(
+            &pool,
+            Library::Movies,
+            "manual",
+            &AtomicBool::new(false),
+            |_, _| async { panic!("no titles can be loaded") },
+        )
         .await
         .unwrap();
         assert!(report.error.unwrap().contains("Cannot read library"));
@@ -612,14 +881,24 @@ mod tests {
     #[tokio::test]
     async fn only_complete_success_advances_freshness() {
         let pool = database().await;
-        sync_library(&pool, Library::Shows, "manual", |_, _| async { Ok(()) })
-            .await
-            .unwrap();
+        sync_library(
+            &pool,
+            Library::Shows,
+            "manual",
+            &AtomicBool::new(false),
+            |_, _| async { Ok(()) },
+        )
+        .await
+        .unwrap();
         let success = status(&pool, Library::Shows).await.unwrap().last_success_at;
         assert!(success.is_some());
-        sync_library(&pool, Library::Shows, "manual", |_, _| async {
-            Err("offline".into())
-        })
+        sync_library(
+            &pool,
+            Library::Shows,
+            "manual",
+            &AtomicBool::new(false),
+            |_, _| async { Err("offline".into()) },
+        )
         .await
         .unwrap();
         let failed = status(&pool, Library::Shows).await.unwrap();
@@ -640,18 +919,24 @@ mod tests {
             .await
             .unwrap();
         let mut countries = Vec::new();
-        let report = sync_library(&pool, Library::Movies, "manual", |_, country| {
-            countries.push(country.unwrap());
-            let pool = pool.clone();
-            async move {
-                sqlx::query("UPDATE settings SET value = ? WHERE key = 'general_preferences'")
-                    .bind(json!({ "release_country": "US" }).to_string())
-                    .execute(&pool)
-                    .await
-                    .unwrap();
-                Ok(())
-            }
-        })
+        let report = sync_library(
+            &pool,
+            Library::Movies,
+            "manual",
+            &AtomicBool::new(false),
+            |_, country| {
+                countries.push(country.unwrap());
+                let pool = pool.clone();
+                async move {
+                    sqlx::query("UPDATE settings SET value = ? WHERE key = 'general_preferences'")
+                        .bind(json!({ "release_country": "US" }).to_string())
+                        .execute(&pool)
+                        .await
+                        .unwrap();
+                    Ok(())
+                }
+            },
+        )
         .await
         .unwrap();
         assert_eq!(countries, vec!["NO", "NO"]);
@@ -667,10 +952,16 @@ mod tests {
             Some("NO")
         );
         let mut next_countries = Vec::new();
-        let next = sync_library(&pool, Library::Movies, "manual", |_, country| {
-            next_countries.push(country.unwrap());
-            async { Ok(()) }
-        })
+        let next = sync_library(
+            &pool,
+            Library::Movies,
+            "manual",
+            &AtomicBool::new(false),
+            |_, country| {
+                next_countries.push(country.unwrap());
+                async { Ok(()) }
+            },
+        )
         .await
         .unwrap();
         assert_eq!(next_countries, vec!["US", "US"]);
@@ -687,8 +978,172 @@ mod tests {
         }))
         .unwrap();
         assert!(report.release_country.is_none());
+        assert!(!report.stopped);
+        assert!(report.skipped_titles.is_empty());
+        assert!(report.processed.is_none());
         assert_eq!(report.succeeded, 1);
         assert_eq!(report.failures[0].id, 5);
     }
 
+    #[tokio::test]
+    async fn retries_preserve_full_result_and_recent_history_is_bounded() {
+        let pool = database().await;
+        let full = sync_library(
+            &pool,
+            Library::Shows,
+            "manual",
+            &AtomicBool::new(false),
+            |id, _| async move {
+                if id == 1 {
+                    Err("offline".into())
+                } else {
+                    Ok(())
+                }
+            },
+        )
+        .await
+        .unwrap();
+        sync_library(
+            &pool,
+            Library::Shows,
+            "retry",
+            &AtomicBool::new(false),
+            |_, _| async { Ok(()) },
+        )
+        .await
+        .unwrap();
+        let current = status(&pool, Library::Shows).await.unwrap();
+        assert!(current.report.unwrap().failures.is_empty());
+        let retained = current.last_full_report.unwrap();
+        assert_eq!(retained.started_at, full.started_at);
+        assert_eq!(retained.total, 4);
+        assert_eq!(retained.succeeded, 1);
+        assert_eq!(retained.failures.len(), 1);
+        assert_eq!(history(&pool, Library::Shows).await.unwrap().len(), 2);
+        for _ in 0..5 {
+            sync_library(
+                &pool,
+                Library::Shows,
+                "retry",
+                &AtomicBool::new(false),
+                |_, _| async { Ok(()) },
+            )
+            .await
+            .unwrap();
+        }
+        let runs = history(&pool, Library::Shows).await.unwrap();
+        assert_eq!(runs.len(), 5);
+        assert!(runs
+            .windows(2)
+            .all(|pair| pair[0].started_at >= pair[1].started_at));
+        assert_eq!(
+            status(&pool, Library::Shows)
+                .await
+                .unwrap()
+                .last_full_report
+                .unwrap()
+                .started_at,
+            full.started_at
+        );
+        assert!(history(&pool, Library::Movies).await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn stop_finishes_one_title_preserves_retry_failures_and_skips_the_next_library() {
+        let pool = database().await;
+        sync_library(
+            &pool,
+            Library::Shows,
+            "manual",
+            &AtomicBool::new(false),
+            |_, _| async { Err("offline".into()) },
+        )
+        .await
+        .unwrap();
+        let stop = AtomicBool::new(false);
+        let mut visited = Vec::new();
+        let stopped = sync_library(&pool, Library::Shows, "retry", &stop, |id, _| {
+            visited.push(id);
+            async {
+                stop.store(true, Ordering::SeqCst);
+                Ok(())
+            }
+        })
+        .await
+        .unwrap();
+        assert_eq!(visited, vec![1]);
+        assert!(stopped.stopped);
+        assert_eq!(stopped.processed, Some(1));
+        assert_eq!(stopped.failures[0].id, 2);
+        assert!(status(&pool, Library::Shows)
+            .await
+            .unwrap()
+            .last_success_at
+            .is_none());
+        let mut retried = Vec::new();
+        sync_library(
+            &pool,
+            Library::Shows,
+            "retry",
+            &AtomicBool::new(false),
+            |id, _| {
+                retried.push(id);
+                async { Ok(()) }
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(retried, vec![2]);
+        let batch_stop = AtomicBool::new(false);
+        let mut libraries = Vec::new();
+        let errors = run_batch(vec![Library::Shows, Library::Movies], &batch_stop, |kind| {
+            libraries.push(kind);
+            async {
+                batch_stop.store(true, Ordering::SeqCst);
+                Ok(())
+            }
+        })
+        .await;
+        assert!(errors.is_empty());
+        assert_eq!(libraries, vec![Library::Shows]);
+    }
+
+    #[tokio::test]
+    async fn user_stop_postpones_overdue_automatic_work_but_manual_sync_can_run() {
+        let pool = database().await;
+        let now = Utc::now();
+        for kind in [Library::Shows, Library::Movies] {
+            sqlx::query("INSERT INTO settings VALUES (?, ?)")
+                .bind(kind.key("frequency"))
+                .bind(json!("daily").to_string())
+                .execute(&pool)
+                .await
+                .unwrap();
+            assert!(status(&pool, kind).await.unwrap().next_sync_at.unwrap() <= Utc::now());
+        }
+        pause_schedules_after_stop(&pool, now).await.unwrap();
+        for kind in [Library::Shows, Library::Movies] {
+            assert_eq!(
+                status(&pool, kind).await.unwrap().next_sync_at,
+                Some(now + Duration::days(1))
+            );
+        }
+        let manual = sync_library(
+            &pool,
+            Library::Shows,
+            "manual",
+            &AtomicBool::new(false),
+            |_, _| async { Ok(()) },
+        )
+        .await
+        .unwrap();
+        assert!(manual.succeeded > 0);
+        assert!(
+            read_setting::<DateTime<Utc>>(&pool, &Library::Shows.key("last_stopped_at"))
+                .await
+                .unwrap()
+                .is_none()
+        );
+        assert_eq!(scheduled_due(Frequency::Off, None, Some(now), now), None);
+    }
 }

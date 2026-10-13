@@ -11,6 +11,7 @@ export interface TrackedShow {
   id: number;
   name: string;
   poster_url: string | null;
+  first_aired?: string | null;
   status: string | null;
   color: string | null;
   notes: string | null;
@@ -268,7 +269,7 @@ export async function loadTrackedShows(): Promise<boolean> {
         tier_only: number;
         unmigrated: number;
       })[]>(
-        "SELECT id, name, poster_url, status, color, notes, tags, rating, rank_order, tier_id, COALESCE(tier_only, 0) as tier_only, COALESCE(unmigrated, 0) as unmigrated FROM shows WHERE COALESCE(archived, 0) = 0 AND COALESCE(tier_only, 0) = 0 ORDER BY name"
+        "SELECT id, name, poster_url, first_aired, status, color, notes, tags, rating, rank_order, tier_id, COALESCE(tier_only, 0) as tier_only, COALESCE(unmigrated, 0) as unmigrated FROM shows WHERE COALESCE(archived, 0) = 0 AND COALESCE(tier_only, 0) = 0 ORDER BY name"
       );
       trackedShows = rows.map((r) => ({
         ...r,
@@ -345,14 +346,25 @@ export async function archiveShow(showId: number): Promise<void> {
   }
 }
 
-export async function unarchiveShow(showId: number): Promise<void> {
+export async function unarchiveShow(showId: number, onFailure?: (message: string) => void): Promise<boolean> {
+  let restored = false;
   try {
     await invoke("unarchive_show", { id: showId });
-    await loadTrackedShows();
-    await loadArchivedShows();
+    restored = true;
+    const { loadTierListShows } = await import("./tiers.svelte");
+    const refreshed = await Promise.all([
+      loadTrackedShows(), loadArchivedShows(), loadTierListShows(), refreshCalendar(),
+    ]);
+    if (refreshed.some(result => result === false)) throw new Error("Reload Archive to refresh the library and calendar.");
+    return true;
   } catch (error) {
-    logger.error("Failed to unarchive show", error);
-    showError("Failed to unarchive show" + ": " + String(error));
+    const message = restored
+      ? `The show was restored, but some views could not refresh. ${String(error)}`
+      : `Could not restore the show: ${String(error)}`;
+    logger.error(message, error);
+    showError(message);
+    onFailure?.(message);
+    return false;
   }
 }
 
@@ -376,7 +388,7 @@ export async function syncShowEpisodes(showId: number): Promise<void> {
 export async function loadEpisodesForRange(
   startDate: string,
   endDate: string
-): Promise<void> {
+): Promise<boolean> {
   const request = ++calendarRequest;
   currentCalendarRange = { start: startDate, end: endDate };
   try {
@@ -384,10 +396,11 @@ export async function loadEpisodesForRange(
       startDate,
       endDate,
     });
-    if (request !== calendarRequest) return;
+    if (request !== calendarRequest) return true;
     calendarEpisodes = episodes;
+    return true;
   } catch (error) {
-    if (request !== calendarRequest) return;
+    if (request !== calendarRequest) return true;
     logger.error("Failed to load episodes", error);
     showError("Failed to load episodes" + ": " + String(error));
     // Fallback to database if backend command fails
@@ -418,7 +431,7 @@ export async function loadEpisodesForRange(
         [startDate, endDate]
       );
 
-      if (request !== calendarRequest) return;
+      if (request !== calendarRequest) return true;
     calendarEpisodes = rows.map((row) => ({
         id: row.id,
         show_id: row.show_id,
@@ -432,10 +445,12 @@ export async function loadEpisodesForRange(
         watched: row.watched === 1,
         poster_url: row.poster_url,
       }));
+      return true;
     } catch (dbError) {
-    if (request !== calendarRequest) return;
+    if (request !== calendarRequest) return true;
       logger.error("Database fallback also failed", dbError);
       showError("Database fallback also failed" + ": " + String(dbError));
+      return false;
     }
   }
 }
@@ -600,11 +615,12 @@ export async function unscheduleEpisode(episodeId: number): Promise<void> {
 }
 
 // Refresh calendar data (called when external changes happen like Plex scrobbles)
-export async function refreshCalendar(): Promise<void> {
+export async function refreshCalendar(): Promise<boolean> {
   if (currentCalendarRange) {
     logger.debug("[Calendar] Refreshing due to external change");
-    await loadEpisodesForRange(currentCalendarRange.start, currentCalendarRange.end);
+    return loadEpisodesForRange(currentCalendarRange.start, currentCalendarRange.end);
   }
+  return true;
 }
 
 // Day detail functions

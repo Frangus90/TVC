@@ -8,11 +8,15 @@ export interface DuplicatePair {
   show1_episode_count: number;
   show1_watched_count: number;
   show1_poster_url: string | null;
+  show1_first_aired: string | null;
+  show1_tmdb_id: number | null;
   show2_id: number;
   show2_name: string;
   show2_episode_count: number;
   show2_watched_count: number;
   show2_poster_url: string | null;
+  show2_first_aired: string | null;
+  show2_tmdb_id: number | null;
   similarity_reason: string;
 }
 
@@ -45,9 +49,14 @@ export interface CleanupEpisodePreview {
   name: string | null;
 }
 
+export type DataTab = "overview" | "sync" | "backups" | "archive" | "maintenance";
+export type MaintenanceSection = "duplicates" | "cleanup" | "unmapped";
+export type DataTarget = DataTab | MaintenanceSection;
+
 // State
 let modalOpen = $state(false);
-let activeTab = $state<"overview" | "sync" | "duplicates" | "cleanup" | "archive">("overview");
+let activeTab = $state<DataTab>("overview");
+let maintenanceSection = $state<MaintenanceSection>("duplicates");
 let statsLoading = $state(false);
 let duplicateLoading = $state(false);
 let writing = $state(false);
@@ -57,6 +66,7 @@ let previewRequest = 0;
 let previewLoading = $state(false);
 let previewError = $state<string | null>(null);
 let error = $state<string | null>(null);
+let summaryError = $state<string | null>(null);
 
 // Data states
 let databaseStats = $state<DatabaseStats | null>(null);
@@ -72,11 +82,14 @@ export function isModalOpen() {
 export function getActiveTab() {
   return activeTab;
 }
+export function getMaintenanceSection() { return maintenanceSection; }
+export function isDataWriting() { return writing; }
+function readSection() { return activeTab === "maintenance" ? maintenanceSection : activeTab; }
 
 export function isLoading() {
-  return writing || (activeTab === "overview" && statsLoading)
-    || (activeTab === "cleanup" && (statsLoading || previewLoading))
-    || (activeTab === "duplicates" && duplicateLoading);
+  return writing || (readSection() === "overview" && statsLoading)
+    || (readSection() === "cleanup" && (statsLoading || previewLoading))
+    || (readSection() === "duplicates" && duplicateLoading);
 }
 
 export function getError() {
@@ -86,6 +99,7 @@ export function getError() {
 export function getDatabaseStats() {
   return databaseStats;
 }
+export function getDatabaseSummaryError() { return summaryError; }
 
 export function getDuplicates() {
   return duplicates;
@@ -116,24 +130,28 @@ export function closeDataManagement() {
   error = null;
 }
 
-export function setActiveTab(tab: "overview" | "sync" | "duplicates" | "cleanup" | "archive") {
-  if (tab !== activeTab) {
+export function setActiveTab(target: DataTarget) {
+  const nextSection = target === "duplicates" || target === "cleanup" || target === "unmapped" ? target : maintenanceSection;
+  const tab: DataTab = target === "duplicates" || target === "cleanup" || target === "unmapped" ? "maintenance" : target;
+  const section = tab === "maintenance" ? nextSection : tab;
+  if (tab !== activeTab || nextSection !== maintenanceSection) {
     error = null;
     if (!writing) {
-      if (tab !== "overview" && tab !== "cleanup") { statsRequest++; statsLoading = false; }
-      if (tab !== "duplicates") { duplicateRequest++; duplicateLoading = false; }
-      if (tab !== "cleanup") { previewRequest++; previewLoading = false; }
+      if (section !== "overview" && section !== "cleanup") { statsRequest++; statsLoading = false; }
+      if (section !== "duplicates") { duplicateRequest++; duplicateLoading = false; }
+      if (section !== "cleanup") { previewRequest++; previewLoading = false; }
     }
   }
   activeTab = tab;
+  maintenanceSection = nextSection;
 
   // Load data for the tab
-  if (tab === "overview") {
+  if (section === "overview") {
     loadDatabaseStats();
-  } else if (tab === "cleanup") {
+  } else if (section === "cleanup") {
     loadDatabaseStats();
     loadCleanupPreviews();
-  } else if (tab === "duplicates") {
+  } else if (section === "duplicates") {
     loadDuplicates();
   }
 }
@@ -142,7 +160,8 @@ export function setActiveTab(tab: "overview" | "sync" | "duplicates" | "cleanup"
 export async function loadDatabaseStats(): Promise<boolean> {
   const request = ++statsRequest;
   statsLoading = true;
-  if (activeTab === "overview" || activeTab === "cleanup" || writing) error = null;
+  summaryError = null;
+  if (readSection() === "overview" || readSection() === "cleanup" || writing) error = null;
   try {
     const result = await invoke<DatabaseStats>("get_database_stats");
     if (request !== statsRequest) return false;
@@ -151,7 +170,8 @@ export async function loadDatabaseStats(): Promise<boolean> {
   } catch (cause) {
     if (request === statsRequest) {
       databaseStats = null;
-      error = `Could not load database summary: ${String(cause)}`;
+      summaryError = `Could not load database summary: ${String(cause)}`;
+      if (readSection() === "overview" || readSection() === "cleanup" || writing) error = summaryError;
       logger.error("Failed to load database stats", cause);
     }
     return false;

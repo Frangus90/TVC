@@ -10,11 +10,15 @@ pub struct DuplicatePair {
     pub show1_episode_count: i64,
     pub show1_watched_count: i64,
     pub show1_poster_url: Option<String>,
+    pub show1_first_aired: Option<String>,
+    pub show1_tmdb_id: Option<i64>,
     pub show2_id: i64,
     pub show2_name: String,
     pub show2_episode_count: i64,
     pub show2_watched_count: i64,
     pub show2_poster_url: Option<String>,
+    pub show2_first_aired: Option<String>,
+    pub show2_tmdb_id: Option<i64>,
     pub similarity_reason: String,
 }
 
@@ -33,16 +37,23 @@ pub async fn find_duplicates(app: AppHandle) -> Result<Vec<DuplicatePair>, Strin
         .await
         .map_err(|e| format!("Database error: {}", e))?;
 
+    find_in_pool(&pool).await
+}
+
+pub(crate) async fn find_in_pool(pool: &sqlx::SqlitePool) -> Result<Vec<DuplicatePair>, String> {
     let mut duplicates = Vec::new();
 
     // Find shows with exact same name (case-insensitive)
     let name_dups = sqlx::query(
-        r#"SELECT s1.id as id1, s1.name as name1, s1.poster_url as poster1,
-                  s2.id as id2, s2.name as name2, s2.poster_url as poster2
+        r#"SELECT s1.id as id1, s1.name as name1, s1.poster_url as poster1, s1.first_aired as first_aired1,
+                  CASE WHEN s1.id > 0 AND COALESCE(s1.unmigrated, 0) = 0 THEN s1.id ELSE NULL END as tmdb1,
+                  s2.id as id2, s2.name as name2, s2.poster_url as poster2, s2.first_aired as first_aired2,
+                  CASE WHEN s2.id > 0 AND COALESCE(s2.unmigrated, 0) = 0 THEN s2.id ELSE NULL END as tmdb2
            FROM shows s1
-           JOIN shows s2 ON LOWER(s1.name) = LOWER(s2.name) AND s1.id < s2.id"#,
+           JOIN shows s2 ON LOWER(s1.name) = LOWER(s2.name) AND s1.id < s2.id
+           ORDER BY LOWER(s1.name), s1.id, s2.id"#,
     )
-    .fetch_all(&pool)
+    .fetch_all(pool)
     .await
     .map_err(|e| format!("Failed to find name duplicates: {}", e))?;
 
@@ -50,8 +61,8 @@ pub async fn find_duplicates(app: AppHandle) -> Result<Vec<DuplicatePair>, Strin
         let show1_id: i64 = row.get("id1");
         let show2_id: i64 = row.get("id2");
 
-        let (ep1_count, watched1) = get_episode_counts(&pool, show1_id).await?;
-        let (ep2_count, watched2) = get_episode_counts(&pool, show2_id).await?;
+        let (ep1_count, watched1) = get_episode_counts(pool, show1_id).await?;
+        let (ep2_count, watched2) = get_episode_counts(pool, show2_id).await?;
 
         duplicates.push(DuplicatePair {
             show1_id,
@@ -59,11 +70,15 @@ pub async fn find_duplicates(app: AppHandle) -> Result<Vec<DuplicatePair>, Strin
             show1_episode_count: ep1_count,
             show1_watched_count: watched1,
             show1_poster_url: row.get("poster1"),
+            show1_first_aired: row.get("first_aired1"),
+            show1_tmdb_id: row.get("tmdb1"),
             show2_id,
             show2_name: row.get("name2"),
             show2_episode_count: ep2_count,
             show2_watched_count: watched2,
             show2_poster_url: row.get("poster2"),
+            show2_first_aired: row.get("first_aired2"),
+            show2_tmdb_id: row.get("tmdb2"),
             similarity_reason: "Same name".to_string(),
         });
     }
@@ -87,6 +102,61 @@ async fn get_episode_counts(pool: &sqlx::SqlitePool, show_id: i64) -> Result<(i6
     Ok((total, watched))
 }
 
+#[cfg(test)]
+mod metadata_tests {
+    use super::find_in_pool;
+    use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
+
+    async fn fixture() -> SqlitePool {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::raw_sql("CREATE TABLE shows(id INTEGER PRIMARY KEY,name TEXT,poster_url TEXT,first_aired TEXT,unmigrated INTEGER);
+            CREATE TABLE episodes(id INTEGER PRIMARY KEY,show_id INTEGER,watched INTEGER);
+            INSERT INTO shows VALUES(10,'Same title',NULL,'2001-01-01',0),(20,'same title',NULL,'2025-01-01',0),
+                (-1,'Legacy pair',NULL,NULL,0),(30,'legacy pair',NULL,'1990-01-01',1);
+            INSERT INTO episodes VALUES(1,10,1),(2,10,0),(3,20,1);").execute(&pool).await.unwrap();
+        pool
+    }
+
+    #[tokio::test]
+    async fn same_named_shows_include_distinct_dates_tmdb_ids_and_existing_counts() {
+        let pool = fixture().await;
+        let pairs = find_in_pool(&pool).await.unwrap();
+        assert_eq!(pairs.len(), 2);
+        let pair = pairs.iter().find(|pair| pair.show1_id == 10).unwrap();
+        assert_eq!(pair.show1_first_aired.as_deref(), Some("2001-01-01"));
+        assert_eq!(pair.show2_first_aired.as_deref(), Some("2025-01-01"));
+        assert_eq!(
+            (pair.show1_tmdb_id, pair.show2_tmdb_id),
+            (Some(10), Some(20))
+        );
+        assert_eq!((pair.show1_episode_count, pair.show1_watched_count), (2, 1));
+        assert_eq!((pair.show2_episode_count, pair.show2_watched_count), (1, 1));
+        assert_eq!(pair.similarity_reason, "Same name");
+        let json = serde_json::to_value(pair).unwrap();
+        assert_eq!(json["show1_first_aired"], "2001-01-01");
+        assert_eq!(json["show2_tmdb_id"], 20);
+    }
+
+    #[tokio::test]
+    async fn manual_and_unresolved_legacy_entries_never_publish_tmdb_links() {
+        let pool = fixture().await;
+        let pairs = find_in_pool(&pool).await.unwrap();
+        let pair = pairs.iter().find(|pair| pair.show1_id == -1).unwrap();
+        assert_eq!((pair.show1_tmdb_id, pair.show2_tmdb_id), (None, None));
+        assert_eq!(pair.show1_first_aired, None);
+        assert_eq!(pair.show2_first_aired.as_deref(), Some("1990-01-01"));
+        assert_eq!((pair.show1_episode_count, pair.show2_episode_count), (0, 0));
+        assert_eq!(
+            serde_json::to_value(pair).unwrap()["show2_tmdb_id"],
+            serde_json::Value::Null
+        );
+    }
+}
+
 /// Merge two duplicate shows - keeps the show with keep_id, deletes merge_id
 #[tauri::command]
 pub async fn merge_duplicates(
@@ -94,6 +164,7 @@ pub async fn merge_duplicates(
     keep_id: i64,
     merge_id: i64,
 ) -> Result<MergeResult, String> {
+    let _guard = crate::library_sync::lock_for_maintenance()?;
     let pool = connection::get_pool(&app)
         .await
         .map_err(|e| format!("Database error: {}", e))?;

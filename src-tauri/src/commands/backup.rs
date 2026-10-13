@@ -12,9 +12,16 @@ use crate::db::connection;
 use crate::tmdb;
 
 mod personal_data;
+mod portable_settings;
 use personal_data::PersonalData;
+use portable_settings::PortableSettings;
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+pub(crate) async fn test_database() -> sqlx::SqlitePool {
+    tests::database().await
+}
 
 /// Export data structure
 #[derive(Debug, Serialize, Deserialize)]
@@ -29,6 +36,8 @@ pub struct BackupData {
     pub tiers: Option<Vec<TierBackup>>,
     /// Required for v3.0; absent from older library-only backups.
     pub personal_data: Option<PersonalData>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub portable_settings: Option<PortableSettings>,
 }
 
 fn default_version() -> String {
@@ -141,6 +150,10 @@ pub struct ImportResult {
     pub episodes_orphaned: u32,
     pub predictions_imported: u32,
     pub warnings: Vec<String>,
+    #[serde(default)]
+    pub settings_restored: bool,
+    #[serde(default)]
+    pub restart_required: bool,
 }
 
 fn unique_ids(kind: &str, values: impl Iterator<Item = i64>) -> Result<HashSet<i64>, String> {
@@ -154,16 +167,21 @@ fn unique_ids(kind: &str, values: impl Iterator<Item = i64>) -> Result<HashSet<i
 }
 
 impl BackupData {
-    fn validate(&self) -> Result<(), String> {
+    pub(crate) fn validate(&self) -> Result<(), String> {
+        if self.version != "4.0" && self.portable_settings.is_some() {
+            return Err("Portable settings require backup version 4.0".into());
+        }
         match self.version.as_str() {
             "1.0" | "2.0" if self.personal_data.is_none() => {}
             "3.0" if self.personal_data.is_some() => {}
+            "4.0" if self.personal_data.is_some() && self.portable_settings.is_some() => {}
+            "4.0" => return Err("Backup v4.0 is missing personal data or portable settings".into()),
             "3.0" => return Err("Backup v3.0 is missing its personal data section".into()),
             "1.0" | "2.0" => return Err("Personal data requires backup version 3.0".into()),
             other => return Err(format!("Unsupported backup version: {other}")),
         }
-        if self.version == "3.0" && self.tiers.is_none() {
-            return Err("Backup v3.0 is missing its tiers section".into());
+        if matches!(self.version.as_str(), "3.0" | "4.0") && self.tiers.is_none() {
+            return Err("Backup is missing its tiers section".into());
         }
         let shows = unique_ids("show", self.shows.iter().map(|r| r.id))?;
         unique_ids("episode", self.episodes.iter().map(|r| r.id))?;
@@ -189,6 +207,9 @@ impl BackupData {
         }
         if let Some(personal) = &self.personal_data {
             personal.validate()?;
+        }
+        if let Some(settings) = &self.portable_settings {
+            settings.validate()?;
         }
         Ok(())
     }
@@ -233,6 +254,13 @@ pub async fn export_database(app: AppHandle) -> Result<BackupData, String> {
 }
 
 async fn export_from_pool(pool: &sqlx::SqlitePool) -> Result<BackupData, String> {
+    export_with_settings(pool, false).await
+}
+
+pub(crate) async fn export_with_settings(
+    pool: &sqlx::SqlitePool,
+    include_settings: bool,
+) -> Result<BackupData, String> {
     // A read transaction gives every table the same snapshot, even during sync.
     let mut tx = pool
         .begin()
@@ -382,18 +410,24 @@ async fn export_from_pool(pool: &sqlx::SqlitePool) -> Result<BackupData, String>
     let personal_data = PersonalData::export(&mut tx)
         .await
         .map_err(|e| format!("Failed to export predictions and history: {e}"))?;
+    let portable_settings = if include_settings {
+        Some(PortableSettings::export(&mut tx).await?)
+    } else {
+        None
+    };
     tx.commit()
         .await
         .map_err(|e| format!("Failed to finish backup: {e}"))?;
 
     Ok(BackupData {
-        version: "3.0".to_string(),
+        version: if include_settings { "4.0" } else { "3.0" }.to_string(),
         exported_at: chrono::Utc::now().to_rfc3339(),
         shows,
         episodes,
         movies,
         tiers: Some(tiers),
         personal_data: Some(personal_data),
+        portable_settings,
     })
 }
 
@@ -631,6 +665,8 @@ pub async fn import_database(app: AppHandle, data: BackupData) -> Result<ImportR
             .as_ref()
             .map_or(0, |p| p.predictions.len() as u32),
         warnings: errors,
+        settings_restored: data.portable_settings.is_some(),
+        restart_required: true,
     })
 }
 
@@ -900,6 +936,9 @@ async fn replace_from_pool(
             .await
             .map_err(|e| format!("Failed to restore predictions and history: {e}"))?;
     }
+    if let Some(settings) = &data.portable_settings {
+        settings.restore(&mut tx).await?;
+    }
 
     let foreign_key_errors = sqlx::query("PRAGMA foreign_key_check")
         .fetch_all(&mut *tx)
@@ -911,8 +950,21 @@ async fn replace_from_pool(
 
     // Reports belong to the old library. Keep schedule preferences, but discard
     // their old title IDs and start the next interval from this restore.
-    sqlx::query("DELETE FROM settings WHERE key IN ('library_sync_shows_report', 'library_sync_movies_report', 'library_sync_shows_last_success', 'library_sync_movies_last_success')")
-        .execute(&mut *tx).await.map_err(|e| format!("Failed to clear stale sync reports: {e}"))?;
+    for kind in ["shows", "movies"] {
+        for suffix in [
+            "report",
+            "last_success",
+            "last_full_report",
+            "history",
+            "last_stopped_at",
+        ] {
+            sqlx::query("DELETE FROM settings WHERE key = ?")
+                .bind(format!("library_sync_{kind}_{suffix}"))
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| format!("Failed to clear stale sync reports: {e}"))?;
+        }
+    }
     for kind in ["shows", "movies"] {
         sqlx::query("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
             .bind(format!("library_sync_{kind}_last_full_attempt"))
@@ -937,6 +989,8 @@ async fn replace_from_pool(
                 .as_ref()
                 .map_or(0, |p| p.predictions.len() as u32),
             warnings: Vec::new(),
+            settings_restored: data.portable_settings.is_some(),
+            restart_required: true,
         },
         to_refresh,
         per_show,

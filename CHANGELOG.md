@@ -31,6 +31,12 @@ All notable changes to TVC will be documented in this file.
 
 ### Data Management
 
+- Data is organised into **Overview**, **Sync**, **Backups**, **Archive**, and **Maintenance**, with shorter headers and clearer status summaries.
+- Sync shows skipped titles and why they were skipped, keeps your last five runs, and preserves the full-run results when you retry failures. You can stop after the current title finishes.
+- Create or restore backups from their own tab. Optional automatic local backups run daily, weekly or monthly and keep five recent backups by default; they start off disabled.
+- Backups can include your appearance, notification, calendar and racing preferences for moving to another laptop. Connection credentials and computer-specific setup stay excluded. Older backups still work.
+- Archive supports title/year search, TV/movie filters, opening details, and clearer restore progress. Duplicate comparisons show years and TMDB links before you choose which entry to keep.
+- Maintenance groups duplicate checks, cleanup and show matching. Database size, optimisation and development tools stay under Advanced maintenance.
 - Cleanup now previews and confirms removal, and keeps episode watch history, schedules, ratings, tags, and unresolved titles protected.
 - Fixed outdated show-matching results and overlapping matching/deletion actions. Search failures now show an explanation and a retry option.
 - Duplicate merges refresh library search and navigation counts, with clearer feedback if the display cannot reload.

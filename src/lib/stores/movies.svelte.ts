@@ -303,7 +303,7 @@ export async function removeMovie(movieId: number): Promise<void> {
 export async function loadMoviesForRange(
   startDate: string,
   endDate: string
-): Promise<void> {
+): Promise<boolean> {
   const request = ++calendarRequest;
   currentCalendarRange = { start: startDate, end: endDate };
   try {
@@ -311,12 +311,14 @@ export async function loadMoviesForRange(
       startDate,
       endDate,
     });
-    if (request !== calendarRequest) return;
+    if (request !== calendarRequest) return true;
     calendarMovies = movies;
+    return true;
   } catch (error) {
-    if (request !== calendarRequest) return;
+    if (request !== calendarRequest) return true;
     logger.error("Failed to load movies for range:", error);
     showError("Failed to load movies for range:" + ": " + String(error));
+    return false;
   }
 }
 
@@ -403,14 +405,25 @@ export async function archiveMovie(movieId: number): Promise<void> {
   }
 }
 
-export async function unarchiveMovie(movieId: number): Promise<void> {
+export async function unarchiveMovie(movieId: number, onFailure?: (message: string) => void): Promise<boolean> {
+  let restored = false;
   try {
     await invoke("unarchive_movie", { id: movieId });
-    await loadTrackedMovies();
-    await loadArchivedMovies();
+    restored = true;
+    const { loadTierListMovies } = await import("./tiers.svelte");
+    const refreshed = await Promise.all([
+      loadArchivedMovies(), loadTierListMovies(), refreshMoviesCalendar(),
+    ]);
+    if (refreshed.some(result => result === false)) throw new Error("Reload Archive to refresh the library and calendar.");
+    return true;
   } catch (error) {
-    logger.error("Failed to unarchive movie:", error);
-    showError("Failed to unarchive movie:" + ": " + String(error));
+    const message = restored
+      ? `The movie was restored, but some views could not refresh. ${String(error)}`
+      : `Could not restore the movie: ${String(error)}`;
+    logger.error(message, error);
+    showError(message);
+    onFailure?.(message);
+    return false;
   }
 }
 
@@ -520,13 +533,15 @@ export async function fetchMovieTrailer(movieId: number): Promise<void> {
 }
 
 // Refresh movies calendar data (called when external changes happen like Plex scrobbles)
-export async function refreshMoviesCalendar(): Promise<void> {
+export async function refreshMoviesCalendar(): Promise<boolean> {
+  let calendarOk = true;
   if (currentCalendarRange) {
     logger.debug("[Movies] Refreshing due to external change");
-    await loadMoviesForRange(currentCalendarRange.start, currentCalendarRange.end);
+    calendarOk = await loadMoviesForRange(currentCalendarRange.start, currentCalendarRange.end);
   }
   // Also reload tracked movies to update sidebar
-  await loadTrackedMovies();
+  const libraryOk = await loadTrackedMovies();
+  return calendarOk && libraryOk;
 }
 
 // Helper to get movies for a specific date (only scheduled movies)

@@ -20,6 +20,9 @@ export interface SyncReport {
   current_title: string | null;
   error: string | null;
   release_country?: string | null;
+  stopped?: boolean;
+  skipped_titles?: { id: number; title: string; reason: "manual_entry" | "needs_matching" }[];
+  processed?: number | null;
 }
 
 export function allLibrariesHaveSynced(statuses: LibrarySyncStatus[]): boolean {
@@ -36,18 +39,22 @@ export interface LibrarySyncStatus {
   running: boolean;
   interrupted: boolean;
   report: SyncReport | null;
+  last_full_report?: SyncReport | null;
+  stop_requested?: boolean;
 }
 
 async function refreshLibrary(kind: LibraryKind) {
   if (kind === "shows") {
     const detailId = isShowDetailOpen() ? getCurrentShow()?.id : undefined;
-    await Promise.all([loadTrackedShows(), loadArchivedShows(), loadTierListShows(), refreshCalendar()]);
+    const results = await Promise.all([loadTrackedShows(), loadArchivedShows(), loadTierListShows(), refreshCalendar()]);
+    if (results.some(result => result === false)) throw new Error("Some TV show views could not reload after syncing. Reopen the page to try again.");
     if (detailId !== undefined && isShowDetailOpen() && getCurrentShow()?.id === detailId) {
       await openShowDetail(detailId);
     }
   } else {
     const detailId = isMovieDetailOpen() ? getCurrentMovie()?.id : undefined;
-    await Promise.all([loadTrackedMovies(), loadArchivedMovies(), loadTierListMovies(), refreshMoviesCalendar()]);
+    const results = await Promise.all([loadTrackedMovies(), loadArchivedMovies(), loadTierListMovies(), refreshMoviesCalendar()]);
+    if (results.some(result => result === false)) throw new Error("Some movie views could not reload after syncing. Reopen the page to try again.");
     if (detailId !== undefined && isMovieDetailOpen() && getCurrentMovie()?.id === detailId) {
       await openMovieDetail(detailId);
     }

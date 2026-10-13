@@ -1,7 +1,7 @@
 use super::*;
 use serde_json::{json, Value};
 
-async fn database() -> sqlx::SqlitePool {
+pub(super) async fn database() -> sqlx::SqlitePool {
     let pool = sqlx::sqlite::SqlitePoolOptions::new()
         .max_connections(1)
         .connect("sqlite::memory:")
@@ -92,12 +92,35 @@ async fn full_backup_round_trip_preserves_personal_state_and_source_snapshots() 
     .execute(&target)
     .await
     .unwrap();
+    for kind in ["shows", "movies"] {
+        for suffix in ["last_full_report", "history", "last_stopped_at"] {
+            sqlx::query(
+                "INSERT OR REPLACE INTO settings(key,value) VALUES (?, 'old-library-state')",
+            )
+            .bind(format!("library_sync_{kind}_{suffix}"))
+            .execute(&target)
+            .await
+            .unwrap();
+        }
+    }
     let restored = replace_from_pool(&target, &decoded, &HashMap::new())
         .await
         .unwrap();
     assert_eq!(restored.result.shows_imported, 2);
     assert_eq!(restored.result.episodes_imported, 2);
     assert_eq!(restored.result.movies_imported, 1);
+    for kind in ["shows", "movies"] {
+        for suffix in ["last_full_report", "history", "last_stopped_at"] {
+            assert!(
+                sqlx::query_scalar::<_, String>("SELECT value FROM settings WHERE key=?")
+                    .bind(format!("library_sync_{kind}_{suffix}"))
+                    .fetch_optional(&target)
+                    .await
+                    .unwrap()
+                    .is_none()
+            );
+        }
+    }
     assert_eq!(restored.result.predictions_imported, 2);
     assert_eq!(snapshot(&target).await, before);
     let settings: Vec<(String, String)> = sqlx::query_as("SELECT key, value FROM settings")
@@ -266,4 +289,203 @@ fn restore_and_bulk_sync_share_the_same_exclusion_lock() {
     assert!(crate::library_sync::lock_for_maintenance().is_err());
     drop(maintenance);
     assert!(crate::library_sync::lock_for_restore().is_ok());
+}
+
+#[tokio::test]
+async fn portable_backup_transfers_only_allowlisted_preferences() {
+    let source = database().await;
+    seed(&source).await;
+    let mut general = crate::commands::preferences::GeneralPreferences::default();
+    general.release_country = "NO".into();
+    general.calendar_view = "agenda".into();
+    sqlx::query("INSERT OR REPLACE INTO settings(key,value) VALUES ('general_preferences',?)")
+        .bind(serde_json::to_string(&general).unwrap())
+        .execute(&source)
+        .await
+        .unwrap();
+    sqlx::raw_sql("INSERT OR REPLACE INTO settings(key,value) VALUES ('theme_accentColor','#abc'),('theme_fontSize','1.2'),('theme_posterSize','large'),('tier_preset','custom'),('notification_quiet_hours_enabled','true'),('notification_quiet_hours_start','23:00'),('notification_quiet_hours_end','07:00'),('tmdb_api_key','secret-not-portable'),('local_backup_preferences','private-folder'),('library_sync_movies_frequency','\"daily\"');
+        UPDATE racing_series SET enabled=1,notify_minutes=60,custom_color='#123456',custom_ics_url='https://private.invalid/secret-feed' WHERE slug='f1';
+        UPDATE notification_settings SET sound_volume=25;"
+    ).execute(&source).await.unwrap();
+    let backup = export_with_settings(&source, true).await.unwrap();
+    assert_eq!(backup.version, "4.0");
+    backup.validate().unwrap();
+    let encoded = serde_json::to_string(&backup).unwrap();
+    for excluded in [
+        "secret-not-portable",
+        "private-folder",
+        "secret-feed",
+        "library_sync_movies_frequency",
+    ] {
+        assert!(!encoded.contains(excluded));
+    }
+    let decoded: BackupData = serde_json::from_str(&encoded).unwrap();
+    let target = database().await;
+    sqlx::raw_sql("INSERT OR REPLACE INTO settings(key,value) VALUES ('tmdb_api_key','keep-target-secret'),('local_backup_preferences','keep-target-folder'),('library_sync_movies_frequency','\"weekly\"'); UPDATE racing_series SET custom_ics_url='https://target.invalid/feed' WHERE slug='f1';")
+        .execute(&target).await.unwrap();
+    let result = replace_from_pool(&target, &decoded, &HashMap::new())
+        .await
+        .unwrap()
+        .result;
+    assert!(result.settings_restored);
+    assert!(result.restart_required);
+    let restored = export_with_settings(&target, true).await.unwrap();
+    assert_eq!(
+        serde_json::to_value(&restored.portable_settings).unwrap(),
+        serde_json::to_value(&backup.portable_settings).unwrap()
+    );
+    for (key, expected) in [
+        ("tmdb_api_key", "keep-target-secret"),
+        ("local_backup_preferences", "keep-target-folder"),
+        ("library_sync_movies_frequency", "\"weekly\""),
+    ] {
+        assert_eq!(
+            sqlx::query_scalar::<_, String>("SELECT value FROM settings WHERE key=?")
+                .bind(key)
+                .fetch_one(&target)
+                .await
+                .unwrap(),
+            expected
+        );
+    }
+    assert_eq!(
+        sqlx::query_scalar::<_, String>("SELECT custom_ics_url FROM racing_series WHERE slug='f1'")
+            .fetch_one(&target)
+            .await
+            .unwrap(),
+        "https://target.invalid/feed"
+    );
+}
+
+#[tokio::test]
+async fn portable_preferences_validate_before_writes_and_roll_back_with_library() {
+    let pool = database().await;
+    seed(&pool).await;
+    let mut backup = export_with_settings(&pool, true).await.unwrap();
+    let before_library = snapshot(&pool).await;
+    let before_settings = serde_json::to_value(&backup.portable_settings).unwrap();
+    backup.shows[0].name = "Must roll back".into();
+    let settings = backup.portable_settings.as_mut().unwrap();
+    settings.appearance["accentColor"] = json!("#123456");
+    settings.general["api_key"] = json!("forbidden");
+    assert!(replace_from_pool(&pool, &backup, &HashMap::new())
+        .await
+        .is_err());
+    assert_eq!(snapshot(&pool).await, before_library);
+    backup
+        .portable_settings
+        .as_mut()
+        .unwrap()
+        .general
+        .as_object_mut()
+        .unwrap()
+        .remove("api_key");
+    sqlx::raw_sql("CREATE TRIGGER fail_preferences BEFORE UPDATE ON notification_settings BEGIN SELECT RAISE(ABORT,'injected preference failure'); END;")
+        .execute(&pool).await.unwrap();
+    assert!(replace_from_pool(&pool, &backup, &HashMap::new())
+        .await
+        .is_err());
+    assert_eq!(snapshot(&pool).await, before_library);
+    assert_eq!(
+        serde_json::to_value(
+            export_with_settings(&pool, true)
+                .await
+                .unwrap()
+                .portable_settings
+        )
+        .unwrap(),
+        before_settings
+    );
+}
+
+#[tokio::test]
+async fn portable_schema_rejects_unknown_groups_invalid_values_and_old_versions() {
+    let pool = database().await;
+    let backup = export_with_settings(&pool, true).await.unwrap();
+    let encoded = serde_json::to_value(backup).unwrap();
+    let mut unknown = encoded.clone();
+    unknown["portable_settings"]["credentials"] = json!({"token":"bad"});
+    assert!(serde_json::from_value::<BackupData>(unknown).is_err());
+    for (group, key, invalid) in [
+        ("appearance", "accentColor", json!("red")),
+        ("appearance", "fontSize", json!(10)),
+        ("general", "close_action", json!("execute")),
+        ("notifications", "quiet_hours_start", json!("10 PM")),
+        ("notifications", "sound_volume", json!(999)),
+        ("notifications", "sound_enabled", json!("true")),
+    ] {
+        let mut value = encoded.clone();
+        value["portable_settings"][group][key] = invalid;
+        assert!(
+            serde_json::from_value::<BackupData>(value)
+                .unwrap()
+                .validate()
+                .is_err(),
+            "{group}.{key}"
+        );
+    }
+    for version in ["1.0", "2.0", "3.0"] {
+        let mut value = encoded.clone();
+        value["version"] = json!(version);
+        assert!(serde_json::from_value::<BackupData>(value)
+            .unwrap()
+            .validate()
+            .is_err());
+    }
+    let mut missing = encoded;
+    missing.as_object_mut().unwrap().remove("portable_settings");
+    assert!(serde_json::from_value::<BackupData>(missing)
+        .unwrap()
+        .validate()
+        .is_err());
+}
+
+#[tokio::test]
+async fn portable_empty_racing_scope_disables_target_series_without_touching_feeds() {
+    let pool = database().await;
+    let mut backup = export_with_settings(&pool, true).await.unwrap();
+    backup
+        .portable_settings
+        .as_mut()
+        .unwrap()
+        .racing
+        .series
+        .clear();
+    sqlx::raw_sql("UPDATE racing_series SET enabled=1,custom_ics_url='https://keep.invalid/feed' WHERE slug='f1'").execute(&pool).await.unwrap();
+    replace_from_pool(&pool, &backup, &HashMap::new())
+        .await
+        .unwrap();
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM racing_series WHERE enabled=1")
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        sqlx::query_scalar::<_, String>("SELECT custom_ics_url FROM racing_series WHERE slug='f1'")
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+        "https://keep.invalid/feed"
+    );
+}
+
+#[tokio::test]
+async fn missing_portable_setting_targets_never_commit_partial_library_restores() {
+    for table in ["notification_settings", "racing_config"] {
+        let pool = database().await;
+        seed(&pool).await;
+        let mut backup = export_with_settings(&pool, true).await.unwrap();
+        backup.shows[0].name = "Must not commit".into();
+        sqlx::query(&format!("DELETE FROM {table} WHERE id=1"))
+            .execute(&pool)
+            .await
+            .unwrap();
+        let before = snapshot(&pool).await;
+        assert!(replace_from_pool(&pool, &backup, &HashMap::new())
+            .await
+            .is_err());
+        assert_eq!(snapshot(&pool).await, before);
+    }
 }

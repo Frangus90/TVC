@@ -112,16 +112,20 @@ Do not use locale-dependent `toLocaleString()` or `toLocaleDateString()` for dat
 
 ### Backup and Restore
 
-Data Management → Export saves a versioned JSON backup. Format **3.0** includes:
+Data → Backups → **Create backup** saves a versioned JSON backup. Format **3.0** includes:
 
 - Shows, episodes, and movies, including watch dates, custom schedules, ratings, notes, tags, archived status, and tier placement/order.
 - Custom tiers.
 - Awards, categories, nominees, results, and saved predictions, including original titles, source keys, Wikipedia page names, and pick timestamps.
 - Plex title corrections, scrobble logs, and change history (including historical references to removed titles).
 
-Exports read all included tables from one database snapshot. Import shows counts and scope before confirmation, validates supported versions and relationships, and rolls back the replacement if a record fails. Import cannot run alongside a bulk TMDB sync. Restart TVC after a successful import to reload all restored state.
+Exports read all included tables from one database snapshot. **Restore backup** shows counts and scope before confirmation, validates supported versions and relationships, and rolls back the replacement if a record fails. Restore cannot run alongside a bulk TMDB sync. After a successful restore, use **Restart now** to reload the data; navigation pauses until then so cached preferences cannot overwrite restored settings.
 
-**Excluded:** app preferences, integration configuration/credentials, Sonarr/Radarr import links, racing data/preferences, notifications, and cached cast/crew. Existing preferences, credentials, racing data, and notifications stay unchanged on import. Cached cast/crew and import links are cleared; metadata refresh and integration import rebuild them. Sync reports are cleared, and enabled sync schedules start their next interval from the restore time.
+Select **Include portable settings** to create format **4.0**, adding Appearance, General/calendar preferences, Notifications/quiet hours, the tier preset, and Racing series choices, colours and reminders. These preferences restore in the same transaction as the library. Racing choices replace the supplied selections; existing feed URLs and downloaded events stay in place.
+
+**Excluded:** integration configuration/credentials, Windows startup registration, backup folders/schedules, TMDB sync schedules, Sonarr/Radarr import links, Racing feed URLs/events, notification history, and cached cast/crew. Formats 1–3 leave current preferences unchanged. Cached cast/crew and import links are cleared; metadata refresh and integration import rebuild them. Sync reports/history are cleared, and enabled sync schedules start their next interval from the restore time.
+
+Automatic local backups are **Off** by default. Choose a folder and a daily, weekly or monthly interval under Backups. They run while TVC is open or in the tray and catch up after reopening. Five recent managed files are kept by default; retention runs only after a new backup succeeds and preserves manual backups, unrelated files and other app profiles. Failed attempts wait until the next interval; **Back up now** retries sooner. Development backups have their own filename prefix and profile marker.
 
 Older **1.0** (TVDB, including files without a version) and **2.0** (TMDB) library backups remain supported. They keep existing awards/predictions, but cannot restore Plex title corrections, scrobble logs, or change history; import explicitly warns that these library-related records will be cleared. Export a new backup before replacing a library if you need to preserve them. Legacy TVDB imports still perform provider remapping and a separate metadata refresh; unmatched shows and episodes are reported.
 

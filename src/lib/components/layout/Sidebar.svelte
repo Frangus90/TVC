@@ -17,9 +17,10 @@
   let syncStatus = $state<LibrarySyncStatus[]>([]);
   let syncError = $state(false);
   const failed = $derived(syncStatus.reduce((sum, library) => sum + (library.report?.failures.length ?? 0), 0));
-  const needsAttention = $derived(failed > 0 || syncStatus.some(library => library.interrupted || library.report?.error));
+  const stopped = $derived(syncStatus.some(library => library.report?.stopped || library.last_full_report?.stopped));
+  const needsAttention = $derived(failed > 0 || syncStatus.some(library => library.interrupted || library.report?.error || library.report?.stopped || library.last_full_report?.stopped || library.last_full_report?.finished_at === null));
   const hasSynced = $derived(allLibrariesHaveSynced(syncStatus));
-  const syncLabel = $derived(syncError ? "Sync status unavailable" : needsAttention ? (failed ? `${failed} titles need syncing` : "Sync needs attention") : hasSynced ? "Library synced" : "Library sync");
+  const syncLabel = $derived(syncError ? "Sync status unavailable" : needsAttention ? (failed ? `${failed} title${failed === 1 ? " needs" : "s need"} syncing` : stopped ? "Sync stopped" : "Sync needs attention") : hasSynced ? "Library synced" : "Library sync");
 
   onMount(() => {
     let disposed = false;

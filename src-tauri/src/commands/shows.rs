@@ -9,6 +9,7 @@ pub struct TrackedShow {
     pub id: i64,
     pub name: String,
     pub poster_url: Option<String>,
+    pub first_aired: Option<String>,
     pub status: Option<String>,
     pub color: Option<String>,
     pub notes: Option<String>,
@@ -86,7 +87,7 @@ pub async fn get_tracked_shows(app: AppHandle) -> Result<Vec<TrackedShow>, Strin
 
     let rows = sqlx::query(
         r#"
-        SELECT id, name, poster_url, status, color, notes, tags, rating, rank_order, tier_id, tier_only, unmigrated
+        SELECT id, name, poster_url, first_aired, status, color, notes, tags, rating, rank_order, tier_id, tier_only, unmigrated
         FROM shows
         WHERE (archived = 0 OR archived IS NULL) AND tier_only = 0
         ORDER BY name
@@ -101,6 +102,7 @@ pub async fn get_tracked_shows(app: AppHandle) -> Result<Vec<TrackedShow>, Strin
         id: row.get("id"),
         name: row.get("name"),
         poster_url: row.get("poster_url"),
+        first_aired: row.get("first_aired"),
         status: row.get("status"),
         color: row.get("color"),
         notes: row.get("notes"),
@@ -122,7 +124,7 @@ pub async fn get_archived_shows(app: AppHandle) -> Result<Vec<TrackedShow>, Stri
 
     let rows = sqlx::query(
         r#"
-        SELECT id, name, poster_url, status, color, notes, tags, rating, rank_order, tier_id, tier_only, unmigrated
+        SELECT id, name, poster_url, first_aired, status, color, notes, tags, rating, rank_order, tier_id, tier_only, unmigrated
         FROM shows
         WHERE archived = 1
         ORDER BY name
@@ -137,6 +139,7 @@ pub async fn get_archived_shows(app: AppHandle) -> Result<Vec<TrackedShow>, Stri
         id: row.get("id"),
         name: row.get("name"),
         poster_url: row.get("poster_url"),
+        first_aired: row.get("first_aired"),
         status: row.get("status"),
         color: row.get("color"),
         notes: row.get("notes"),

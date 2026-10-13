@@ -11,6 +11,8 @@
   import ConfirmDialog from "./lib/components/common/ConfirmDialog.svelte";
   import { getViewMode, setViewMode, getCalendarFilter, setCalendarFilter, goToToday } from "./lib/stores/calendar.svelte";
   import { loadGeneralPreferences, isGeneralLoaded, getGeneralPreferences, getStartupState, rememberLastPage, rememberCalendarState } from "./lib/stores/general.svelte";
+  import { isBackupRestoring, isBackupRestartRequired } from "./lib/stores/backups.svelte";
+  import { setActiveTab as setDataTab } from "./lib/stores/dataManagement.svelte";
   import { startClock, stopClock, onDayChange } from "./lib/stores/now.svelte";
   import { checkForUpdates } from "./lib/stores/updates.svelte";
   import { isSearchModalOpen, refreshCalendar } from "./lib/stores/shows.svelte";
@@ -176,6 +178,10 @@
 
   // Check for updates on app start and listen for Plex scrobble events
   let preferencesReady = $state(false);
+  const restoreBlocked = $derived(isBackupRestoring() || isBackupRestartRequired());
+  $effect(() => {
+    if (restoreBlocked) untrack(() => { setSidebarTab("data"); setDataTab("backups"); });
+  });
   $effect(() => {
     if (isGeneralLoaded() && !preferencesReady) untrack(() => {
       const startup = getStartupState();
@@ -190,13 +196,13 @@
   });
   $effect(() => {
     const page = getSidebarTab();
-    if (preferencesReady) untrack(() => { void rememberLastPage(page); });
+    if (preferencesReady && !restoreBlocked) untrack(() => { void rememberLastPage(page); });
   });
   $effect(() => {
     const remember = getGeneralPreferences().remember_calendar;
     const view = getViewMode();
     const filter = getCalendarFilter();
-    if (preferencesReady && remember) untrack(() => { void rememberCalendarState(view, filter); });
+    if (preferencesReady && remember && !restoreBlocked) untrack(() => { void rememberCalendarState(view, filter); });
   });
   onMount(() => {
     void loadGeneralPreferences().catch(error => showError(`Could not load startup preferences: ${error}`));
@@ -297,9 +303,9 @@
 <ErrorBoundary>
   {#snippet children()}
     <div class="focus-app">
-      <Header />
+      <div inert={restoreBlocked}><Header /></div>
       <div class="focus-app-body">
-      <Sidebar />
+      <div class="contents" inert={restoreBlocked}><Sidebar /></div>
       <main class="focus-main" id="main-content">
         <div class="focus-content" class:focus-calendar-page={activeItem.kind === "calendar"}>
           {#if activeItem.kind === "standalone"}
