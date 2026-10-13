@@ -1,7 +1,8 @@
 <script lang="ts">
   import { fade, scale } from "svelte/transition";
   import { modalFocus } from "../utils/modalFocus";
-  import { X, Check, Calendar, CalendarX, Eye, EyeOff, Trash2, Film, ChevronRight } from "lucide-svelte";
+  import { X, Check, Calendar, CalendarX, Eye, Trash2, Film, ChevronRight } from "lucide-svelte";
+  import WatchedBadge from "./common/WatchedBadge.svelte";
   import {
     isDayDetailOpen,
     getDayDetailDate,
@@ -253,8 +254,8 @@
                 {#each group.episodes as episode}
                   {@const isScheduled = !!episode.scheduled_date}
                   <div
-                    class="flex items-center gap-3 p-3 rounded-lg transition-colors {episode.watched
-                      ? 'bg-watched/10'
+                    class="focus-day-entry flex items-center gap-3 p-3 rounded-lg transition-colors {episode.watched
+                      ? 'is-watched'
                       : isScheduled
                         ? 'bg-premiere/10'
                         : 'bg-upcoming/10'}"
@@ -262,15 +263,14 @@
                   >
                     <!-- Episode info -->
                     <div class="flex-1 min-w-0">
-                      <div class="flex items-center gap-2">
-                        {#if episode.watched}
-                          <Check class="w-4 h-4 text-watched flex-shrink-0" />
-                        {:else if isScheduled}
+                      <div class="flex flex-wrap items-center gap-2">
+                        {#if !episode.watched && isScheduled}
                           <Calendar class="w-4 h-4 text-premiere flex-shrink-0" />
                         {/if}
-                        <span class="font-medium {episode.watched ? 'text-watched line-through' : ''}">
+                        <span class="font-medium">
                           S{String(episode.season_number).padStart(2, "0")}E{String(episode.episode_number).padStart(2, "0")}
                         </span>
+                        {#if episode.watched}<WatchedBadge />{/if}
                       </div>
                       {#if episode.name}
                         <p class="text-sm text-text-muted truncate mt-0.5">{episode.name}</p>
@@ -281,11 +281,13 @@
                     <div class="flex items-center gap-1">
                       <button
                         onclick={() => handleToggleWatched(episode)}
-                        class="p-2 rounded-lg hover:bg-surface-hover transition-colors"
+                        class="focus-day-watch p-2 rounded-lg hover:bg-surface-hover transition-colors"
+                        aria-pressed={episode.watched}
+                        aria-label="{episode.watched ? 'Mark unwatched' : 'Mark watched'}: {group.showName} S{String(episode.season_number).padStart(2, '0')}E{String(episode.episode_number).padStart(2, '0')}"
                         title={episode.watched ? "Mark as unwatched" : "Mark as watched"}
                       >
                         {#if episode.watched}
-                          <EyeOff class="w-4 h-4 text-text-muted" />
+                          <Check class="w-4 h-4" />
                         {:else}
                           <Eye class="w-4 h-4 text-text-muted" />
                         {/if}
@@ -308,7 +310,7 @@
 
           <!-- Movies -->
           {#each moviesForDate() as movie}
-            <div class="bg-background rounded-lg p-4">
+            <div class="focus-day-entry bg-background rounded-lg p-4" class:is-watched={movie.watched}>
               <div class="flex items-center gap-4">
                 <button
                   type="button"
@@ -330,29 +332,31 @@
                   {/if}
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2">
-                      {#if movie.watched}
-                        <Check class="w-4 h-4 text-watched flex-shrink-0" />
-                      {:else}
+                      {#if !movie.watched}
                         <Film class="w-4 h-4 text-premiere flex-shrink-0" />
                       {/if}
-                      <h3 class="font-semibold text-lg truncate {movie.watched ? 'text-watched line-through' : ''}">{movie.title}</h3>
+                      <h3 class="font-semibold text-lg truncate">{movie.title}</h3>
                     </div>
-                    <p class="text-sm text-text-muted">
-                      Movie
-                      {#if movie.runtime}
-                        &bull; {Math.floor(movie.runtime / 60)}h {movie.runtime % 60}m
-                      {/if}
+                    <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-text-muted">
+                      <span>Movie
+                        {#if movie.runtime}
+                          &bull; {Math.floor(movie.runtime / 60)}h {movie.runtime % 60}m
+                        {/if}
+                      </span>
+                      {#if movie.watched}<WatchedBadge />{/if}
                     </p>
                   </div>
                 </button>
                 <div class="flex items-center gap-1">
                   <button
                     onclick={() => handleToggleMovieWatched(movie)}
-                    class="p-2 rounded-lg hover:bg-surface-hover transition-colors"
+                    class="focus-day-watch p-2 rounded-lg hover:bg-surface-hover transition-colors"
+                    aria-pressed={movie.watched}
+                    aria-label="{movie.watched ? 'Mark unwatched' : 'Mark watched'}: {movie.title}"
                     title={movie.watched ? "Mark as unwatched" : "Mark as watched"}
                   >
                     {#if movie.watched}
-                      <EyeOff class="w-4 h-4 text-text-muted" />
+                      <Check class="w-4 h-4" />
                     {:else}
                       <Eye class="w-4 h-4 text-text-muted" />
                     {/if}
@@ -385,3 +389,10 @@
     </div>
   </div>
 {/if}
+
+<style>
+  .focus-day-entry { border: 1px solid transparent; }
+  .focus-day-entry.is-watched { background: var(--focus-watched-background); border-color: var(--focus-watched-border); }
+  .focus-day-watch[aria-pressed="true"] { background: var(--focus-watched); color: var(--focus-watched-ink); }
+  .focus-day-watch[aria-pressed="true"]:hover { background: color-mix(in srgb, var(--focus-watched) 85%, white); }
+</style>

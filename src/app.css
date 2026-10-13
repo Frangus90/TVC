@@ -56,7 +56,13 @@ body {
   --accent-hover: #ab94ef;
   --accent-foreground: #17131f;
   --font-size-multiplier: 1;
+  --focus-watched: #a3d1b7;
+  --focus-watched-ink: #15221c;
+  --focus-watched-background: color-mix(in srgb, var(--focus-watched) 16%, var(--color-surface));
+  --focus-watched-border: color-mix(in srgb, var(--focus-watched) 65%, var(--color-surface));
 }
+
+:root.colorblind-friendly { --focus-watched: #c0cbdc; --focus-watched-ink: #17202e; }
 
 /* Font size scaling */
 html { font-size: calc(16px * var(--font-size-multiplier)); }

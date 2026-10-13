@@ -12,6 +12,7 @@ All notable changes to TVC will be documented in this file.
 - Search your saved shows and movies from the top bar, or press **Ctrl K**.
 - Settings, Data Management, and Statistics now open as full pages, with more space for sync results, history, and connected services.
 - Calendar titles open their details. Use the separate watched button to change watch status; scheduling and right-click shortcuts are still available.
+- Watched episodes and movies are easier to spot on the calendar: a clear **✓ Watched** badge, stronger background and border, and a filled watch button appear in Month, Week, Agenda and day details. Titles stay readable.
 - Tier lists, awards, racing, notifications, and exported images share the updated appearance.
 - Your custom colours, text size, compact spacing, hidden posters, tiers, and saved history are kept.
 - Archived tier-only titles now appear in **Data Management → Archive**, where you can restore them.

@@ -40,5 +40,5 @@
       <button type="button" aria-pressed={getCalendarFilter() === option.value} onclick={() => setCalendarFilter(option.value as "all" | "shows" | "movies")}>{option.label}</button>
     {/each}
   </div>
-  <div class="focus-calendar-legend text-xs text-text-muted"><span><Tv size={14} />TV episode</span><span><Film size={14} />Movie</span><span><CircleCheck size={14} />Watched</span></div>
+  <div class="focus-calendar-legend text-xs text-text-muted"><span><Tv size={14} />TV episode</span><span><Film size={14} />Movie</span><span style="color: var(--focus-watched)"><CircleCheck size={14} />Watched</span></div>
 </div>

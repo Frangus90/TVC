@@ -1,4 +1,5 @@
 <script lang="ts">
+  import WatchedBadge from "../common/WatchedBadge.svelte";
   import {
     startOfWeek,
     endOfWeek,
@@ -226,7 +227,7 @@
                 {#if item.subtitle}<span class="focus-event-subtitle">{item.subtitle}</span>{/if}
               </button>
               <div class="focus-event-bottom">
-                <span>{item.watched ? 'Watched' : item.hasAired ? 'Available' : 'Upcoming'}</span>
+                {#if item.watched}<WatchedBadge />{:else}<span>{item.hasAired ? 'Available' : 'Upcoming'}</span>{/if}
                 <button type="button" class="focus-watch-button" aria-pressed={item.watched} aria-label="{item.watched ? 'Mark unwatched' : 'Mark watched'}: {item.title}" onclick={() => handleItemClick(item)}>
                   {#if item.watched}<Check class="w-4 h-4" />{:else}<span class="focus-watch-circle"></span>{/if}
                 </button>
@@ -357,14 +358,16 @@
   .focus-week-grid { min-height: 0; }
   .focus-week-column { min-width: 0; }
   .focus-event { border: 1px solid var(--color-border); border-radius: 0.625rem; background: var(--color-surface-hover); }
-  .focus-event.is-watched { background: color-mix(in srgb, var(--color-watched) 8%, var(--color-surface)); }
+  .focus-event.is-watched { background: var(--focus-watched-background); border-color: var(--focus-watched-border); }
   .focus-event-open { display: block; width: 100%; text-align: left; }
   .focus-event-type { display: flex; align-items: center; gap: 0.3rem; color: var(--color-text-muted); font-size: 0.6875rem; }
   .focus-event-title { display: block; color: var(--color-text); font-size: 0.875rem; font-weight: 600; overflow-wrap: anywhere; margin: 0.4rem 0; }
   .focus-event-subtitle { display: block; color: var(--color-text-muted); font-size: 0.75rem; line-height: 1.5; }
-  .focus-event-bottom { display: flex; align-items: center; justify-content: space-between; gap: 0.3rem; color: var(--color-text-muted); font-size: 0.6875rem; margin-top: 0.65rem; }
-  .focus-watch-button { display: flex; align-items: center; justify-content: center; width: 1.6rem; height: 1.6rem; border: 1px solid var(--color-border); border-radius: 0.4rem; flex: none; color: var(--color-watched); }
+  .focus-event-bottom { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.3rem; color: var(--color-text-muted); font-size: 0.6875rem; margin-top: 0.65rem; }
+  .focus-watch-button { display: flex; align-items: center; justify-content: center; width: 1.6rem; height: 1.6rem; margin-left: auto; border: 1px solid var(--color-border); border-radius: 0.4rem; flex: none; color: var(--color-watched); }
   .focus-watch-button:hover { background: var(--color-surface); color: var(--color-text); }
+  .focus-watch-button[aria-pressed="true"] { background: var(--focus-watched); border-color: var(--focus-watched); color: var(--focus-watched-ink); }
+  .focus-watch-button[aria-pressed="true"]:hover { background: color-mix(in srgb, var(--focus-watched) 85%, white); }
   .focus-watch-circle { width: 0.8rem; height: 0.8rem; border: 1px solid var(--color-text-muted); border-radius: 50%; }
   @media (max-width: 1100px) { .focus-week-grid { gap: 0.375rem; } }
 </style>

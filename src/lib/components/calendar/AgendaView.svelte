@@ -1,4 +1,5 @@
 <script lang="ts">
+  import WatchedBadge from "../common/WatchedBadge.svelte";
   import { format, parseISO, addDays, isPast, isToday } from "date-fns";
   import { Check, Tv, Film } from "lucide-svelte";
   import { getCalendarFilter } from "../../stores/calendar.svelte";
@@ -207,10 +208,10 @@
                 </button>
 
                 <!-- Status indicator -->
-                <span class="focus-agenda-state text-xs text-text-muted">{item.watched ? 'Watched' : item.hasAired ? 'Available' : 'Upcoming'}</span>
+                <span class="focus-agenda-state text-xs text-text-muted" class:is-watched={item.watched}>{#if item.watched}<WatchedBadge />{:else}{item.hasAired ? 'Available' : 'Upcoming'}{/if}</span>
                 <button type="button" class="focus-watch-button flex-shrink-0" aria-pressed={item.watched} aria-label="{item.watched ? 'Mark unwatched' : 'Mark watched'}: {item.title}" onclick={() => handleItemClick(item)}>
                   {#if item.watched}
-                    <Check class="w-4 h-4 text-watched" />
+                    <Check class="w-4 h-4" />
                   {:else}
                     <span class="focus-watch-circle"></span>
                   {/if}
@@ -229,11 +230,14 @@
   .focus-agenda-day { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: 1.5rem; padding: 1.4rem 0; border-bottom: 1px solid var(--color-border); }
   .focus-agenda-date { padding-top: 0.75rem; }
   .focus-agenda-item { border: 1px solid var(--color-border); border-radius: 0.75rem; background: var(--color-surface); }
-  .focus-agenda-item.is-watched { background: color-mix(in srgb, var(--color-watched) 5%, var(--color-surface)); }
+  .focus-agenda-item.is-watched { background: var(--focus-watched-background); border-color: var(--focus-watched-border); }
+  .focus-agenda-state { flex: none; }
   .focus-agenda-open:hover { color: var(--color-accent); }
   .focus-watch-button { display: flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border: 1px solid var(--color-border); border-radius: 0.5rem; }
   .focus-watch-button:hover { background: var(--color-surface-hover); }
+  .focus-watch-button[aria-pressed="true"] { background: var(--focus-watched); border-color: var(--focus-watched); color: var(--focus-watched-ink); }
+  .focus-watch-button[aria-pressed="true"]:hover { background: color-mix(in srgb, var(--focus-watched) 85%, white); }
   .focus-watch-circle { width: 0.9rem; height: 0.9rem; border: 1px solid var(--color-text-muted); border-radius: 50%; }
   :global(.compact-spacing) .focus-agenda-day { padding: 0.75rem 0; }
-  @media (max-width: 1050px) { .focus-agenda-day { grid-template-columns: 1fr; gap: 0.75rem; } .focus-agenda-date { padding: 0; } .focus-agenda-state { display: none; } }
+  @media (max-width: 1050px) { .focus-agenda-day { grid-template-columns: 1fr; gap: 0.75rem; } .focus-agenda-date { padding: 0; } .focus-agenda-state:not(.is-watched) { display: none; } }
 </style>

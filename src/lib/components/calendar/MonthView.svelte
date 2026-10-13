@@ -38,6 +38,7 @@
   import { getThemeSettings } from "../../stores/theme.svelte";
   import { formatDate } from "../../utils/dateFormat";
   import { openShowDetail } from "../../stores/showDetail.svelte";
+  import WatchedBadge from "../common/WatchedBadge.svelte";
 
   let showPickerOpen = $state(false);
   let showPickerDate = $state<string | null>(null);
@@ -261,12 +262,13 @@
                 <span class="focus-event-type">
                   {#if item.type === "movie"}<Film class="w-3 h-3" />{:else}<Tv class="w-3 h-3" />{/if}
                   {item.type === "movie" ? 'Movie' : 'TV episode'}
+                  {#if item.watched}<WatchedBadge />{/if}
                   {#if !item.watched && !item.hasAired}<span class="text-upcoming">· Upcoming</span>{/if}
                 </span>
                 <span class="focus-event-title">{item.title}</span>
               </button>
               <div class="focus-event-bottom">
-                <span class="truncate">{item.subtitle || 'Planned watching'}</span>
+                <span class="truncate">{item.subtitle || (item.watched ? 'Completed watching' : 'Planned watching')}</span>
                 <button type="button" class="focus-watch-button" aria-pressed={item.watched} aria-label="{item.watched ? 'Mark unwatched' : 'Mark watched'}: {item.title}" title={item.watched ? 'Mark unwatched' : 'Mark watched'} onclick={() => handleItemClick(item)}>
                   {#if item.watched}<Check class="w-3.5 h-3.5" />{:else}<span class="focus-watch-circle"></span>{/if}
                 </button>
@@ -407,13 +409,15 @@
   .focus-month-day.is-weekend { background: color-mix(in srgb, var(--color-background) 50%, var(--color-surface)); }
   .focus-month-day.is-today { background: color-mix(in srgb, var(--color-accent) 4%, var(--color-surface)); }
   .focus-event { border: 1px solid var(--color-border); border-radius: 0.5rem; background: var(--color-surface-hover); }
-  .focus-event.is-watched { background: color-mix(in srgb, var(--color-watched) 8%, var(--color-surface)); }
+  .focus-event.is-watched { background: var(--focus-watched-background); border-color: var(--focus-watched-border); }
   .focus-event-open { display: block; width: 100%; min-width: 0; text-align: left; }
-  .focus-event-type { display: flex; align-items: center; gap: 0.3rem; color: var(--color-text-muted); font-size: 0.625rem; }
+  .focus-event-type { display: flex; align-items: center; flex-wrap: wrap; gap: 0.3rem; color: var(--color-text-muted); font-size: 0.625rem; }
   .focus-event-title { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-text); font-size: 0.75rem; font-weight: 600; margin-top: 0.2rem; }
   .focus-event-bottom { display: flex; align-items: center; justify-content: space-between; gap: 0.3rem; color: var(--color-text-muted); font-size: 0.625rem; }
-  .focus-watch-button { display: flex; align-items: center; justify-content: center; width: 1.35rem; height: 1.35rem; border-radius: 0.3rem; flex: none; color: var(--color-watched); }
+  .focus-watch-button { display: flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; border: 1px solid var(--color-border); border-radius: 0.3rem; flex: none; color: var(--color-text-muted); }
   .focus-watch-button:hover { background: var(--color-surface); color: var(--color-text); }
+  .focus-watch-button[aria-pressed="true"] { background: var(--focus-watched); border-color: var(--focus-watched); color: var(--focus-watched-ink); }
+  .focus-watch-button[aria-pressed="true"]:hover { background: color-mix(in srgb, var(--focus-watched) 85%, white); }
   .focus-watch-circle { width: 0.7rem; height: 0.7rem; border: 1px solid var(--color-text-muted); border-radius: 50%; }
   :global(.compact-spacing) .focus-month-grid { grid-auto-rows: minmax(5.75rem, auto); }
   :global(.compact-spacing) .focus-month-day { min-height: 5.75rem; }
