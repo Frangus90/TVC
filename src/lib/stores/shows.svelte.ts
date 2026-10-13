@@ -252,11 +252,12 @@ export async function searchShows(query: string): Promise<void> {
  * Falls back to direct database access if backend command fails.
  * Updates the trackedShows state and sets loading flags.
  */
-export async function loadTrackedShows(): Promise<void> {
+export async function loadTrackedShows(): Promise<boolean> {
   showsLoading = true;
   try {
     const shows = await invoke<TrackedShow[]>("get_tracked_shows");
     trackedShows = shows;
+    return true;
   } catch (error) {
     logger.error("Failed to load tracked shows", error);
     showError("Failed to load tracked shows" + ": " + String(error));
@@ -267,16 +268,18 @@ export async function loadTrackedShows(): Promise<void> {
         tier_only: number;
         unmigrated: number;
       })[]>(
-        "SELECT id, name, poster_url, status, color, notes, tags, rating, rank_order, tier_id, COALESCE(tier_only, 0) as tier_only, COALESCE(unmigrated, 0) as unmigrated FROM shows WHERE COALESCE(archived, 0) = 0 ORDER BY name"
+        "SELECT id, name, poster_url, status, color, notes, tags, rating, rank_order, tier_id, COALESCE(tier_only, 0) as tier_only, COALESCE(unmigrated, 0) as unmigrated FROM shows WHERE COALESCE(archived, 0) = 0 AND COALESCE(tier_only, 0) = 0 ORDER BY name"
       );
       trackedShows = rows.map((r) => ({
         ...r,
         tier_only: r.tier_only === 1,
         unmigrated: r.unmigrated === 1,
       }));
+      return true;
     } catch (dbError) {
       logger.error("Database fallback also failed", dbError);
       showError("Database fallback also failed" + ": " + String(dbError));
+      return false;
     }
   } finally {
     showsLoading = false;
@@ -314,14 +317,16 @@ export async function removeShow(showId: number): Promise<void> {
   }
 }
 
-export async function loadArchivedShows(): Promise<void> {
+export async function loadArchivedShows(): Promise<boolean> {
   archivedShowsLoading = true;
   try {
     const shows = await invoke<TrackedShow[]>("get_archived_shows");
     archivedShows = shows;
+    return true;
   } catch (error) {
     logger.error("Failed to load archived shows", error);
     showError("Failed to load archived shows" + ": " + String(error));
+    return false;
   } finally {
     archivedShowsLoading = false;
   }

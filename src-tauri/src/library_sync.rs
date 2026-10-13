@@ -20,6 +20,12 @@ pub(crate) fn lock_for_restore() -> Result<tokio::sync::MutexGuard<'static, ()>,
     })
 }
 
+pub(crate) fn lock_for_maintenance() -> Result<tokio::sync::MutexGuard<'static, ()>, String> {
+    SYNC_LOCK
+        .try_lock()
+        .map_err(|_| "Wait for the current sync or restore before cleanup".into())
+}
+
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum Library {
@@ -75,6 +81,8 @@ pub struct Report {
     failures: Vec<Failure>,
     current_title: Option<String>,
     error: Option<String>,
+    #[serde(default)]
+    release_country: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -198,9 +206,15 @@ async fn sync_library<F, Fut>(
     mut sync_item: F,
 ) -> Result<Report, String>
 where
-    F: FnMut(i64) -> Fut,
+    F: FnMut(i64, Option<String>) -> Fut,
     Fut: Future<Output = Result<(), String>>,
 {
+    // A preference change during a long run applies to the next run. Every movie
+    // in this report must use the same release country.
+    let release_country = match kind {
+        Library::Movies => Some(commands::preferences::release_country(pool).await?),
+        Library::Shows => None,
+    };
     let retry_ids = if source == "retry" {
         let previous: Report = read_setting(pool, &kind.key("report"))
             .await?
@@ -226,6 +240,7 @@ where
         failures: vec![],
         current_title: None,
         error: None,
+        release_country: release_country.clone(),
     };
     // Store the attempt and report together. A failed run won't retry every scheduler tick.
     let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
@@ -262,7 +277,7 @@ where
             report.current_title = Some(title.clone());
             save_report(pool, &report).await?;
             if eligible {
-                match sync_item(id).await {
+                match sync_item(id, release_country.clone()).await {
                     Ok(()) => report.succeeded += 1,
                     Err(error) => report.failures.push(Failure { id, title, error }),
                 }
@@ -302,10 +317,13 @@ async fn run_one(
 ) -> Result<(), String> {
     ACTIVE.store(kind.code(), Ordering::SeqCst);
     let _active = ActiveRun;
-    let report = sync_library(pool, kind, source, |id| async move {
+    let report = sync_library(pool, kind, source, |id, country| async move {
         let result = match kind {
             Library::Shows => commands::episodes::sync_show_episodes(app.clone(), id).await,
-            Library::Movies => commands::movies::sync_movie(app.clone(), id).await,
+            Library::Movies => match country {
+                Some(country) => commands::movies::sync_movie_for_country(pool, id, &country).await,
+                None => Err("Movie sync has no release country".into()),
+            },
         };
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
         result
@@ -441,7 +459,7 @@ mod tests {
     async fn partial_failures_persist_and_retry_only_failed_titles() {
         let pool = database().await;
         let mut visited = vec![];
-        let report = sync_library(&pool, Library::Shows, "manual", |id| {
+        let report = sync_library(&pool, Library::Shows, "manual", |id, _| {
             visited.push(id);
             async move {
                 if id == 1 {
@@ -476,7 +494,7 @@ mod tests {
                 .await
                 .unwrap();
         let mut retried = vec![];
-        let retry = sync_library(&pool, Library::Shows, "retry", |id| {
+        let retry = sync_library(&pool, Library::Shows, "retry", |id, _| {
             retried.push(id);
             async { Ok(()) }
         })
@@ -518,7 +536,7 @@ mod tests {
                 <= Utc::now()
         );
         let mut visited = vec![];
-        let report = sync_library(&pool, Library::Movies, "automatic", |id| {
+        let report = sync_library(&pool, Library::Movies, "automatic", |id, _| {
             visited.push(id);
             async { Err("offline".into()) }
         })
@@ -543,7 +561,7 @@ mod tests {
     #[tokio::test]
     async fn interrupted_and_overdue_runs_catch_up_after_reopening() {
         let pool = database().await;
-        let mut report = sync_library(&pool, Library::Shows, "manual", |_| async { Ok(()) })
+        let mut report = sync_library(&pool, Library::Shows, "manual", |_, _| async { Ok(()) })
             .await
             .unwrap();
         sqlx::query("INSERT INTO settings VALUES (?, ?)")
@@ -577,7 +595,7 @@ mod tests {
             .execute(&pool)
             .await
             .unwrap();
-        let report = sync_library(&pool, Library::Movies, "manual", |_| async {
+        let report = sync_library(&pool, Library::Movies, "manual", |_, _| async {
             panic!("no titles can be loaded")
         })
         .await
@@ -594,12 +612,12 @@ mod tests {
     #[tokio::test]
     async fn only_complete_success_advances_freshness() {
         let pool = database().await;
-        sync_library(&pool, Library::Shows, "manual", |_| async { Ok(()) })
+        sync_library(&pool, Library::Shows, "manual", |_, _| async { Ok(()) })
             .await
             .unwrap();
         let success = status(&pool, Library::Shows).await.unwrap().last_success_at;
         assert!(success.is_some());
-        sync_library(&pool, Library::Shows, "manual", |_| async {
+        sync_library(&pool, Library::Shows, "manual", |_, _| async {
             Err("offline".into())
         })
         .await
@@ -608,4 +626,69 @@ mod tests {
         assert_eq!(failed.last_success_at, success);
         assert_eq!(failed.report.unwrap().failures.len(), 2);
     }
+
+    #[tokio::test]
+    async fn movie_run_keeps_one_country_when_preferences_change_and_next_run_uses_new_choice() {
+        let pool = database().await;
+        sqlx::query("INSERT INTO movies VALUES (5, 'Second movie')")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO settings VALUES ('general_preferences', ?)")
+            .bind(json!({ "release_country": "NO" }).to_string())
+            .execute(&pool)
+            .await
+            .unwrap();
+        let mut countries = Vec::new();
+        let report = sync_library(&pool, Library::Movies, "manual", |_, country| {
+            countries.push(country.unwrap());
+            let pool = pool.clone();
+            async move {
+                sqlx::query("UPDATE settings SET value = ? WHERE key = 'general_preferences'")
+                    .bind(json!({ "release_country": "US" }).to_string())
+                    .execute(&pool)
+                    .await
+                    .unwrap();
+                Ok(())
+            }
+        })
+        .await
+        .unwrap();
+        assert_eq!(countries, vec!["NO", "NO"]);
+        assert_eq!(report.release_country.as_deref(), Some("NO"));
+        assert_eq!(
+            status(&pool, Library::Movies)
+                .await
+                .unwrap()
+                .report
+                .unwrap()
+                .release_country
+                .as_deref(),
+            Some("NO")
+        );
+        let mut next_countries = Vec::new();
+        let next = sync_library(&pool, Library::Movies, "manual", |_, country| {
+            next_countries.push(country.unwrap());
+            async { Ok(()) }
+        })
+        .await
+        .unwrap();
+        assert_eq!(next_countries, vec!["US", "US"]);
+        assert_eq!(next.release_country.as_deref(), Some("US"));
+    }
+
+    #[test]
+    fn old_sync_reports_without_a_country_still_load() {
+        let report: Report = serde_json::from_value(json!({
+            "kind": "movies", "source": "manual", "started_at": "2026-10-01T12:00:00Z",
+            "finished_at": "2026-10-01T12:01:00Z", "total": 2, "succeeded": 1,
+            "skipped": 0, "failures": [{"id": 5, "title": "Second movie", "error": "offline"}],
+            "current_title": null, "error": null
+        }))
+        .unwrap();
+        assert!(report.release_country.is_none());
+        assert_eq!(report.succeeded, 1);
+        assert_eq!(report.failures[0].id, 5);
+    }
+
 }

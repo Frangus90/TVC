@@ -358,13 +358,21 @@ pub async fn unarchive_movie(app: AppHandle, id: i64) -> Result<(), String> {
 /// Fetch fresh TMDB metadata while preserving the movie's user data.
 #[tauri::command]
 pub async fn sync_movie(app: AppHandle, id: i64) -> Result<(), String> {
-    tmdb::invalidate_movie_cache(id).await;
-
     let pool = connection::get_pool(&app)
         .await
         .map_err(|e| format!("Database error: {}", e))?;
     let country = crate::commands::preferences::release_country(&pool).await?;
-    let (movie_details, release_dates) = tmdb::get_movie_with_release_dates(id, &country)
+    sync_movie_for_country(&pool, id, &country).await
+}
+
+/// Library runs pass their saved country, so an in-progress run cannot mix regions.
+pub(crate) async fn sync_movie_for_country(
+    pool: &sqlx::SqlitePool,
+    id: i64,
+    country: &str,
+) -> Result<(), String> {
+    tmdb::invalidate_movie_cache(id).await;
+    let (movie_details, release_dates) = tmdb::get_movie_with_release_dates(id, country)
         .await
         .map_err(|e| format!("Failed to fetch movie details: {}", e))?;
 
@@ -403,7 +411,7 @@ pub async fn sync_movie(app: AppHandle, id: i64) -> Result<(), String> {
     .bind(genres_json.as_ref())
     .bind(movie_details.vote_average)
     .bind(id)
-    .execute(&pool)
+    .execute(pool)
     .await
     .map_err(|e| format!("Failed to sync movie: {}", e))?;
 

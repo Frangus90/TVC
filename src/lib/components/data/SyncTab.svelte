@@ -133,6 +133,7 @@
 
       {#if report}
         <div class="border-t border-border pt-3 space-y-2">
+          {#if report.release_country}<p class="text-xs text-text-muted">Movie release country: {report.release_country}</p>{/if}
           <div class="flex items-center gap-2 text-sm">
             {#if library.running}<RefreshCw class="w-4 h-4 animate-spin text-accent" />
             {:else if library.interrupted || report.error || report.failures.length}<AlertTriangle class="w-4 h-4 text-yellow-400" />

@@ -29,6 +29,14 @@ All notable changes to TVC will be documented in this file.
 - Plex and Sonarr/Radarr are together under **Integrations**. You can test saved servers without editing them, and Plex setup instructions stay out of the way once connected.
 - Racing settings let you switch between followed series and all series, and explain when notification settings prevent reminders.
 
+### Data Management
+
+- Cleanup now previews and confirms removal, and keeps episode watch history, schedules, ratings, tags, and unresolved titles protected.
+- Fixed outdated show-matching results and overlapping matching/deletion actions. Search failures now show an explanation and a retry option.
+- Duplicate merges refresh library search and navigation counts, with clearer feedback if the display cannot reload.
+- Data failures use clear error messages instead of success styling or misleading empty counts.
+- Movie syncing uses one release country for the whole run, and the library status requires both movies and shows to have synced successfully.
+
 ## [0.14.8] - 10.10.2026
 
 ### Movies

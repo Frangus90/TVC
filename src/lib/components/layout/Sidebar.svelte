@@ -11,13 +11,14 @@
   import { openWhatsNew, getAppVersion, hasUnseenChanges } from "../../stores/whatsNew.svelte";
   import { setActiveTab as setDataTab } from "../../stores/dataManagement.svelte";
   import type { LibrarySyncStatus } from "../../stores/librarySync";
+  import { allLibrariesHaveSynced } from "../../stores/librarySync";
   import { logger } from "../../utils/logger";
 
   let syncStatus = $state<LibrarySyncStatus[]>([]);
   let syncError = $state(false);
   const failed = $derived(syncStatus.reduce((sum, library) => sum + (library.report?.failures.length ?? 0), 0));
   const needsAttention = $derived(failed > 0 || syncStatus.some(library => library.interrupted || library.report?.error));
-  const hasSynced = $derived(syncStatus.some(library => library.last_success_at));
+  const hasSynced = $derived(allLibrariesHaveSynced(syncStatus));
   const syncLabel = $derived(syncError ? "Sync status unavailable" : needsAttention ? (failed ? `${failed} titles need syncing` : "Sync needs attention") : hasSynced ? "Library synced" : "Library sync");
 
   onMount(() => {

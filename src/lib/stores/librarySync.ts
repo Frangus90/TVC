@@ -19,6 +19,13 @@ export interface SyncReport {
   failures: { id: number; title: string; error: string }[];
   current_title: string | null;
   error: string | null;
+  release_country?: string | null;
+}
+
+export function allLibrariesHaveSynced(statuses: LibrarySyncStatus[]): boolean {
+  return (["shows", "movies"] as const).every(kind =>
+    statuses.some(library => library.kind === kind && !!library.last_success_at)
+  );
 }
 
 export interface LibrarySyncStatus {

@@ -35,6 +35,28 @@ function store(name, dependencies = {}) {
   return { api, requests, errors };
 }
 
+for (const kind of ['shows', 'movies']) {
+  test(`${kind}: library refresh failures retain cached titles and report failure to Data actions`, async () => {
+    let fail = false;
+    const titles = [{ id: 42, name: 'Saved show', title: 'Saved movie', archived: false, tier_only: false }];
+    const { api } = store(kind, {
+      '@tauri-apps/api/core': { invoke: async () => {
+        if (fail) throw new Error('Read failed');
+        return titles;
+      } },
+      '../utils/database': { getDatabase: async () => { throw new Error('Fallback unavailable'); } },
+    });
+    const suffix = kind === 'shows' ? 'Shows' : 'Movies';
+    assert.equal(await api[`loadTracked${suffix}`](), true);
+    assert.equal(await api[`loadArchived${suffix}`](), true);
+    fail = true;
+    assert.equal(await api[`loadTracked${suffix}`](), false);
+    assert.equal(await api[`loadArchived${suffix}`](), false);
+    assert.equal(api[`getTracked${suffix}`]()[0].id, 42);
+    assert.equal(api[`getArchived${suffix}`]()[0].id, 42);
+  });
+}
+
 test('Plex start failure stays visible and does not persist automatic startup', async () => {
   const { api, requests } = store('plex');
   const toggling = api.toggleServer(true);

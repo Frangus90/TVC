@@ -144,21 +144,25 @@ export async function loadTierPreset(): Promise<void> {
   }
 }
 
-export async function loadTierListShows(): Promise<void> {
+export async function loadTierListShows(): Promise<boolean> {
   try {
     tierListShows = await invoke<TierListShow[]>("get_tier_list_shows");
+    return true;
   } catch (error) {
     logger.error("Failed to load tier list shows", error);
     showError("Failed to load tier list shows" + ": " + String(error));
+    return false;
   }
 }
 
-export async function loadTierListMovies(): Promise<void> {
+export async function loadTierListMovies(): Promise<boolean> {
   try {
     tierListMovies = await invoke<TierListMovie[]>("get_tier_list_movies");
+    return true;
   } catch (error) {
     logger.error("Failed to load tier list movies", error);
     showError("Failed to load tier list movies" + ": " + String(error));
+    return false;
   }
 }
 

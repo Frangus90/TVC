@@ -62,6 +62,10 @@ let done = $state(0);
 let currentName = $state("");
 let lastFinished = $state<FinishedEvent | null>(null);
 let unmigratedShows = $state<UnmigratedShow[]>([]);
+let unmigratedError = $state<string | null>(null);
+let unmigratedLoading = $state(false);
+let unmigratedRequest = 0;
+let busyShows = $state<Set<number>>(new Set());
 
 export function isMigrationInProgress(): boolean {
   return inProgress;
@@ -86,17 +90,26 @@ export function getLastMigrationResult(): FinishedEvent | null {
 export function getUnmigratedShows(): UnmigratedShow[] {
   return unmigratedShows;
 }
+export function getUnmigratedShowsError() { return unmigratedError; }
+export function isUnmigratedShowsLoading() { return unmigratedLoading; }
+export function isUnmigratedShowBusy(id: number) { return busyShows.has(id); }
 
 export function dismissMigrationResult() {
   lastFinished = null;
 }
 
 export async function loadUnmigratedShows(): Promise<void> {
+  const request = ++unmigratedRequest;
+  unmigratedLoading = true;
+  unmigratedError = null;
   try {
-    unmigratedShows = await invoke<UnmigratedShow[]>("get_unmigrated_shows");
+    const rows = await invoke<UnmigratedShow[]>("get_unmigrated_shows");
+    if (request === unmigratedRequest) unmigratedShows = rows;
   } catch (e) {
+    if (request !== unmigratedRequest) return;
+    unmigratedError = e instanceof Error ? e.message : String(e);
     logger.error("[Migration] failed to load unmigrated shows", e);
-  }
+  } finally { if (request === unmigratedRequest) unmigratedLoading = false; }
 }
 
 export async function searchTmdbTv(
@@ -107,7 +120,7 @@ export async function searchTmdbTv(
     return await invoke<TmdbTvSearchResult[]>("search_tmdb_tv", { query });
   } catch (e) {
     logger.error("[Migration] search_tmdb_tv failed", e);
-    return [];
+    throw e;
   }
 }
 
@@ -115,20 +128,33 @@ export async function resolveUnmigratedShow(
   oldId: number,
   newTmdbId: number,
 ): Promise<RemapOutcome> {
-  const outcome = await invoke<RemapOutcome>("resolve_unmigrated_show", {
-    oldId,
-    newTmdbId,
-  });
-  await loadUnmigratedShows();
-  await Promise.all([loadTrackedShows(), loadArchivedShows(), loadTierListShows()]);
-  await refreshCalendar();
-  return outcome;
+  if (busyShows.has(oldId)) throw new Error("This show is already being updated.");
+  busyShows = new Set(busyShows).add(oldId);
+  try {
+    const outcome = await invoke<RemapOutcome>("resolve_unmigrated_show", {
+      oldId,
+      newTmdbId,
+    });
+    await loadUnmigratedShows();
+    await Promise.all([loadTrackedShows(), loadArchivedShows(), loadTierListShows()]);
+    await refreshCalendar();
+    return outcome;
+  } finally {
+    const next = new Set(busyShows); next.delete(oldId); busyShows = next;
+  }
 }
 
 export async function deleteUnmigratedShow(id: number): Promise<void> {
-  await invoke("delete_unmigrated_show", { id });
-  await loadUnmigratedShows();
-  await Promise.all([loadTrackedShows(), loadArchivedShows(), loadTierListShows()]);
+  if (busyShows.has(id)) throw new Error("This show is already being updated.");
+  busyShows = new Set(busyShows).add(id);
+  try {
+    await invoke("delete_unmigrated_show", { id });
+    await loadUnmigratedShows();
+    await Promise.all([loadTrackedShows(), loadArchivedShows(), loadTierListShows()]);
+    await refreshCalendar();
+  } finally {
+    const next = new Set(busyShows); next.delete(id); busyShows = next;
+  }
 }
 
 export function setupMigrationListener(): () => void {

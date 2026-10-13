@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
   import { fade, scale } from "svelte/transition";
   import { X, Database, Copy, RefreshCw, AlertTriangle, Check, CloudDownload, Download, Upload, ChevronDown, HelpCircle } from "lucide-svelte";
   import SyncTab from "./data/SyncTab.svelte";
@@ -21,6 +21,10 @@
     getDuplicates,
     getOrphanedEpisodes,
     getUnairedEpisodes,
+    getCleanupPreviewError,
+    isCleanupPreviewLoading,
+    loadDatabaseStats,
+    loadCleanupPreviews,
     closeDataManagement,
     setActiveTab,
     cleanupOrphaned,
@@ -42,6 +46,16 @@
   });
 
   let cleanupMessage = $state<string | null>(null);
+  let messageKind = $state<"success" | "error" | "warning">("success");
+  let messageTimer: ReturnType<typeof setTimeout> | null = null;
+  let cleanupPending = $state(false);
+  function showResult(message: string, kind: "success" | "error" | "warning" = "success", duration = 0) {
+    if (messageTimer) clearTimeout(messageTimer);
+    cleanupMessage = message;
+    messageKind = kind;
+    messageTimer = duration ? setTimeout(() => { cleanupMessage = null; messageTimer = null; }, duration) : null;
+  }
+  onDestroy(() => { if (messageTimer) clearTimeout(messageTimer); });
   let dummyUpdateVersion = $state("0.8.0");
   let dummyUpdateNotes = $state(`### Theme Settings
 
@@ -108,12 +122,10 @@
 
       if (filePath) {
         await writeTextFile(filePath, JSON.stringify(data, null, 2));
-        cleanupMessage = `Exported ${data.shows.length} shows, ${data.episodes.length} episodes, ${data.movies.length} movies, and ${data.personal_data?.predictions.length ?? 0} predictions, including tiers and history.`;
-        setTimeout(() => (cleanupMessage = null), 5000);
+        showResult(`Exported ${data.shows.length} shows, ${data.episodes.length} episodes, ${data.movies.length} movies, and ${data.personal_data?.predictions.length ?? 0} predictions, including tiers and history.`, "success", 5000);
       }
     } catch (err) {
-      cleanupMessage = `Export failed: ${err}`;
-      setTimeout(() => (cleanupMessage = null), 5000);
+      showResult(`Export failed: ${err}`, "error");
     } finally {
       exporting = false;
     }
@@ -140,55 +152,76 @@
       // Import via backend
       const result = await invoke<ImportResult>("import_database", { data });
 
-      cleanupMessage = `Imported ${result.shows_imported} shows, ${result.episodes_imported} episodes, ${result.movies_imported} movies, and ${result.predictions_imported} predictions. Please restart the app.`;
+      let message = `Imported ${result.shows_imported} shows, ${result.episodes_imported} episodes, ${result.movies_imported} movies, and ${result.predictions_imported} predictions. Please restart the app.`;
       if (result.quarantined || result.episodes_orphaned || result.warnings.length) {
-        cleanupMessage += ` ${result.quarantined} shows need matching; ${result.episodes_orphaned} legacy episodes could not be matched. ${result.warnings.join(" ")}`;
+        message += ` ${result.quarantined} shows need matching; ${result.episodes_orphaned} legacy episodes could not be matched. ${result.warnings.join(" ")}`;
       }
+      showResult(message, result.quarantined || result.episodes_orphaned || result.warnings.length ? "warning" : "success");
     } catch (err) {
-      cleanupMessage = `Import failed: ${err}`;
+      showResult(`Import failed: ${err}`, "error");
     } finally {
       importing = false;
     }
   }
 
+  async function confirmCleanup(kind: "orphaned" | "undated" | "all") {
+    await Promise.all([loadDatabaseStats(), loadCleanupPreviews()]);
+    if (getError() || getCleanupPreviewError()) return false;
+    const stats = getDatabaseStats();
+    if (!stats) return false;
+    const orphaned = kind === "undated" ? 0 : stats.orphaned_episodes;
+    const undated = kind === "orphaned" ? 0 : stats.unaired_unscheduled_episodes;
+    const total = orphaned + undated;
+    if (!total) { showResult("No eligible episode records to remove."); return false; }
+    return openConfirmDialog({
+      title: kind === "all" ? "Run full cleanup?" : "Remove unused episode records?",
+      message: `Remove ${total} episode record${total === 1 ? "" : "s"}: ${orphaned} without a linked show and ${undated} without an air date? Only records without watch history, schedules, ratings, tags or change history are eligible. Tier-only and unresolved shows are protected. The preview shows at most 20 records; this action applies to all ${total}. ${kind === "all" ? "Database optimization runs separately afterwards. " : ""}This cannot be undone.`,
+      type: "danger", confirmLabel: `Remove ${total} record${total === 1 ? "" : "s"}`, cancelLabel: "Keep records",
+    });
+  }
+
   async function handleCleanupOrphaned() {
+    if (cleanupPending) return;
+    cleanupPending = true;
     try {
+      if (!await confirmCleanup("orphaned")) return;
       const count = await cleanupOrphaned();
-      cleanupMessage = `Removed ${count} orphaned episode${count !== 1 ? "s" : ""}`;
-      setTimeout(() => (cleanupMessage = null), 3000);
-    } catch {
-      // Error handled in store
-    }
+      showResult(`Removed ${count} unused orphaned episode record${count !== 1 ? "s" : ""}`, "success", 5000);
+    } catch (error) { showResult(`Cleanup failed: ${error}`, "error"); }
+    finally { cleanupPending = false; }
   }
 
   async function handleCleanupUnaired() {
+    if (cleanupPending) return;
+    cleanupPending = true;
     try {
+      if (!await confirmCleanup("undated")) return;
       const count = await cleanupUnaired();
-      cleanupMessage = `Removed ${count} unaired episode${count !== 1 ? "s" : ""}`;
-      setTimeout(() => (cleanupMessage = null), 3000);
-    } catch {
-      // Error handled in store
-    }
+      showResult(`Removed ${count} unused episode record${count !== 1 ? "s" : ""} without dates`, "success", 5000);
+    } catch (error) { showResult(`Cleanup failed: ${error}`, "error"); }
+    finally { cleanupPending = false; }
   }
 
   async function handleOptimize() {
+    if (cleanupPending) return;
+    cleanupPending = true;
     try {
       await optimizeDatabase();
-      cleanupMessage = "Database optimized successfully";
-      setTimeout(() => (cleanupMessage = null), 3000);
-    } catch {
-      // Error handled in store
-    }
+      showResult("Database optimized successfully", "success", 5000);
+    } catch (error) { showResult(`Optimization failed: ${error}`, "error"); }
+    finally { cleanupPending = false; }
   }
 
   async function handleFullCleanup() {
+    if (cleanupPending) return;
+    cleanupPending = true;
     try {
+      if (!await confirmCleanup("all")) return;
       const result = await runFullCleanup();
-      cleanupMessage = `Cleanup complete: ${result.orphaned_episodes_removed} orphaned, ${result.unaired_episodes_removed} unaired episodes removed`;
-      setTimeout(() => (cleanupMessage = null), 5000);
-    } catch {
-      // Error handled in store
-    }
+      const message = `Removed ${result.orphaned_episodes_removed} unused orphaned records and ${result.unaired_episodes_removed} unused records without dates.`;
+      showResult(result.optimization_error ? `${message} Optimization did not finish: ${result.optimization_error}` : `${message} Database optimized.`, result.optimization_error ? "warning" : "success");
+    } catch (error) { showResult(`Cleanup failed: ${error}`, "error"); }
+    finally { cleanupPending = false; }
   }
 
   async function handleMerge(pair: DuplicatePair, keepFirst: boolean) {
@@ -207,11 +240,8 @@
     if (confirmed) {
       try {
         const result = await mergeDuplicates(keepId, mergeId);
-        cleanupMessage = `Merged: ${result.episodes_moved} moved, ${result.episodes_merged} merged`;
-        setTimeout(() => (cleanupMessage = null), 3000);
-      } catch {
-        // Error handled in store
-      }
+        showResult(`Merged: ${result.episodes_moved} episodes moved, ${result.episodes_merged} combined`, "success", 5000);
+      } catch (error) { showResult(`Merge failed: ${error}`, "error"); }
     }
   }
 </script>
@@ -333,6 +363,7 @@
         <div class="text-center py-8">
           <AlertTriangle class="w-8 h-8 text-red-400 mx-auto mb-2" />
           <p class="text-red-400">{error}</p>
+          <button type="button" onclick={() => setActiveTab(activeTab)} class="focus-button mt-3">Reload page</button>
         </div>
       {:else if activeTab === "overview"}
         <!-- Overview Tab -->
@@ -607,12 +638,20 @@
         <!-- Cleanup Tab -->
         {#if stats}
           <div class="space-y-4">
+            {#if getCleanupPreviewError()}
+              <div role="alert" class="p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 text-sm">
+                <p>{getCleanupPreviewError()}</p>
+                <button type="button" onclick={() => loadCleanupPreviews()} disabled={isCleanupPreviewLoading()} class="underline mt-2">Retry preview</button>
+              </div>
+            {:else if isCleanupPreviewLoading()}
+              <p role="status" class="text-sm text-text-muted">Loading affected episode records…</p>
+            {/if}
             <!-- Orphaned Episodes -->
             <div class="focus-panel bg-surface rounded-xl border border-border p-5">
               <div class="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <h3 class="font-medium">Orphaned Episodes</h3>
-                  <p class="text-sm text-text-muted">Episodes whose show has been deleted</p>
+                  <p class="text-sm text-text-muted">Unused records whose show has been deleted; personal data is protected</p>
                 </div>
                 <div class="flex items-center gap-3">
                   <span class="text-lg font-bold {stats.orphaned_episodes > 0 ? 'text-yellow-400' : 'text-text-muted'}">
@@ -621,7 +660,7 @@
                   <button
                     type="button"
                     onclick={handleCleanupOrphaned}
-                    disabled={stats.orphaned_episodes === 0}
+                    disabled={stats.orphaned_episodes === 0 || cleanupPending || isCleanupPreviewLoading() || !!getCleanupPreviewError()}
                     class="px-3 py-1.5 text-sm bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Clean
@@ -639,6 +678,7 @@
                 </button>
                 {#if orphanedExpanded}
                   <div class="mt-2 p-3 bg-surface rounded-lg border border-border max-h-48 overflow-y-auto">
+                    <p class="text-xs text-text-muted mb-2">Showing {Math.min(orphanedEpisodesList.length, 20)} of {stats.orphaned_episodes} eligible records</p>
                     <ul class="space-y-1 text-sm">
                       {#each orphanedEpisodesList.slice(0, 20) as ep}
                         <li class="text-text-muted">
@@ -651,8 +691,8 @@
                           {/if}
                         </li>
                       {/each}
-                      {#if orphanedEpisodesList.length > 20}
-                        <li class="text-text-muted italic">...and {orphanedEpisodesList.length - 20} more</li>
+                      {#if stats.orphaned_episodes > 20}
+                        <li class="text-text-muted italic">...and {stats.orphaned_episodes - 20} more</li>
                       {/if}
                     </ul>
                   </div>
@@ -664,8 +704,8 @@
             <div class="focus-panel bg-surface rounded-xl border border-border p-5">
               <div class="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <h3 class="font-medium">Unaired & Unscheduled Episodes</h3>
-                  <p class="text-sm text-text-muted">Episodes with no air date and not scheduled</p>
+                  <h3 class="font-medium">Unused Episodes Without Dates</h3>
+                  <p class="text-sm text-text-muted">No air date or personal data. Upcoming episodes can legitimately have no date.</p>
                 </div>
                 <div class="flex items-center gap-3">
                   <span class="text-lg font-bold {stats.unaired_unscheduled_episodes > 0 ? 'text-yellow-400' : 'text-text-muted'}">
@@ -674,7 +714,7 @@
                   <button
                     type="button"
                     onclick={handleCleanupUnaired}
-                    disabled={stats.unaired_unscheduled_episodes === 0}
+                    disabled={stats.unaired_unscheduled_episodes === 0 || cleanupPending || isCleanupPreviewLoading() || !!getCleanupPreviewError()}
                     class="px-3 py-1.5 text-sm bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Clean
@@ -692,6 +732,7 @@
                 </button>
                 {#if unairedExpanded}
                   <div class="mt-2 p-3 bg-surface rounded-lg border border-border max-h-48 overflow-y-auto">
+                    <p class="text-xs text-text-muted mb-2">Showing {Math.min(unairedEpisodesList.length, 20)} of {stats.unaired_unscheduled_episodes} eligible records</p>
                     <ul class="space-y-1 text-sm">
                       {#each unairedEpisodesList.slice(0, 20) as ep}
                         <li class="text-text-muted">
@@ -704,8 +745,8 @@
                           {/if}
                         </li>
                       {/each}
-                      {#if unairedEpisodesList.length > 20}
-                        <li class="text-text-muted italic">...and {unairedEpisodesList.length - 20} more</li>
+                      {#if stats.unaired_unscheduled_episodes > 20}
+                        <li class="text-text-muted italic">...and {stats.unaired_unscheduled_episodes - 20} more</li>
                       {/if}
                     </ul>
                   </div>
@@ -723,6 +764,7 @@
                 <button
                   type="button"
                   onclick={handleOptimize}
+                  disabled={cleanupPending}
                   class="px-3 py-1.5 text-sm bg-accent/20 hover:bg-accent/30 text-accent rounded transition-colors"
                 >
                   Optimize
@@ -735,11 +777,12 @@
               <div class="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <h3 class="font-medium text-red-400">Full Cleanup</h3>
-                  <p class="text-sm text-text-muted">Remove all orphaned data and optimize database</p>
+                  <p class="text-sm text-text-muted">Remove eligible orphaned and undated episode records, then optimize the database</p>
                 </div>
                 <button
                   type="button"
                   onclick={handleFullCleanup}
+                  disabled={cleanupPending || isCleanupPreviewLoading() || !!getCleanupPreviewError() || stats.orphaned_episodes + stats.unaired_unscheduled_episodes === 0}
                   class="px-3 py-1.5 text-sm bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded transition-colors"
                 >
                   Run Full Cleanup
@@ -753,8 +796,9 @@
 
     <!-- Footer message -->
     {#if cleanupMessage}
-      <div role="status" class="mt-4 p-3 rounded-lg border border-available/30 bg-available/10 text-available text-sm">
-        {cleanupMessage}
+      <div role={messageKind === "error" ? "alert" : "status"} class="mt-4 p-3 rounded-lg border text-sm flex items-start justify-between gap-3 {messageKind === 'error' ? 'border-red-500/30 bg-red-500/10 text-red-400' : messageKind === 'warning' ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400' : 'border-available/30 bg-available/10 text-available'}">
+        <span>{cleanupMessage}</span>
+        <button type="button" onclick={() => { if (messageTimer) clearTimeout(messageTimer); messageTimer = null; cleanupMessage = null; }} aria-label="Dismiss result" class="shrink-0 p-1"><X size={16} /></button>
       </div>
     {/if}
   </div>

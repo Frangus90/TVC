@@ -250,27 +250,31 @@ export async function searchMovies(query: string): Promise<void> {
   }
 }
 
-export async function loadTrackedMovies(): Promise<void> {
+export async function loadTrackedMovies(): Promise<boolean> {
   moviesLoading = true;
   try {
     const movies = await invoke<TrackedMovie[]>("get_tracked_movies");
     trackedMovies = movies;
+    return true;
   } catch (error) {
     logger.error("Failed to load tracked movies:", error);
     showError("Failed to load tracked movies:" + ": " + String(error));
+    return false;
   } finally {
     moviesLoading = false;
   }
 }
 
-export async function loadArchivedMovies(): Promise<void> {
+export async function loadArchivedMovies(): Promise<boolean> {
   archivedMoviesLoading = true;
   try {
     const movies = await invoke<TrackedMovie[]>("get_archived_movies");
     archivedMovies = movies;
+    return true;
   } catch (error) {
     logger.error("Failed to load archived movies:", error);
     showError("Failed to load archived movies:" + ": " + String(error));
+    return false;
   } finally {
     archivedMoviesLoading = false;
   }

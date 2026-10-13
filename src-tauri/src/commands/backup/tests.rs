@@ -256,6 +256,14 @@ async fn older_backups_keep_awards_and_report_legacy_id_collisions() {
 fn restore_and_bulk_sync_share_the_same_exclusion_lock() {
     let guard = crate::library_sync::lock_for_restore().unwrap();
     assert!(crate::library_sync::lock_for_restore().is_err());
+    assert_eq!(
+        crate::library_sync::lock_for_maintenance().unwrap_err(),
+        "Wait for the current sync or restore before cleanup"
+    );
     drop(guard);
+    let maintenance = crate::library_sync::lock_for_maintenance().unwrap();
+    assert!(crate::library_sync::lock_for_restore().is_err());
+    assert!(crate::library_sync::lock_for_maintenance().is_err());
+    drop(maintenance);
     assert!(crate::library_sync::lock_for_restore().is_ok());
 }
