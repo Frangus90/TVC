@@ -384,6 +384,7 @@ pub fn run() {
             commands::tiers::reorder_tiers,
             commands::tiers::get_tier_preset,
             commands::tiers::apply_tier_preset,
+            commands::tiers::apply_tier_configuration,
             commands::tiers::get_tier_list_shows,
             commands::tiers::get_tier_list_movies,
             commands::tiers::add_show_tier_only,

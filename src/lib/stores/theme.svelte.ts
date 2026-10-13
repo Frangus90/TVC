@@ -14,7 +14,7 @@ export interface ThemeSettings {
 const getDb = getDatabase;
 
 // Default theme settings
-const defaultTheme: ThemeSettings = {
+export const defaultTheme: ThemeSettings = {
   colorScheme: "default",
   accentColor: "#bba4ff",
   fontSize: 1,
@@ -25,62 +25,102 @@ const defaultTheme: ThemeSettings = {
 
 let themeSettings = $state<ThemeSettings>(defaultTheme);
 let initialized = $state(false);
+let loading = $state(false);
+let saving = $state(false);
+let loadError = $state<string | null>(null);
+let saveError = $state<string | null>(null);
+let loadPromise: Promise<void> | null = null;
+let saveQueue: Promise<void> = Promise.resolve();
+let pendingSaves = 0;
+let saveRevision = 0;
+
+export function isThemeLoading() { return loading; }
+export function isThemeSaving() { return saving; }
+export function getThemeLoadError() { return loadError; }
+export function getThemeSaveError() { return saveError; }
+
+export function normalizeAccentColor(value: string): string | null {
+  const color = value.trim();
+  if (!/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(color)) return null;
+  const hex = color.slice(1).toLowerCase();
+  return `#${hex.length === 3 ? hex.split("").map(char => char + char).join("") : hex}`;
+}
 
 export function getThemeSettings() {
   return themeSettings;
 }
 
-export async function loadThemeSettings(): Promise<void> {
-  if (initialized) return;
+export function loadThemeSettings(): Promise<void> {
+  if (initialized) return Promise.resolve();
+  if (loadPromise) return loadPromise;
+  loadPromise = readThemeSettings().finally(() => { loadPromise = null; });
+  return loadPromise;
+}
 
+async function readThemeSettings(): Promise<void> {
+  loading = true;
+  loadError = null;
   try {
     const database = await getDb();
-    const settings = await database.select<{ key: string; value: string }[]>(
+    const rows = await database.select<{ key: string; value: string }[]>(
       "SELECT key, value FROM settings WHERE key LIKE 'theme_%'"
     );
-
     const loaded: Partial<ThemeSettings> = {};
-    for (const setting of settings) {
-      const key = setting.key.replace("theme_", "");
-      if (key === "colorScheme" || key === "accentColor") {
-        (loaded as any)[key] = setting.value;
-      } else if (key === "fontSize") {
-        loaded.fontSize = parseFloat(setting.value) || 1;
-      } else if (key === "compactSpacing") {
-        loaded.compactSpacing = setting.value === "true";
-      } else if (key === "colorblindFriendly") {
-        loaded.colorblindFriendly = setting.value === "true";
-      } else if (key === "hidePosters") {
-        loaded.hidePosters = setting.value === "true";
-      }
+    for (const row of rows) {
+      const key = row.key.replace("theme_", "");
+      if (key === "accentColor") loaded.accentColor = normalizeAccentColor(row.value) ?? defaultTheme.accentColor;
+      else if (key === "colorScheme") loaded.colorScheme = row.value;
+      else if (key === "fontSize") loaded.fontSize = Math.max(0.75, Math.min(1.5, parseFloat(row.value) || 1));
+      else if (key === "compactSpacing" || key === "colorblindFriendly" || key === "hidePosters") loaded[key] = row.value === "true";
     }
-
     themeSettings = { ...defaultTheme, ...loaded };
-    applyTheme();
     initialized = true;
   } catch (error) {
     logger.error("Failed to load theme settings", error);
+    loadError = `Could not load appearance settings: ${error}`;
+  } finally {
     applyTheme();
-    initialized = true;
+    loading = false;
   }
 }
 
-export async function updateThemeSettings(updates: Partial<ThemeSettings>): Promise<void> {
+export async function updateThemeSettings(updates: Partial<ThemeSettings>): Promise<boolean> {
+  if (!initialized) await loadThemeSettings();
+  if (loadError) return false;
+  if (updates.accentColor !== undefined) {
+    const normalized = normalizeAccentColor(updates.accentColor);
+    if (!normalized) { saveError = "Enter a colour as #RGB or #RRGGBB."; return false; }
+    updates = { ...updates, accentColor: normalized };
+  }
   themeSettings = { ...themeSettings, ...updates };
   applyTheme();
-
-  try {
+  const snapshot = { ...themeSettings };
+  const revision = ++saveRevision;
+  pendingSaves++;
+  saving = true;
+  saveError = null;
+  // Persist complete snapshots in order. A later save also recovers earlier failed fields.
+  const operation = saveQueue.then(async () => {
     const database = await getDb();
-    for (const [key, value] of Object.entries(updates)) {
-      await database.execute(
-        "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
-        [`theme_${key}`, String(value)]
-      );
+    for (const [key, value] of Object.entries(snapshot)) {
+      await database.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [`theme_${key}`, String(value)]);
     }
+  });
+  saveQueue = operation.catch(() => {}); // The caller below reports failures; keep the next save usable.
+  try {
+    await operation;
+    if (revision === saveRevision) saveError = null;
+    return true;
   } catch (error) {
     logger.error("Failed to save theme settings", error);
+    if (revision === saveRevision) saveError = `Appearance changes were not saved: ${error}`;
+    return false;
+  } finally {
+    saving = --pendingSaves > 0;
   }
 }
+
+export function retryThemeSave() { return updateThemeSettings({}); }
 
 function applyTheme() {
   const root = document.documentElement;
@@ -111,7 +151,7 @@ function applyTheme() {
 function adjustBrightness(color: string, percent: number): string {
   // Simple brightness adjustment for hover colors
   // This is a simplified version - in production, use a proper color manipulation library
-  const num = parseInt(color.replace("#", ""), 16);
+  const num = parseInt((normalizeAccentColor(color) ?? defaultTheme.accentColor).slice(1), 16);
   const amt = Math.round(2.55 * percent);
   const R = Math.max(0, Math.min(255, (num >> 16) + amt));
   const G = Math.max(0, Math.min(255, ((num >> 8) & 0x00ff) + amt));

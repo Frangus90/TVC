@@ -148,16 +148,18 @@ export async function loadRacingEventsForRange(
 export async function toggleSeries(
   slug: string,
   enabled: boolean
-): Promise<void> {
+): Promise<boolean> {
   try {
     await invoke("toggle_racing_series", { slug, enabled });
     racingSeries = racingSeries.map((s) =>
       s.slug === slug ? { ...s, enabled } : s
     );
     refreshSignal++;
+    return true;
   } catch (error) {
     logger.error("Failed to toggle racing series", error);
     showError("Failed to toggle racing series" + ": " + String(error));
+    return false;
   }
 }
 

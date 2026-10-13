@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { onDestroy } from "svelte";
+  import { openConfirmDialog } from "../../stores/confirmDialog.svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { Search, Upload, X, Check, AlertTriangle, Loader2 } from "lucide-svelte";
   import {
@@ -59,8 +61,16 @@
   let activeManualIndex = $state<number | null>(null);
   let autoCreateTiers = $state(true);
   let createdTierCount = $state(0);
+  let plannedTiers = $state<Array<{ id: number; name: string; color: string }>>([]);
+  let confirmingImport = $state(false);
+  let previewError = $state<string | null>(null);
+  let searchGeneration = 0;
+  let manualGeneration = 0;
+  let disposed = false;
+  onDestroy(() => { disposed = true; searchGeneration++; manualGeneration++; });
 
   const tiers = $derived(getTiers());
+  const tierChoices = $derived([...tiers, ...plannedTiers]);
 
   // Stats for review
   const matchedCount = $derived(matchedItems.filter(i => i.status === "matched" || i.status === "manual").length);
@@ -105,7 +115,8 @@
   }
 
   function parseHtml() {
-    if (!htmlInput.trim()) return;
+    if (!htmlInput.trim() || isSearching) return;
+    previewError = null;
 
     const parser = new DOMParser();
     const doc = parser.parseFromString(htmlInput, "text/html");
@@ -169,16 +180,16 @@
     parsedItems = items;
 
     if (items.length > 0) {
-      startBatchSearch();
-    }
+      void startBatchSearch();
+    } else { previewError = "No titles found. Copy the Tiermaker rows and try again."; }
   }
 
   // =============================================
   // Step 2: Batch search
   // =============================================
 
-  async function searchSingle(name: string): Promise<SearchResult[]> {
-    if (contentType === "movies") {
+  async function searchSingle(name: string, kind: ContentType = contentType): Promise<SearchResult[]> {
+    if (kind === "movies") {
       const results = await invoke<Array<{
         id: number;
         title: string;
@@ -238,52 +249,51 @@
     return null;
   }
 
-  async function createTiersFromLabels(labels: string[]): Promise<Map<string, number>> {
+  function planTiersFromLabels(labels: string[]): Map<string, number> {
     const tierMap = new Map<string, number>();
-    createdTierCount = 0;
-
-    // Reuse existing tiers by name, only create missing ones
-    // This prevents wiping out movie tiers when importing a show list (or vice versa)
-    for (let i = 0; i < labels.length; i++) {
-      const label = labels[i];
+    plannedTiers = [];
+    for (const [index, label] of labels.entries()) {
       const lowerLabel = label.toLowerCase().trim();
-
-      // Try exact match first, then prefix match for labels like "S - Masterpiece" → "S"
-      const existing = tiers.find(t => t.name.toLowerCase() === lowerLabel)
-        || tiers.find(t => {
-          const prefix = lowerLabel.split(/\s*-\s*/)[0];
-          return prefix && t.name.toLowerCase() === prefix;
-        });
-      if (existing) {
-        tierMap.set(label, existing.id);
-        continue;
-      }
-
-      const color = defaultTierColors[i % defaultTierColors.length];
-      const newTier = await createTier(label, color);
-      if (newTier) {
-        tierMap.set(label, newTier.id);
-        createdTierCount++;
+      const prefix = lowerLabel.split(/\s*-\s*/)[0];
+      const existing = tiers.find(tier => tier.name.toLowerCase() === lowerLabel)
+        ?? tiers.find(tier => prefix && tier.name.toLowerCase() === prefix);
+      if (existing) tierMap.set(label, existing.id);
+      else {
+        const planned = { id: -(index + 1), name: label, color: defaultTierColors[index % defaultTierColors.length] };
+        plannedTiers = [...plannedTiers, planned];
+        tierMap.set(label, planned.id);
       }
     }
-
-    // Reorder: import labels first (top=best), then any pre-existing tiers not in the import
-    if (createdTierCount > 0) {
-      await loadTiers();
-      const importTierIds = labels
-        .map(l => tierMap.get(l))
-        .filter((id): id is number => id !== undefined);
-      const importIdSet = new Set(importTierIds);
-      const otherTierIds = getTiers()
-        .filter(t => !importIdSet.has(t.id))
-        .map(t => t.id);
-      await reorderTiers([...importTierIds, ...otherTierIds]);
-    }
-
     return tierMap;
   }
 
+  async function createConfirmedTiers(items: MatchedItem[]): Promise<Map<number, number>> {
+    const mapping = new Map<number, number>();
+    createdTierCount = 0;
+    await loadTiers();
+    const used = new Set(items.map(item => item.tierId));
+    for (const planned of plannedTiers) {
+      if (!used.has(planned.id)) continue;
+      const existing = getTiers().find(tier => tier.name.toLowerCase() === planned.name.toLowerCase());
+      if (existing) mapping.set(planned.id, existing.id);
+      else {
+        const saved = await createTier(planned.name, planned.color);
+        if (!saved) throw new Error(`Could not create tier “${planned.name}”.`);
+        mapping.set(planned.id, saved.id);
+        createdTierCount++;
+      }
+    }
+    if (createdTierCount > 0) {
+      const importIds = [...new Set(items.map(item => item.tierId !== null ? mapping.get(item.tierId) ?? item.tierId : null).filter((id): id is number => id !== null))];
+      const imported = new Set(importIds);
+      await reorderTiers([...importIds, ...getTiers().filter(tier => !imported.has(tier.id)).map(tier => tier.id)]);
+    }
+    return mapping;
+  }
+
   async function startBatchSearch() {
+    const request = ++searchGeneration;
+    const kind = contentType;
     isSearching = true;
     searchTotal = parsedItems.length;
     searchProgress = 0;
@@ -298,17 +308,19 @@
       }
     }
 
-    // Auto-create tiers if enabled
+    // Preview missing tiers without writing anything.
     let tierMap = new Map<string, number>();
     if (autoCreateTiers && orderedLabels.length > 0) {
-      tierMap = await createTiersFromLabels(orderedLabels);
+      tierMap = planTiersFromLabels(orderedLabels);
     }
 
+    if (!autoCreateTiers) plannedTiers = [];
     const results: MatchedItem[] = [];
 
     for (const item of parsedItems) {
       try {
-        const searchResults = await searchSingle(item.name);
+        const searchResults = await searchSingle(item.name, kind);
+        if (disposed || request !== searchGeneration) return;
         const best = searchResults[0];
         const tierId = findBestTierMatch(item.tierLabel, tierMap);
 
@@ -341,6 +353,7 @@
           });
         }
       } catch {
+        if (disposed || request !== searchGeneration) return;
         results.push({
           parsed: item,
           matchedId: null,
@@ -380,6 +393,8 @@
   // =============================================
 
   function toggleManualSearch(index: number) {
+    manualGeneration++;
+    manualSearchLoading = false;
     if (activeManualIndex === index) {
       activeManualIndex = null;
       matchedItems[index].showSearch = false;
@@ -399,16 +414,19 @@
 
   async function handleManualSearch() {
     if (!manualSearchQuery.trim()) return;
+    const request = ++manualGeneration;
+    const index = activeManualIndex;
     manualSearchLoading = true;
     try {
-      manualSearchResults = await searchSingle(manualSearchQuery.trim());
+      const results = await searchSingle(manualSearchQuery.trim(), contentType);
+      if (!disposed && request === manualGeneration && index === activeManualIndex) manualSearchResults = results;
     } catch {
-      manualSearchResults = [];
-    }
-    manualSearchLoading = false;
+      if (!disposed && request === manualGeneration) manualSearchResults = [];
+    } finally { if (!disposed && request === manualGeneration) manualSearchLoading = false; }
   }
 
   function selectManualMatch(index: number, result: SearchResult) {
+    manualGeneration++;
     matchedItems[index] = {
       ...matchedItems[index],
       matchedId: result.id,
@@ -424,6 +442,7 @@
   }
 
   function addAsManualEntry(index: number) {
+    manualGeneration++;
     matchedItems[index] = {
       ...matchedItems[index],
       matchedId: null,
@@ -437,6 +456,7 @@
   }
 
   function skipItem(index: number) {
+    manualGeneration++;
     matchedItems[index] = {
       ...matchedItems[index],
       status: "skipped",
@@ -456,28 +476,48 @@
   // =============================================
 
   async function startImport() {
-    const toImport = matchedItems.filter(i => i.status === "matched" || i.status === "manual");
+    if (confirmingImport) return;
+    const toImport = matchedItems.filter(i => i.status === "matched" || i.status === "manual").map(item => ({ ...item }));
+    if (!toImport.length) return;
+    confirmingImport = true;
+    const kind = contentType;
+    const neededTiers = plannedTiers.filter(tier => toImport.some(item => item.tierId === tier.id)).length;
+    const confirmed = await openConfirmDialog({
+      title: "Import reviewed titles?",
+      message: `Import ${toImport.length} ${kind === "movies" ? "movies" : "TV shows"}${neededTiers ? ` and add up to ${neededTiers} missing tiers` : ""}? Existing titles and assignments in your other list will be kept. Imported titles may have their tier updated.`,
+      type: "info", confirmLabel: "Import titles", cancelLabel: "Keep reviewing",
+    });
+    confirmingImport = false;
+    if (!confirmed || disposed) return;
     step = "importing";
     importTotal = toImport.length;
     importProgress = 0;
     importErrors = [];
 
+    let tierMapping: Map<number, number>;
+    try { tierMapping = await createConfirmedTiers(toImport); }
+    catch (cause) {
+      importErrors = toImport.map(item => `${item.parsed.name}: ${String(cause)}`);
+      step = "done";
+      return;
+    }
     for (const item of toImport) {
+      const tierId = item.tierId !== null ? tierMapping.get(item.tierId) ?? item.tierId : null;
       try {
         if (item.matchedId && item.matchedId > 0) {
           // API-matched item
-          if (contentType === "movies") {
-            await addMovieTierOnly(item.matchedId, item.tierId);
+          if (kind === "movies") {
+            await addMovieTierOnly(item.matchedId, tierId);
           } else {
-            await addShowTierOnly(item.matchedId, item.tierId);
+            await addShowTierOnly(item.matchedId, tierId);
           }
         } else {
           // Manual entry (no API ID)
           const title = item.matchedTitle ?? item.parsed.name;
-          if (contentType === "movies") {
-            await addManualMovie(title, item.matchedPoster, item.tierId);
+          if (kind === "movies") {
+            await addManualMovie(title, item.matchedPoster, tierId);
           } else {
-            await addManualShow(title, item.matchedPoster, item.tierId);
+            await addManualShow(title, item.matchedPoster, tierId);
           }
         }
       } catch (e) {
@@ -487,7 +527,7 @@
     }
 
     // Refresh tier lists
-    if (contentType === "movies") {
+    if (kind === "movies") {
       await loadTierListMovies();
     } else {
       await loadTierListShows();
@@ -501,6 +541,8 @@
   // =============================================
 
   function reset() {
+    searchGeneration++; manualGeneration++;
+    plannedTiers = []; previewError = null;
     step = "paste";
     htmlInput = "";
     parsedItems = [];
@@ -525,11 +567,13 @@
     </p>
   </div>
 
+  {#if previewError}<p role="alert" class="text-sm text-red-400">{previewError}</p>{/if}
   {#if step === "paste"}
     <!-- Content type toggle -->
     <div class="flex gap-2">
       <button
         type="button"
+        disabled={isSearching}
         onclick={() => contentType = "movies"}
         class="px-3 py-1.5 text-xs rounded-lg border transition-colors
           {contentType === 'movies'
@@ -540,6 +584,7 @@
       </button>
       <button
         type="button"
+        disabled={isSearching}
         onclick={() => contentType = "shows"}
         class="px-3 py-1.5 text-xs rounded-lg border transition-colors
           {contentType === 'shows'
@@ -552,14 +597,15 @@
 
     <!-- Auto-create tiers option -->
     <label class="flex items-center gap-2 text-xs text-text">
-      <input type="checkbox" bind:checked={autoCreateTiers} class="rounded border-border" />
-      Auto-create tiers from Tiermaker labels
-      <span class="text-text-muted">(replaces existing tier layout)</span>
+      <input type="checkbox" disabled={isSearching} bind:checked={autoCreateTiers} class="rounded border-border" />
+      Add missing tiers from Tiermaker labels when importing
+      <span class="text-text-muted">(existing tiers and assignments are kept)</span>
     </label>
 
     <!-- HTML paste area -->
     <textarea
       bind:value={htmlInput}
+      disabled={isSearching}
       placeholder="Paste Tiermaker HTML here..."
       class="w-full h-32 bg-background border border-border rounded-lg px-3 py-2 text-xs text-text font-mono outline-none focus:ring-2 focus:ring-accent resize-y"
     ></textarea>
@@ -610,6 +656,7 @@
       </button>
     </div>
 
+    <p class="text-xs text-text-muted">Preview only. No titles or tiers have changed. {plannedTiers.length} proposed new tiers; review the matches before importing.</p>
     <!-- Items list -->
     <div class="border border-border rounded-lg overflow-hidden max-h-[400px] overflow-y-auto">
       {#each matchedItems as item, index (index)}
@@ -656,8 +703,8 @@
                 class="bg-background border border-border rounded px-1.5 py-0.5 text-xs text-text outline-none"
               >
                 <option value="">No tier</option>
-                {#each tiers as tier (tier.id)}
-                  <option value={tier.id}>{tier.name}</option>
+                {#each tierChoices as tier (tier.id)}
+                  <option value={tier.id}>{tier.name}{tier.id < 0 ? " (new)" : ""}</option>
                 {/each}
               </select>
 
@@ -761,7 +808,7 @@
       <button
         type="button"
         onclick={startImport}
-        disabled={matchedCount === 0}
+        disabled={matchedCount === 0 || confirmingImport}
         class="flex items-center gap-2 px-4 py-2 text-sm bg-accent text-white rounded-lg hover:bg-accent/90 disabled:opacity-50 transition-colors"
       >
         <Upload class="w-4 h-4" />

@@ -35,6 +35,42 @@ export interface DeleteTierResult {
   affected_movies: number;
 }
 
+export type TierPreset = "10-star" | "5-star" | "custom";
+export interface TierDefinition { name: string; color: string }
+export interface TierDraft { preset: TierPreset; tiers: TierDefinition[] }
+let tierDraft = $state<TierDraft | null>(null);
+export function getTierDraft() { return tierDraft; }
+export function saveTierDraft(preset: TierPreset, definitions: TierDefinition[]) {
+  tierDraft = { preset, tiers: definitions.map(tier => ({ ...tier })) };
+}
+export function clearTierDraft() { tierDraft = null; }
+export interface ApplyTierConfigurationResult {
+  tiers: Tier[];
+  cleared_shows: number;
+  cleared_movies: number;
+}
+
+// Settings edits stay local until the user confirms this single replacement.
+export async function applyTierConfiguration(preset: TierPreset, definitions: TierDefinition[]): Promise<ApplyTierConfigurationResult> {
+  const result = await invoke<ApplyTierConfigurationResult>("apply_tier_configuration", { preset, tiers: definitions });
+  tiers = result.tiers;
+  tierPreset = preset;
+  const shows = await import("./shows.svelte");
+  const movies = await import("./movies.svelte");
+  const detail = await import("./showDetail.svelte");
+  const showId = detail.isShowDetailOpen() ? detail.getCurrentShow()?.id : undefined;
+  const movieId = movies.isMovieDetailOpen() ? movies.getCurrentMovie()?.id : undefined;
+  await Promise.all([
+    loadTierListShows(), loadTierListMovies(),
+    shows.loadTrackedShows(), shows.loadArchivedShows(),
+    movies.loadTrackedMovies(), movies.loadArchivedMovies(),
+  ]);
+  if (showId !== undefined && detail.isShowDetailOpen() && detail.getCurrentShow()?.id === showId) await detail.openShowDetail(showId);
+  if (movieId !== undefined && movies.isMovieDetailOpen() && movies.getCurrentMovie()?.id === movieId) await movies.openMovieDetail(movieId);
+  clearTierDraft();
+  return result;
+}
+
 // State
 let tiers = $state<Tier[]>([]);
 let tierPreset = $state<string>("10-star");

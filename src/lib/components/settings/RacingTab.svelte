@@ -18,6 +18,8 @@
     type RacingSeries,
   } from "../../stores/racing.svelte";
 
+  import { getNotificationSettings } from "../../stores/notifications.svelte";
+  import { openSettings } from "../../stores/settings.svelte";
   import { formatDateTime } from "../../utils/dateFormat";
 
   const isDev = import.meta.env.DEV;
@@ -28,9 +30,22 @@
     "stock-car": "Stock Car",
     motorcycle: "Motorcycle",
     rally: "Rally",
+    touring: "Touring",
+    other: "Other",
   };
 
-  const categoryOrder = ["open-wheel", "endurance", "stock-car", "motorcycle", "rally"];
+  const preferredCategories = ["open-wheel", "endurance", "stock-car", "motorcycle", "rally", "touring", "other"];
+  const categoryOrder = $derived([...new Set([...preferredCategories, ...getRacingSeries().map(series => series.category)])]);
+  let seriesFilter = $state<"followed" | "all">("followed");
+  const followedCount = $derived(getRacingSeries().filter(series => series.enabled).length);
+  const reminderStatus = $derived.by(() => {
+    const config = getRacingConfig();
+    const notifications = getNotificationSettings();
+    if (!config || !notifications) return "Checking reminder settings…";
+    if (!config.notifications_enabled) return "Race reminders are paused.";
+    if (!notifications.enabled || !notifications.racing_enabled) return "Race reminders are paused in Notifications settings.";
+    return "Race reminders are on for followed series with reminders enabled.";
+  });
 
   let expandedSeries = $state<Set<string>>(new Set());
   let collapsedCategories = $state<Set<string>>(new Set());
@@ -46,7 +61,7 @@
   function getSeriesByCategory(): Record<string, RacingSeries[]> {
     const grouped: Record<string, RacingSeries[]> = {};
     for (const cat of categoryOrder) {
-      grouped[cat] = getRacingSeries().filter((s) => s.category === cat);
+      grouped[cat] = getRacingSeries().filter((s) => s.category === cat && (seriesFilter === "all" || s.enabled));
     }
     return grouped;
   }
@@ -72,8 +87,8 @@
   }
 
   async function handleToggle(slug: string, enabled: boolean) {
-    await toggleSeries(slug, enabled);
-    if (enabled) {
+    const saved = await toggleSeries(slug, enabled);
+    if (saved && enabled) {
       await refreshSingleSeries(slug);
     }
   }
@@ -133,26 +148,31 @@
           <BellOff class="w-4 h-4 text-text-muted" />
         {/if}
         <div>
-          <p class="text-sm font-medium text-text">Desktop Notifications</p>
-          <p class="text-xs text-text-muted">Get notified before sessions start</p>
+          <p class="text-sm font-medium text-text">Race reminders</p>
+          <p class="text-xs text-text-muted">Get reminded before your followed sessions start</p>
         </div>
       </div>
       <button
         onclick={() => { globalNotifications = !globalNotifications; handleSaveGlobalConfig(); }}
         class="relative w-10 h-5 rounded-full transition-colors {globalNotifications ? 'bg-accent' : 'bg-border'}"
-        aria-label="Toggle desktop notifications"
+        role="switch" aria-checked={globalNotifications} aria-label="Race reminders"
       >
         <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform {globalNotifications ? 'translate-x-5' : ''}"></span>
       </button>
     </div>
 
+    <div class="flex flex-wrap items-center gap-2 text-xs text-text-muted">
+      <span aria-live="polite">{reminderStatus}</span>
+      <button type="button" onclick={() => openSettings('notifications')} class="text-accent hover:underline">Notifications settings</button>
+    </div>
     <div class="flex items-center justify-between p-3 rounded-lg bg-background border border-border">
       <div>
-        <p class="text-sm font-medium text-text">Change All Lead Times</p>
-        <p class="text-xs text-text-muted">Set all enabled series to the same lead time</p>
+        <p class="text-sm font-medium text-text">Change enabled reminder times</p>
+        <p class="text-xs text-text-muted">Set the same lead time for followed series whose reminders are on</p>
       </div>
       <select
         value=""
+        aria-label="Lead time for enabled racing reminders"
         onchange={(e) => { const v = (e.target as HTMLSelectElement).value; if (v) { handleChangeAllLeadTimes(parseInt(v)); (e.target as HTMLSelectElement).value = ""; } }}
         class="bg-surface border border-border rounded-lg px-3 py-1.5 text-sm text-text"
       >
@@ -185,12 +205,20 @@
     </div>
   </div>
 
+  <div class="focus-segment" role="group" aria-label="Racing series filter">
+    <button type="button" aria-pressed={seriesFilter === 'followed'} onclick={() => seriesFilter = 'followed'}>Followed ({followedCount})</button>
+    <button type="button" aria-pressed={seriesFilter === 'all'} onclick={() => seriesFilter = 'all'}>All series ({getRacingSeries().length})</button>
+  </div>
+  {#if seriesFilter === 'followed' && !followedCount}
+    <p class="text-sm text-text-muted">No followed series. <button type="button" onclick={() => seriesFilter = 'all'} class="text-accent hover:underline">Choose from all series</button></p>
+  {/if}
   <!-- Series by category -->
   {#each categoryOrder as category}
     {@const seriesInCat = getSeriesByCategory()[category]}
     {#if seriesInCat && seriesInCat.length > 0}
       <div class="space-y-2">
         <button
+          aria-expanded={!collapsedCategories.has(category)}
           onclick={() => toggleCategory(category)}
           class="flex items-center gap-2 text-sm font-semibold text-text-muted uppercase tracking-wider hover:text-text transition-colors w-full text-left"
         >
@@ -228,6 +256,7 @@
                   class="p-1.5 rounded transition-colors {series.notify_enabled
                     ? 'text-accent hover:bg-accent/10'
                     : 'text-text-muted hover:bg-surface-hover'}"
+                  aria-label={`Reminders for ${series.name}`} aria-pressed={series.notify_enabled}
                   title={series.notify_enabled ? "Notifications on" : "Notifications off"}
                 >
                   {#if series.notify_enabled}
@@ -240,6 +269,7 @@
                 <!-- Minutes selector -->
                 {#if series.notify_enabled}
                   <select
+                    aria-label={`Reminder lead time for ${series.name}`}
                     value={series.notify_minutes}
                     onchange={(e) => handleMinutesChange(series, parseInt((e.target as HTMLSelectElement).value))}
                     class="bg-surface border border-border rounded px-2 py-1 text-xs text-text w-20"
@@ -255,6 +285,7 @@
               <button
                 onclick={() => toggleExpanded(series.slug)}
                 class="p-1.5 rounded hover:bg-surface-hover transition-colors text-text-muted"
+                aria-label={`Advanced options for ${series.name}`} aria-expanded={expandedSeries.has(series.slug)}
                 title="Advanced options"
               >
                 {#if expandedSeries.has(series.slug)}
@@ -268,7 +299,8 @@
               <button
                 onclick={() => handleToggle(series.slug, !series.enabled)}
                 class="relative w-10 h-5 rounded-full transition-colors {series.enabled ? 'bg-accent' : 'bg-border'}"
-                aria-label="Toggle {series.name}"
+                role="switch" aria-checked={series.enabled}
+                aria-label="Follow {series.name}"
               >
                 <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform {series.enabled ? 'translate-x-5' : ''}"></span>
               </button>

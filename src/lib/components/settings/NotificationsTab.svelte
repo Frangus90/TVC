@@ -1,9 +1,16 @@
 <script lang="ts">
+  import { onDestroy, onMount } from "svelte";
   import { Bell, BellOff, Volume2, VolumeX, Monitor, MonitorOff, Play, Zap, Flag, Tv, Download, Info } from "lucide-svelte";
   import {
     getNotificationSettings,
     updateNotificationSettings,
     testNotification,
+    loadNotificationSettings,
+    isNotificationSettingsLoading,
+    isNotificationSettingsSaving,
+    getNotificationSettingsLoadError,
+    getNotificationSettingsSaveError,
+    retryNotificationSettingsSave,
   } from "../../stores/notifications.svelte";
   import { previewSound, getAvailableSounds } from "../../utils/notificationSound";
 
@@ -11,6 +18,22 @@
   const settings = $derived(getNotificationSettings());
   const sounds = getAvailableSounds();
   let testingAll = $state(false);
+  let volumeInput = $state(50);
+  let volumeTimer: ReturnType<typeof setTimeout> | null = null;
+  $effect(() => { const volume = settings?.sound_volume; if (!volumeTimer && volume !== undefined) volumeInput = volume; });
+  onMount(() => { if (!settings && !isNotificationSettingsLoading()) void loadNotificationSettings(); });
+  onDestroy(() => { if (volumeTimer) { clearTimeout(volumeTimer); volumeTimer = null; void updateNotificationSettings({ sound_volume: volumeInput }); } });
+  function changeVolume(event: Event) {
+    volumeInput = parseInt((event.target as HTMLInputElement).value);
+    if (volumeTimer) clearTimeout(volumeTimer);
+    volumeTimer = setTimeout(flushVolume, 250);
+  }
+  function flushVolume() {
+    if (!volumeTimer) return;
+    clearTimeout(volumeTimer);
+    volumeTimer = null;
+    void updateNotificationSettings({ sound_volume: volumeInput });
+  }
 
   const testTypes = [
     { type: "racing", label: "Racing", icon: Flag, color: "text-red-400" },
@@ -61,7 +84,19 @@
   }
 </script>
 
+{#if getNotificationSettingsLoadError()}
+  <div role="alert" class="p-3 rounded-lg border border-red-500/30 text-red-400 text-sm mb-4">
+    <p>{getNotificationSettingsLoadError()}</p><button type="button" onclick={() => loadNotificationSettings()} class="underline mt-1">Retry loading</button>
+  </div>
+{:else if !settings || isNotificationSettingsLoading()}
+  <p role="status" class="text-sm text-text-muted py-4">Loading notification settings…</p>
+{/if}
 {#if settings}
+  {#if getNotificationSettingsSaveError()}
+    <div role="alert" class="p-3 rounded-lg border border-red-500/30 text-red-400 text-sm mb-4">
+      <p>{getNotificationSettingsSaveError()}</p><button type="button" disabled={isNotificationSettingsSaving()} onclick={() => retryNotificationSettingsSave()} class="underline mt-1">Retry saving</button>
+    </div>
+  {:else if isNotificationSettingsSaving()}<p role="status" class="text-xs text-text-muted mb-3">Saving notification settings…</p>{/if}
   <div class="space-y-6">
     <!-- General -->
     <div class="space-y-3">
@@ -83,6 +118,8 @@
         <button
           onclick={() => toggle("enabled")}
           class="relative w-10 h-5 rounded-full transition-colors {settings.enabled ? 'bg-accent' : 'bg-border'}"
+          role="switch"
+          aria-checked={settings.enabled}
           aria-label="Toggle notifications"
         >
           <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform {settings.enabled ? 'translate-x-5' : ''}"></span>
@@ -105,6 +142,8 @@
         <button
           onclick={() => toggle("tray_notifications")}
           class="relative w-10 h-5 rounded-full transition-colors {settings.tray_notifications ? 'bg-accent' : 'bg-border'}"
+          role="switch"
+          aria-checked={settings.tray_notifications}
           aria-label="Toggle tray notifications"
         >
           <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform {settings.tray_notifications ? 'translate-x-5' : ''}"></span>
@@ -123,6 +162,8 @@
         <button
           onclick={() => toggle("os_fallback")}
           class="relative w-10 h-5 rounded-full transition-colors {settings.os_fallback ? 'bg-accent' : 'bg-border'}"
+          role="switch"
+          aria-checked={settings.os_fallback}
           aria-label="Toggle OS notifications"
         >
           <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform {settings.os_fallback ? 'translate-x-5' : ''}"></span>
@@ -150,6 +191,8 @@
         <button
           onclick={() => toggle("sound_enabled")}
           class="relative w-10 h-5 rounded-full transition-colors {settings.sound_enabled ? 'bg-accent' : 'bg-border'}"
+          role="switch"
+          aria-checked={settings.sound_enabled}
           aria-label="Toggle notification sound"
         >
           <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform {settings.sound_enabled ? 'translate-x-5' : ''}"></span>
@@ -162,7 +205,8 @@
           <p class="text-sm font-medium text-text">Sound</p>
           <div class="flex items-center gap-2">
             <select
-              value={settings.sound_choice}
+              aria-label="Notification sound"
+          value={settings.sound_choice}
               onchange={(e) => updateNotificationSettings({ sound_choice: (e.target as HTMLSelectElement).value })}
               class="bg-surface border border-border rounded-md px-2 py-1 text-sm text-text"
             >
@@ -184,15 +228,17 @@
         <div class="p-3 rounded-lg bg-background border border-border">
           <div class="flex items-center justify-between mb-2">
             <p class="text-sm font-medium text-text">Volume</p>
-            <span class="text-xs text-text-muted">{settings.sound_volume}%</span>
+            <span class="text-xs text-text-muted">{volumeInput}%</span>
           </div>
           <input
             type="range"
             min="0"
             max="100"
             step="5"
-            value={settings.sound_volume}
-            oninput={(e) => updateNotificationSettings({ sound_volume: parseInt((e.target as HTMLInputElement).value) })}
+            value={volumeInput}
+            aria-label="Notification volume"
+            oninput={changeVolume}
+            onchange={flushVolume}
             class="w-full accent-accent"
           />
         </div>
@@ -207,6 +253,7 @@
       <div class="flex items-center justify-between p-3 rounded-lg bg-background border border-border">
         <p class="text-sm font-medium text-text">Popup Position</p>
         <select
+          aria-label="Popup position"
           value={settings.popup_position}
           onchange={(e) => updateNotificationSettings({ popup_position: (e.target as HTMLSelectElement).value })}
           class="bg-surface border border-border rounded-md px-2 py-1 text-sm text-text"
@@ -221,6 +268,7 @@
       <div class="flex items-center justify-between p-3 rounded-lg bg-background border border-border">
         <p class="text-sm font-medium text-text">Auto-dismiss</p>
         <select
+          aria-label="Popup duration"
           value={settings.popup_duration}
           onchange={(e) => updateNotificationSettings({ popup_duration: parseInt((e.target as HTMLSelectElement).value) })}
           class="bg-surface border border-border rounded-md px-2 py-1 text-sm text-text"
@@ -235,6 +283,7 @@
       <div class="flex items-center justify-between p-3 rounded-lg bg-background border border-border">
         <p class="text-sm font-medium text-text">Max Popups</p>
         <select
+          aria-label="Maximum visible popups"
           value={settings.max_visible}
           onchange={(e) => updateNotificationSettings({ max_visible: parseInt((e.target as HTMLSelectElement).value) })}
           class="bg-surface border border-border rounded-md px-2 py-1 text-sm text-text"
@@ -259,6 +308,8 @@
           <button
             onclick={() => toggle(cat.key)}
             class="relative w-10 h-5 rounded-full transition-colors {(settings as any)[cat.key] ? 'bg-accent' : 'bg-border'}"
+            role="switch"
+            aria-checked={settings[cat.key]}
             aria-label="Toggle {cat.label} notifications"
           >
             <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform {(settings as any)[cat.key] ? 'translate-x-5' : ''}"></span>

@@ -1,4 +1,3 @@
-import { showError } from "./toast.svelte";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { logger } from "../utils/logger";
@@ -41,6 +40,20 @@ let unreadCount = $state(0);
 let settings = $state<NotificationSettings | null>(null);
 let activePopups = $state<AppNotification[]>([]);
 let notificationCenterOpen = $state(false);
+let settingsLoading = $state(false);
+let settingsSaving = $state(false);
+let settingsLoadError = $state<string | null>(null);
+let settingsSaveError = $state<string | null>(null);
+let settingsLoadPromise: Promise<void> | null = null;
+let settingsSaveQueue: Promise<void> = Promise.resolve();
+let pendingSettingsSaves = 0;
+let settingsRevision = 0;
+
+export function isNotificationSettingsLoading() { return settingsLoading; }
+export function isNotificationSettingsSaving() { return settingsSaving; }
+export function getNotificationSettingsLoadError() { return settingsLoadError; }
+export function getNotificationSettingsSaveError() { return settingsSaveError; }
+
 let popupTimers = new Map<number, ReturnType<typeof setTimeout>>();
 
 // Getters
@@ -102,31 +115,47 @@ export async function loadUnreadCount() {
   }
 }
 
-// Load settings
-export async function loadNotificationSettings() {
+// Load settings, sharing in-flight reads so a retry cannot replace a newer response.
+export function loadNotificationSettings(): Promise<void> {
+  if (settingsLoadPromise) return settingsLoadPromise;
+  settingsLoading = true;
+  settingsLoadError = null;
+  const revision = settingsRevision;
+  settingsLoadPromise = invoke<NotificationSettings>("get_notification_settings")
+    .then(result => { if (revision === settingsRevision) settings = result; })
+    .catch(error => {
+      logger.error("[Notifications] Failed to load settings", error);
+      settingsLoadError = `Could not load notification settings: ${error}`;
+    })
+    .finally(() => { settingsLoading = false; settingsLoadPromise = null; });
+  return settingsLoadPromise;
+}
+
+// Apply changes immediately, then save full snapshots in order.
+export async function updateNotificationSettings(updates: Partial<NotificationSettings>): Promise<boolean> {
+  if (!settings) return false;
+  settings = { ...settings, ...updates };
+  const snapshot = { ...settings };
+  const revision = ++settingsRevision;
+  pendingSettingsSaves++;
+  settingsSaving = true;
+  settingsSaveError = null;
+  const operation = settingsSaveQueue.then(() => invoke("update_notification_settings", { settings: snapshot }));
+  settingsSaveQueue = operation.then(() => {}, () => {}); // Failure is surfaced below; allow a later save/retry.
   try {
-    settings = await invoke("get_notification_settings");
-  } catch (e) {
-    logger.error("[Notifications] Failed to load settings", e);
+    await operation;
+    if (revision === settingsRevision) settingsSaveError = null;
+    return true;
+  } catch (error) {
+    logger.error("[Notifications] Failed to update settings", error);
+    if (revision === settingsRevision) settingsSaveError = `Notification changes were not saved: ${error}`;
+    return false;
+  } finally {
+    settingsSaving = --pendingSettingsSaves > 0;
   }
 }
 
-// Update settings
-export async function updateNotificationSettings(
-  updates: Partial<NotificationSettings>,
-) {
-  if (!settings) return;
-
-  const updated = { ...settings, ...updates };
-
-  try {
-    await invoke("update_notification_settings", { settings: updated });
-    settings = updated;
-  } catch (e) {
-    logger.error("[Notifications] Failed to update settings", e);
-    showError(`Could not save notification settings: ${e}`);
-  }
-}
+export function retryNotificationSettingsSave() { return updateNotificationSettings({}); }
 
 // Mark a notification as read
 export async function markRead(id: number) {

@@ -101,10 +101,11 @@ export async function updateConfig(newConfig: PlexConfig) {
   try {
     await invoke("update_plex_config", { config: newConfig });
     config = newConfig;
+    return true;
   } catch (err) {
     logger.error("[Plex] Failed to update config:", err);
     error = err instanceof Error ? err.message : String(err);
-    throw err;
+    return false;
   } finally {
     loading = false;
   }
@@ -117,9 +118,11 @@ export async function startServer() {
   try {
     await invoke("start_plex_server", { port: config.port });
     await loadServerStatus();
+    return true;
   } catch (err) {
     logger.error("[Plex] Failed to start server:", err);
     error = err instanceof Error ? err.message : String(err);
+    return false;
   } finally {
     loading = false;
   }
@@ -132,23 +135,22 @@ export async function stopServer() {
   try {
     await invoke("stop_plex_server");
     await loadServerStatus();
+    return true;
   } catch (err) {
     logger.error("[Plex] Failed to stop server:", err);
     error = err instanceof Error ? err.message : String(err);
+    return false;
   } finally {
     loading = false;
   }
 }
 
 export async function toggleServer(enabled: boolean) {
-  if (enabled) {
-    await startServer();
-  } else {
-    await stopServer();
-  }
+  const changed = enabled ? await startServer() : await stopServer();
+  if (!changed) return false;
 
   // Update config to persist the enabled state
-  await updateConfig({ ...config, enabled });
+  return updateConfig({ ...config, enabled });
 }
 
 // Computed

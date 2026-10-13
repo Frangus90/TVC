@@ -16,6 +16,13 @@ All notable changes to TVC will be documented in this file.
 - Your custom colours, text size, compact spacing, hidden posters, tiers, and saved history are kept.
 - Archived tier-only titles now appear in **Data Management → Archive**, where you can restore them.
 
+### Settings
+
+- Tier presets and edits now stay in a draft until you choose **Apply**. The confirmation explains that applying clears previous movie and TV show rankings while keeping your titles and watch history.
+- Tiermaker searches let you review matches before changing your saved tiers or importing titles.
+- Fixed missing racing series in Settings, unreliable preference saves, and custom colour validation.
+- Plex startup failures remain visible, and Sonarr/Radarr import results let you read every reported issue.
+
 ## [0.14.8] - 10.10.2026
 
 ### Movies

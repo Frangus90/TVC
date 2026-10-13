@@ -27,6 +27,8 @@
   });
 
   let copied = $state(false);
+  let copyError = $state("");
+  let portError = $state("");
   let portInput = $state(9876);
 
   $effect(() => {
@@ -41,15 +43,26 @@
 
   async function handlePortChange() {
     const config = getConfig();
-    if (portInput !== config.port && portInput >= 1024 && portInput <= 65535) {
-      await updateConfig({ ...config, port: portInput });
+    portError = "";
+    if (!Number.isInteger(portInput) || portInput < 1024 || portInput > 65535) {
+      portError = "Enter a whole port number between 1024 and 65535.";
+      return;
+    }
+    if (portInput !== config.port) {
+      if (!await updateConfig({ ...config, port: portInput })) portInput = config.port;
     }
   }
 
-  function copyWebhookUrl() {
-    navigator.clipboard.writeText(getWebhookUrl());
-    copied = true;
-    setTimeout(() => (copied = false), 2000);
+  async function copyWebhookUrl() {
+    copyError = "";
+    copied = false;
+    try {
+      await navigator.clipboard.writeText(getWebhookUrl());
+      copied = true;
+      setTimeout(() => (copied = false), 2000);
+    } catch {
+      copyError = "Could not copy the URL. Select and copy it manually.";
+    }
   }
 
   const loading = $derived(isLoading());
@@ -118,6 +131,7 @@
           <p class="text-sm text-text-muted self-center">Stop server to change port</p>
         {/if}
       </div>
+      {#if portError}<p role="alert" class="text-sm text-red-400 mt-1">{portError}</p>{/if}
     </div>
 
     <!-- Webhook URL -->
@@ -141,6 +155,7 @@
           {/if}
         </button>
       </div>
+      {#if copyError}<p role="alert" class="text-sm text-red-400 mt-1">{copyError}</p>{/if}
     </div>
 
     <!-- Setup Instructions -->

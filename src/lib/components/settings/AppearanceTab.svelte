@@ -1,19 +1,24 @@
 <script lang="ts">
+  import { onDestroy } from "svelte";
   import { RotateCcw } from "lucide-svelte";
   import {
     getThemeSettings,
     updateThemeSettings,
     type ThemeSettings,
+    defaultTheme,
+    normalizeAccentColor,
+    isThemeSaving,
+    getThemeSaveError,
+    getThemeLoadError,
+    loadThemeSettings,
+    retryThemeSave,
   } from "../../stores/theme.svelte";
 
-  const defaultTheme: ThemeSettings = {
-    colorScheme: "default",
-    accentColor: "#bba4ff",
-    fontSize: 1,
-    compactSpacing: false,
-    colorblindFriendly: false,
-    hidePosters: false,
-  };
+  let colourError = $state<string | null>(null);
+  let fontInput = $state(1);
+  let fontTimer: ReturnType<typeof setTimeout> | null = null;
+  $effect(() => { if (!fontTimer) fontInput = getThemeSettings().fontSize; });
+  onDestroy(() => { if (fontTimer) { clearTimeout(fontTimer); fontTimer = null; void updateThemeSettings({ fontSize: fontInput }); } });
 
   const accentPresets = [
     { color: "#bba4ff", name: "Focus" },
@@ -32,12 +37,22 @@
   }
 
   async function handleAccentColor(color: string) {
-    await updateThemeSettings({ accentColor: color });
+    const normalized = normalizeAccentColor(color);
+    if (!normalized) { colourError = "Use #RGB or #RRGGBB, for example #bba4ff."; return; }
+    colourError = null;
+    await updateThemeSettings({ accentColor: normalized });
   }
 
-  async function handleFontSize(event: Event) {
-    const input = event.target as HTMLInputElement;
-    await updateThemeSettings({ fontSize: parseFloat(input.value) });
+  function handleFontSize(event: Event) {
+    fontInput = parseFloat((event.target as HTMLInputElement).value);
+    if (fontTimer) clearTimeout(fontTimer);
+    fontTimer = setTimeout(flushFontSize, 250);
+  }
+  function flushFontSize() {
+    if (!fontTimer) return;
+    clearTimeout(fontTimer);
+    fontTimer = null;
+    void updateThemeSettings({ fontSize: fontInput });
   }
 
   async function handleToggle(key: keyof ThemeSettings) {
@@ -61,6 +76,16 @@
 </script>
 
 <div class="space-y-6">
+  {#if getThemeLoadError()}
+    <div role="alert" class="p-3 rounded-lg border border-red-500/30 text-red-400 text-sm">
+      <p>{getThemeLoadError()}</p><button type="button" onclick={() => loadThemeSettings()} class="underline mt-1">Retry loading</button>
+    </div>
+  {/if}
+  {#if getThemeSaveError()}
+    <div role="alert" class="p-3 rounded-lg border border-red-500/30 text-red-400 text-sm">
+      <p>{getThemeSaveError()}</p><button type="button" disabled={isThemeSaving()} onclick={() => retryThemeSave()} class="underline mt-1">Retry saving</button>
+    </div>
+  {:else if isThemeSaving()}<p role="status" class="text-xs text-text-muted">Saving appearance…</p>{/if}
   <!-- Theme -->
   <div class="space-y-3">
     <h3 class="text-sm font-semibold text-text-muted uppercase tracking-wider">Theme</h3>
@@ -87,9 +112,13 @@
           onchange={(e) => handleAccentColor((e.target as HTMLInputElement).value)}
           class="w-10 h-8 rounded border border-border cursor-pointer bg-transparent"
           style="padding: 0;"
+          aria-label="Choose a custom accent colour"
           title="Custom color"
         />
         <input
+          aria-label="Custom accent colour hexadecimal value"
+          aria-invalid={!!colourError}
+          aria-describedby={colourError ? "accent-colour-error" : undefined}
           type="text"
           value={settings().accentColor}
           onchange={(e) => handleAccentColor((e.target as HTMLInputElement).value)}
@@ -97,6 +126,7 @@
           placeholder="#3b82f6"
         />
       </div>
+      {#if colourError}<p id="accent-colour-error" role="alert" class="text-sm text-red-400">{colourError}</p>{/if}
     </div>
   </div>
 
@@ -108,7 +138,7 @@
     <div class="p-3 rounded-lg bg-background border border-border space-y-2">
       <div class="flex items-center justify-between">
         <p class="text-sm font-medium text-text">Font Size</p>
-        <span class="text-sm text-text-muted">{Math.round(settings().fontSize * 100)}%</span>
+        <span class="text-sm text-text-muted">{Math.round(fontInput * 100)}%</span>
       </div>
       <div class="flex items-center gap-3">
         <span class="text-xs text-text-muted">75%</span>
@@ -117,8 +147,10 @@
           min="0.75"
           max="1.5"
           step="0.05"
-          value={settings().fontSize}
+          value={fontInput}
+          aria-label="Font size"
           oninput={handleFontSize}
+          onchange={flushFontSize}
           class="flex-1"
         />
         <span class="text-xs text-text-muted">150%</span>
@@ -170,6 +202,8 @@
       <button
         onclick={() => handleToggle('colorblindFriendly')}
         class="relative w-10 h-5 rounded-full transition-colors flex-shrink-0 {settings().colorblindFriendly ? 'bg-accent' : 'bg-border'}"
+        role="switch"
+        aria-checked={settings().colorblindFriendly}
         aria-label="Toggle colorblind-friendly palette"
       >
         <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform {settings().colorblindFriendly ? 'translate-x-5' : ''}"></span>

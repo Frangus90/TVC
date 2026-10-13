@@ -35,6 +35,41 @@ function store(name, dependencies = {}) {
   return { api, requests, errors };
 }
 
+test('Plex start failure stays visible and does not persist automatic startup', async () => {
+  const { api, requests } = store('plex');
+  const toggling = api.toggleServer(true);
+  assert.equal(requests[0].command, 'start_plex_server');
+  requests[0].reject(new Error('Port is already in use'));
+  assert.equal(await toggling, false);
+  assert.match(api.getError(), /Port is already in use/);
+  assert.equal(api.getConfig().enabled, false);
+  assert.equal(requests.length, 1, 'failed start must not erase the error through a config save');
+});
+
+test('Plex persists startup only after a successful server transition', async () => {
+  const commands = [];
+  const { api } = store('plex', { '@tauri-apps/api/core': { invoke: async (command, args) => {
+    commands.push(command);
+    if (command === 'get_plex_server_status') return { running: true, port: 9876 };
+    if (command === 'update_plex_config') assert.equal(args.config.enabled, true);
+  } } });
+  assert.equal(await api.toggleServer(true), true);
+  assert.equal(api.getServerStatus().running, true);
+  assert.equal(api.getConfig().enabled, true);
+  assert.deepEqual(commands, ['start_plex_server', 'get_plex_server_status', 'update_plex_config']);
+});
+
+test('Plex configuration failure retains the running status and exposes unsaved startup preference', async () => {
+  const { api } = store('plex', { '@tauri-apps/api/core': { invoke: async command => {
+    if (command === 'get_plex_server_status') return { running: true, port: 9876 };
+    if (command === 'update_plex_config') throw new Error('Settings could not be saved');
+  } } });
+  assert.equal(await api.toggleServer(true), false);
+  assert.equal(api.getServerStatus().running, true);
+  assert.equal(api.getConfig().enabled, false);
+  assert.match(api.getError(), /Settings could not be saved/);
+});
+
 for (const kind of ['shows', 'movies']) {
   test(`${kind}: removing a tier-only title clears the shared library cache; failed removal keeps it`, async () => {
     const title = kind === 'shows' ? { name: 'Tier-only show' } : { title: 'Tier-only movie' };

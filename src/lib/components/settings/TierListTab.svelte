@@ -1,450 +1,197 @@
 <script lang="ts">
-  import { modalFocus } from "../../utils/modalFocus";
-  import { GripVertical, Trash2, Plus, RotateCcw } from "lucide-svelte";
+  import { onMount, untrack } from "svelte";
+  import { GripVertical, Trash2, Plus, RotateCcw, ArrowUp, ArrowDown, Loader2 } from "lucide-svelte";
   import TiermakerImport from "./TiermakerImport.svelte";
-  import {
-    getTiers,
-    getTierPreset,
-    loadTiers,
-    loadTierPreset,
-    createTier,
-    updateTierInfo,
-    deleteTier,
-    reorderTiers,
-    applyPreset,
-    type Tier,
-  } from "../../stores/tiers.svelte";
+  import { getTiers, getTierPreset, loadTiers, loadTierPreset, applyTierConfiguration, getTierDraft, saveTierDraft, clearTierDraft, type TierDefinition, type TierPreset } from "../../stores/tiers.svelte";
+  import { openConfirmDialog } from "../../stores/confirmDialog.svelte";
+  import { showSuccess } from "../../stores/toast.svelte";
 
-  // Load data on mount
-  $effect(() => {
-    loadTiers();
-    loadTierPreset();
+  interface DraftTier extends TierDefinition { key: number }
+  let draft = $state<DraftTier[]>([]);
+  let draftPreset = $state<TierPreset>("custom");
+  let baseline = $state("");
+  let loading = $state(true);
+  let applying = $state(false);
+  let error = $state<string | null>(null);
+  let newName = $state("");
+  let newColor = $state("#8b5cf6");
+  let nextKey = 0;
+  let draggedKey = $state<number | null>(null);
+  let dragOverIndex = $state<number | null>(null);
+  let importOpen = $state(false);
+  const definitions = $derived(draft.map(({ name, color }) => ({ name: name.trim(), color })));
+  const dirty = $derived(JSON.stringify({ preset: draftPreset, tiers: definitions }) !== baseline);
+  const valid = $derived(draft.length > 0 && draft.length <= 100 && draft.every(tier => tier.name.trim().length > 0 && [...tier.name.trim()].length <= 120));
+
+  function snapshotCurrent() {
+    draftPreset = ["10-star", "5-star"].includes(getTierPreset()) ? getTierPreset() as TierPreset : "custom";
+    draft = getTiers().map(tier => ({ name: tier.name, color: tier.color, key: ++nextKey }));
+    baseline = JSON.stringify({ preset: draftPreset, tiers: draft.map(({ name, color }) => ({ name: name.trim(), color })) });
+    newName = "";
+    error = null;
+    clearTierDraft();
+  }
+
+  onMount(() => {
+    let active = true;
+    const savedDraft = getTierDraft();
+    Promise.all([loadTiers(), loadTierPreset()]).then(() => {
+      if (active) {
+        snapshotCurrent();
+        if (savedDraft) {
+          draftPreset = savedDraft.preset;
+          draft = savedDraft.tiers.map(tier => ({ ...tier, key: ++nextKey }));
+        }
+        loading = false;
+      }
+    });
+    return () => { active = false; };
   });
 
-  const tiers = $derived(getTiers());
-  const preset = $derived(getTierPreset());
+  // Import can change the saved tiers. Refresh a clean editor; retain a dirty draft.
+  $effect(() => {
+    getTiers(); getTierPreset();
+    untrack(() => { if (!loading && !applying && !dirty) snapshotCurrent(); });
+  });
 
-  // Editing state
-  let editingTierId = $state<number | null>(null);
-  let editName = $state("");
-  let editColor = $state("");
-
-  // New tier state
-  let showNewTierForm = $state(false);
-  let newTierName = $state("");
-  let newTierColor = $state("");
-
-  // Drag reorder state
-  let draggedTierId = $state<number | null>(null);
-  let dragOverIndex = $state<number | null>(null);
-
-  // Confirmation state
-  let pendingPreset = $state<string | null>(null);
-  let pendingDeleteId = $state<number | null>(null);
-  let pendingReset = $state(false);
-
-  // Color presets for quick selection
-  const colorPresets = [
-    "#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4",
-    "#3b82f6", "#8b5cf6", "#ec4899", "#f43f5e", "#14b8a6",
-  ];
-
-  // Start editing a tier
-  function startEdit(tier: Tier) {
-    editingTierId = tier.id;
-    editName = tier.name;
-    editColor = tier.color;
-  }
-
-  // Save tier edit
-  async function saveEdit() {
-    if (editingTierId === null || !editName.trim()) return;
-    if (!await updateTierInfo(editingTierId, editName.trim(), editColor)) return;
-    editingTierId = null;
-  }
-
-  // Cancel edit
-  function cancelEdit() {
-    editingTierId = null;
-  }
-
-  // Handle Enter key in edit
-  function handleEditKeyDown(e: KeyboardEvent) {
-    if (e.key === "Enter") saveEdit();
-    else if (e.key === "Escape") cancelEdit();
-  }
-
-  // Create new tier
-  async function handleCreateTier() {
-    if (!newTierName.trim()) return;
-    if (!await createTier(newTierName.trim(), newTierColor)) return;
-    newTierName = "";
-    newTierColor = "";
-    showNewTierForm = false;
-  }
-
-  // Delete tier (with confirmation)
-  function requestDelete(tierId: number) {
-    pendingDeleteId = tierId;
-  }
-
-  async function confirmDelete() {
-    if (pendingDeleteId === null) return;
-    if (!await deleteTier(pendingDeleteId)) return;
-    pendingDeleteId = null;
-  }
-
-  // Preset change (with confirmation if items are tiered)
-  function requestPresetChange(newPreset: string) {
-    if (newPreset === preset) return;
-    pendingPreset = newPreset;
-  }
-
-  async function confirmPresetChange() {
-    if (!pendingPreset) return;
-    if (!await applyPreset(pendingPreset)) return;
-    pendingPreset = null;
-  }
-
-  // Reset to default
-  function requestReset() {
-    pendingReset = true;
-  }
-
-  async function confirmReset() {
-    if (!await applyPreset("10-star")) return;
-    pendingReset = false;
-  }
-
-  // Drag reorder handlers
-  function handleDragStart(e: DragEvent, tierId: number) {
-    draggedTierId = tierId;
-    if (e.dataTransfer) {
-      e.dataTransfer.effectAllowed = "move";
+  $effect(() => {
+    if (!loading && !applying) {
+      if (dirty) saveTierDraft(draftPreset, definitions);
+      else clearTierDraft();
     }
+  });
+
+  function setPreset(preset: TierPreset) {
+    draftPreset = preset;
+    if (preset === "custom") return;
+    const names = preset === "10-star"
+      ? ["Masterpiece", "Excellent", "Great", "Good", "Solid", "Average", "Below Average", "Poor", "Bad", "Terrible"]
+      : ["Excellent", "Great", "Good", "Average", "Poor"];
+    draft = names.map(name => ({ name, color: "", key: ++nextKey }));
+    error = null;
   }
 
-  function handleDragOver(e: DragEvent, index: number) {
-    e.preventDefault();
-    dragOverIndex = index;
+  function editTier(key: number, values: Partial<TierDefinition>) {
+    draft = draft.map(tier => tier.key === key ? { ...tier, ...values } : tier);
+    draftPreset = "custom";
   }
 
-  function handleDragLeave() {
+  function addTier() {
+    if (!newName.trim() || draft.length >= 100) return;
+    draft = [...draft, { name: newName.trim(), color: newColor, key: ++nextKey }];
+    draftPreset = "custom";
+    newName = "";
+  }
+
+  function deleteTier(key: number) {
+    draft = draft.filter(tier => tier.key !== key);
+    draftPreset = "custom";
+  }
+
+  function moveTier(from: number, to: number) {
+    if (to < 0 || to >= draft.length || from === to) return;
+    const next = [...draft];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    draft = next;
+    draftPreset = "custom";
+  }
+
+  function dropTier(event: DragEvent, index: number) {
+    event.preventDefault();
+    const from = draft.findIndex(tier => tier.key === draggedKey);
+    if (from >= 0) moveTier(from, index);
+    draggedKey = null;
     dragOverIndex = null;
   }
 
-  async function handleDrop(e: DragEvent, dropIndex: number) {
-    e.preventDefault();
-    dragOverIndex = null;
-
-    if (draggedTierId === null) return;
-
-    const currentTiers = [...tiers];
-    const draggedIndex = currentTiers.findIndex(t => t.id === draggedTierId);
-    if (draggedIndex === -1 || draggedIndex === dropIndex) {
-      draggedTierId = null;
-      return;
-    }
-
-    // Reorder: remove from old position, insert at new
-    const [moved] = currentTiers.splice(draggedIndex, 1);
-    currentTiers.splice(dropIndex, 0, moved);
-
-    // Send new order to backend (array of tier IDs in display order, top = highest position)
-    await reorderTiers(currentTiers.map(t => t.id));
-    draggedTierId = null;
-  }
-
-  function handleDragEnd() {
-    draggedTierId = null;
-    dragOverIndex = null;
+  async function applyDraft() {
+    if (!dirty || !valid || applying) return;
+    applying = true;
+    error = null;
+    const preset = draftPreset;
+    const tiers = definitions.map(tier => ({ ...tier }));
+    try {
+      const confirmed = await openConfirmDialog({
+        title: "Apply new tier layout?",
+        message: "Applying replaces your current tiers and clears all tier assignments and ranking order for BOTH movies and TV shows, including archived titles. You will need to rank them again. Your saved titles, watched history and schedules are kept. This cannot be undone.",
+        type: "warning", confirmLabel: "Apply and clear rankings", cancelLabel: "Keep current tiers",
+      });
+      if (!confirmed) return;
+      const result = await applyTierConfiguration(preset, tiers);
+      snapshotCurrent();
+      showSuccess(`Tier layout applied. ${result.cleared_movies} movies and ${result.cleared_shows} shows are ready to rank again.`);
+    } catch (cause) {
+      error = `Could not apply your tier layout: ${cause instanceof Error ? cause.message : String(cause)}`;
+    } finally { applying = false; }
   }
 </script>
 
-<div class="space-y-6">
-  <!-- Preset selector -->
-  <div class="space-y-2">
-    <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Tier preset">
-      <span class="text-sm font-medium text-text mr-2">Preset</span>
-      {#each [
-        { id: "10-star", label: "10 Stars" },
-        { id: "5-star", label: "5 Stars" },
-        { id: "custom", label: "Custom" },
-      ] as presetOption (presetOption.id)}
-        <button
-          type="button"
-          onclick={() => requestPresetChange(presetOption.id)}
-          aria-pressed={preset === presetOption.id}
-          class="px-4 py-2 text-sm rounded-lg border transition-colors
-            {preset === presetOption.id
-              ? 'border-accent bg-accent/10 text-accent font-medium'
-              : 'border-border text-text-muted hover:text-text hover:bg-surface-hover'}"
-        >
-          {presetOption.label}
-        </button>
-      {/each}
-    </div>
-    <p class="text-xs text-text-muted">
-      {#if preset === "10-star"}
-        10 tiers (Masterpiece to Terrible). Set star ratings in title details.
-      {:else if preset === "5-star"}
-        5 tiers (Excellent to Terrible). Set full-star ratings in title details.
-      {:else}
-        Custom tiers. Edit names and colours below; assign titles using the tier picker in title details.
-      {/if}
-    </p>
-  </div>
-
-  <!-- Tiers list -->
-  <div class="space-y-2">
-    <div class="flex items-center justify-between">
-      <span class="block text-sm font-medium text-text">Tiers</span>
-      <span class="text-xs text-text-muted">{tiers.length} tier{tiers.length !== 1 ? 's' : ''}</span>
-    </div>
-
-    <div class="border border-border rounded-lg overflow-hidden">
-      {#each tiers as tier, index (tier.id)}
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div
-          class="flex items-center gap-3 px-3 py-2.5 border-b border-border last:border-b-0 transition-colors
-            {dragOverIndex === index ? 'bg-accent/10' : 'bg-surface'}
-            {draggedTierId === tier.id ? 'opacity-50' : ''}"
-          draggable="true"
-          ondragstart={(e) => handleDragStart(e, tier.id)}
-          ondragover={(e) => handleDragOver(e, index)}
-          ondragleave={handleDragLeave}
-          ondrop={(e) => handleDrop(e, index)}
-          ondragend={handleDragEnd}
-        >
-          <!-- Drag handle -->
-          <div class="cursor-grab active:cursor-grabbing text-text-muted hover:text-text">
-            <GripVertical class="w-4 h-4" />
-          </div>
-
-          {#if editingTierId === tier.id}
-            <!-- Edit mode -->
-            <div class="flex-1 flex items-center gap-2">
-              <input
-                type="text"
-                bind:value={editName}
-                onkeydown={handleEditKeyDown}
-                class="flex-1 bg-background border border-border rounded px-2 py-1 text-sm text-text outline-none focus:ring-2 focus:ring-accent"
-              />
-              <input
-                type="color"
-                bind:value={editColor}
-                class="w-8 h-8 rounded cursor-pointer border border-border bg-transparent"
-              />
-              <button
-                type="button"
-                onclick={saveEdit}
-                class="px-2 py-1 text-xs bg-accent text-white rounded hover:bg-accent/90"
-              >
-                Save
-              </button>
-              <button
-                type="button"
-                onclick={cancelEdit}
-                class="px-2 py-1 text-xs text-text-muted hover:text-text"
-              >
-                Cancel
-              </button>
-            </div>
-          {:else}
-            <!-- Display mode -->
-            <!-- Color indicator -->
-            {#if tier.color}
-              <div class="w-4 h-4 rounded-full flex-shrink-0" style="background-color: {tier.color};"></div>
-            {:else}
-              <div class="w-4 h-4 rounded-full flex-shrink-0 bg-border"></div>
-            {/if}
-
-            <!-- Tier name (clickable to edit) -->
-            <button
-              type="button"
-              onclick={() => startEdit(tier)}
-              class="flex-1 text-left text-sm text-text hover:text-accent transition-colors"
-              title="Click to edit"
-            >
-              {tier.name}
-            </button>
-
-            <!-- Position badge -->
-            <span class="text-xs text-text-muted">#{tier.position}</span>
-
-            <!-- Delete button -->
-            <button
-              type="button"
-              onclick={() => requestDelete(tier.id)}
-              class="p-1 rounded hover:bg-red-500/10 text-text-muted hover:text-red-400 transition-colors"
-              title="Delete tier"
-            >
-              <Trash2 class="w-3.5 h-3.5" />
-            </button>
-          {/if}
-        </div>
-      {/each}
-
-      {#if tiers.length === 0}
-        <div class="px-3 py-6 text-center text-sm text-text-muted">
-          No tiers. Select a preset or add tiers below.
-        </div>
-      {/if}
-    </div>
-  </div>
-
-  <!-- Add tier -->
-  {#if showNewTierForm}
-    <div class="flex items-center gap-2 p-3 bg-surface rounded-lg border border-border">
-      <input
-        type="text"
-        bind:value={newTierName}
-        placeholder="Tier name..."
-        onkeydown={(e) => { if (e.key === 'Enter') handleCreateTier(); if (e.key === 'Escape') { showNewTierForm = false; } }}
-        class="flex-1 bg-background border border-border rounded px-2 py-1.5 text-sm text-text outline-none focus:ring-2 focus:ring-accent"
-      />
-      <div class="flex gap-1">
-        {#each colorPresets as color}
-          <button
-            type="button"
-            onclick={() => newTierColor = color}
-            class="w-5 h-5 rounded-full transition-transform hover:scale-110
-              {newTierColor === color ? 'ring-2 ring-accent ring-offset-1 ring-offset-surface' : ''}"
-            style="background-color: {color};"
-            title="Select color {color}"
-          ></button>
-        {/each}
-        <input
-          type="color"
-          bind:value={newTierColor}
-          class="w-5 h-5 rounded cursor-pointer border border-border bg-transparent"
-          title="Custom color"
-        />
+<div class="space-y-4">
+  <div class="focus-panel p-4 space-y-3">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h2 class="font-semibold">Tier layout draft</h2>
+        <p class="text-sm text-text-muted">Changes here stay in this draft until you apply them.</p>
       </div>
-      <button
-        type="button"
-        onclick={handleCreateTier}
-        disabled={!newTierName.trim()}
-        class="px-3 py-1.5 text-xs bg-accent text-white rounded hover:bg-accent/90 disabled:opacity-50"
-      >
-        Add
-      </button>
-      <button
-        type="button"
-        onclick={() => { showNewTierForm = false; newTierName = ""; newTierColor = ""; }}
-        class="px-2 py-1.5 text-xs text-text-muted hover:text-text"
-      >
-        Cancel
-      </button>
+      <span class="text-xs {dirty ? 'text-amber-400' : 'text-text-muted'}" aria-live="polite">{loading ? "Loading…" : dirty ? "Unapplied changes" : "Matches your current layout"}</span>
     </div>
+    <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Draft tier preset">
+      <span class="text-sm text-text-muted mr-1">Start from</span>
+      {#each [{ id: "10-star", label: "10 Stars" }, { id: "5-star", label: "5 Stars" }, { id: "custom", label: "Custom" }] as preset}
+        <button type="button" disabled={loading || applying} onclick={() => setPreset(preset.id as TierPreset)} aria-pressed={draftPreset === preset.id}
+          class="px-3 py-1.5 text-sm rounded-lg border transition-colors disabled:opacity-50 {draftPreset === preset.id ? 'border-accent bg-accent/10 text-accent' : 'border-border hover:bg-surface-hover'}">{preset.label}</button>
+      {/each}
+    </div>
+  </div>
+
+  {#if error}<p role="alert" class="text-sm text-red-400">{error}</p>{/if}
+  {#if loading}
+    <p class="text-sm text-text-muted">Loading your current tiers…</p>
   {:else}
-    <button
-      type="button"
-      onclick={() => { showNewTierForm = true; }}
-      class="flex items-center gap-2 px-3 py-2 text-sm text-text-muted hover:text-text border border-dashed border-border rounded-lg hover:bg-surface-hover transition-colors w-full"
-    >
-      <Plus class="w-4 h-4" />
-      Add Tier
-    </button>
+    <div class="flex justify-between items-center gap-3 text-sm"><span class="font-medium">Draft tiers</span><span class="text-text-muted">Top is best · {draft.length} tiers</span></div>
+    <ul class="border border-border rounded-lg overflow-hidden" aria-label="Draft tier order">
+      {#each draft as tier, index (tier.key)}
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <li class="flex flex-wrap items-center gap-2 p-3 border-b border-border last:border-b-0 {dragOverIndex === index ? 'bg-accent/10' : 'bg-surface'}"
+          ondragover={(event) => { event.preventDefault(); if (!applying) dragOverIndex = index; }} ondragleave={() => dragOverIndex = null} ondrop={(event) => { if (!applying) dropTier(event, index); }}>
+          <button type="button" disabled={applying} draggable={!applying} aria-label={`Drag ${tier.name || 'unnamed tier'} to reorder`} title="Drag to reorder"
+            ondragstart={(event) => { draggedKey = tier.key; if (event.dataTransfer) { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", String(tier.key)); } }}
+            ondragend={() => { draggedKey = null; dragOverIndex = null; }} class="p-1 text-text-muted cursor-grab"><GripVertical size={16} /></button>
+          <span class="w-5 text-xs text-text-muted">{index + 1}</span>
+          <input type="text" value={tier.name} disabled={applying} maxlength="120" aria-label={`Tier ${index + 1} name`}
+            oninput={(event) => editTier(tier.key, { name: event.currentTarget.value })} class="flex-1 min-w-[8rem] bg-background border border-border rounded-lg px-3 py-1.5 text-sm" />
+          <input type="color" value={tier.color || '#8b5cf6'} disabled={applying} aria-label={`Tier ${index + 1} colour`}
+            oninput={(event) => editTier(tier.key, { color: event.currentTarget.value })} class="w-8 h-8 rounded border border-border bg-transparent" />
+          {#if tier.color}<button type="button" disabled={applying} onclick={() => editTier(tier.key, { color: "" })} class="text-xs text-text-muted hover:text-text">Clear colour</button>{/if}
+          <button type="button" disabled={applying || index === 0} onclick={() => moveTier(index, index - 1)} aria-label={`Move ${tier.name || 'tier'} up`} class="p-1.5 rounded hover:bg-surface-hover disabled:opacity-30"><ArrowUp size={16} /></button>
+          <button type="button" disabled={applying || index === draft.length - 1} onclick={() => moveTier(index, index + 1)} aria-label={`Move ${tier.name || 'tier'} down`} class="p-1.5 rounded hover:bg-surface-hover disabled:opacity-30"><ArrowDown size={16} /></button>
+          <button type="button" disabled={applying} onclick={() => deleteTier(tier.key)} aria-label={`Delete ${tier.name || 'tier'} from draft`} class="p-1.5 rounded text-text-muted hover:text-red-400 hover:bg-surface-hover"><Trash2 size={16} /></button>
+        </li>
+      {:else}<li class="p-4 text-sm text-text-muted">Add at least one tier before applying.</li>{/each}
+    </ul>
+    <div class="flex flex-wrap items-center gap-2">
+      <input type="text" bind:value={newName} maxlength="120" disabled={applying || draft.length >= 100} placeholder="New tier name" aria-label="New tier name" onkeydown={(event) => { if (event.key === 'Enter') addTier(); }} class="flex-1 min-w-[10rem] bg-background border border-border rounded-lg px-3 py-2 text-sm" />
+      <input type="color" bind:value={newColor} disabled={applying} aria-label="New tier colour" class="w-8 h-8 rounded border border-border bg-transparent" />
+      <button type="button" disabled={applying || !newName.trim() || draft.length >= 100} onclick={addTier} class="focus-button"><Plus size={16} />Add to draft</button>
+    </div>
+    <div class="focus-panel p-4 space-y-3">
+      <p class="text-sm text-text-muted">Applying clears the current rankings for both movies and TV shows. Your titles and watched history stay saved. Your draft stays while you switch pages. Closing TVC discards unapplied changes.</p>
+      <div class="flex flex-wrap items-center gap-2">
+        <button type="button" onclick={applyDraft} disabled={!dirty || !valid || applying} class="focus-button focus-primary">{#if applying}<Loader2 size={16} class="animate-spin" />{/if}Apply layout</button>
+        <button type="button" onclick={snapshotCurrent} disabled={!dirty || applying} class="focus-button">Discard draft</button>
+        <button type="button" onclick={() => setPreset('10-star')} disabled={applying} class="focus-button"><RotateCcw size={15} />Reset draft to 10 Stars</button>
+      </div>
+    </div>
   {/if}
 
-  <!-- Tiermaker Import -->
   <div class="pt-4 border-t border-border">
-    <TiermakerImport />
+    <button type="button" class="focus-button" aria-expanded={importOpen} disabled={applying} onclick={() => importOpen = !importOpen}>Import from Tiermaker</button>
+    {#if importOpen}
+      <div class="mt-4">
+        {#if dirty}<p class="text-sm text-amber-400 mb-3">This import uses your saved tiers, independently of the unapplied draft above.</p>{/if}
+        <TiermakerImport />
+      </div>
+    {/if}
   </div>
-
-  <!-- Reset button -->
-  <div class="pt-2 border-t border-border">
-    <button
-      type="button"
-      onclick={requestReset}
-      class="flex items-center gap-2 px-3 py-2 text-sm text-text-muted hover:text-text hover:bg-surface-hover rounded-lg transition-colors"
-    >
-      <RotateCcw class="w-4 h-4" />
-      Reset to Default (10 Stars)
-    </button>
-  </div>
-
-  <!-- Confirmation dialogs -->
-  {#if pendingPreset}
-    <div class="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="tier-preset-dialog" use:modalFocus={() => pendingPreset = null}>
-      <div class="bg-surface rounded-xl border border-border shadow-2xl p-6 max-w-sm">
-        <h4 id="tier-preset-dialog" class="text-base font-semibold text-text mb-2">Change Preset?</h4>
-        <p class="text-sm text-text-muted mb-4">
-          Switching presets will replace all current tiers and remove all tier assignments from shows and movies. This cannot be undone.
-        </p>
-        <div class="flex justify-end gap-2">
-          <button
-            type="button"
-            onclick={() => pendingPreset = null}
-            class="px-3 py-2 text-sm text-text-muted hover:bg-surface-hover rounded-lg"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onclick={confirmPresetChange}
-            class="px-3 py-2 text-sm bg-accent text-white rounded-lg hover:bg-accent/90"
-          >
-            Switch to {pendingPreset === "10-star" ? "10 Stars" : pendingPreset === "5-star" ? "5 Stars" : "Custom"}
-          </button>
-        </div>
-      </div>
-    </div>
-  {/if}
-
-  {#if pendingDeleteId !== null}
-    {@const tierToDelete = tiers.find(t => t.id === pendingDeleteId)}
-    <div class="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="tier-delete-dialog" use:modalFocus={() => pendingDeleteId = null}>
-      <div class="bg-surface rounded-xl border border-border shadow-2xl p-6 max-w-sm">
-        <h4 id="tier-delete-dialog" class="text-base font-semibold text-text mb-2">Delete Tier?</h4>
-        <p class="text-sm text-text-muted mb-4">
-          Delete "{tierToDelete?.name ?? 'this tier'}"? Shows and movies in this tier will become untiered.
-        </p>
-        <div class="flex justify-end gap-2">
-          <button
-            type="button"
-            onclick={() => pendingDeleteId = null}
-            class="px-3 py-2 text-sm text-text-muted hover:bg-surface-hover rounded-lg"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onclick={confirmDelete}
-            class="px-3 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600"
-          >
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
-  {/if}
-
-  {#if pendingReset}
-    <div class="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="tier-reset-dialog" use:modalFocus={() => pendingReset = false}>
-      <div class="bg-surface rounded-xl border border-border shadow-2xl p-6 max-w-sm">
-        <h4 id="tier-reset-dialog" class="text-base font-semibold text-text mb-2">Reset to Default?</h4>
-        <p class="text-sm text-text-muted mb-4">
-          This will replace all current tiers with the default 10-star preset and remove all tier assignments. This cannot be undone.
-        </p>
-        <div class="flex justify-end gap-2">
-          <button
-            type="button"
-            onclick={() => pendingReset = false}
-            class="px-3 py-2 text-sm text-text-muted hover:bg-surface-hover rounded-lg"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onclick={confirmReset}
-            class="px-3 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600"
-          >
-            Reset
-          </button>
-        </div>
-      </div>
-    </div>
-  {/if}
 </div>

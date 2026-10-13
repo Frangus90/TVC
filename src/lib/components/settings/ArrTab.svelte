@@ -362,7 +362,7 @@
             </div>
 
             {#if server.last_synced}
-              <p class="text-xs text-text-muted mt-2">Last synced: {formatDateTime(server.last_synced)}</p>
+              <p class="text-xs text-text-muted mt-2">Last imported: {formatDateTime(server.last_synced)}</p>
             {/if}
           </div>
         {/each}
@@ -640,14 +640,12 @@
                 Imported: {importResult.imported} | Skipped: {importResult.skipped} | Failed: {importResult.failed}
               </p>
               {#if importResult.errors.length > 0}
-                <div class="mt-2 text-sm text-red-400">
-                  {#each importResult.errors.slice(0, 3) as err}
+                <details class="mt-2 text-sm text-red-400">
+                  <summary class="cursor-pointer">Import issues ({importResult.errors.length})</summary>
+                  {#each importResult.errors as err}
                     <p>{err}</p>
                   {/each}
-                  {#if importResult.errors.length > 3}
-                    <p>...and {importResult.errors.length - 3} more errors</p>
-                  {/if}
-                </div>
+                </details>
               {/if}
             </div>
           {/if}

@@ -18,6 +18,145 @@ pub struct DeleteTierResult {
     pub affected_movies: i64,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct TierDefinition {
+    pub name: String,
+    pub color: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ApplyTierConfigurationResult {
+    pub tiers: Vec<Tier>,
+    pub cleared_shows: u64,
+    pub cleared_movies: u64,
+}
+
+#[tauri::command]
+pub async fn apply_tier_configuration(
+    app: AppHandle,
+    preset: String,
+    tiers: Vec<TierDefinition>,
+) -> Result<ApplyTierConfigurationResult, String> {
+    let pool = connection::get_pool(&app).await
+        .map_err(|e| format!("Database error: {}", e))?;
+    apply_configuration(&pool, &preset, tiers).await
+}
+
+async fn apply_configuration(
+    pool: &sqlx::SqlitePool,
+    preset: &str,
+    mut definitions: Vec<TierDefinition>,
+) -> Result<ApplyTierConfigurationResult, String> {
+    if !matches!(preset, "10-star" | "5-star" | "custom") {
+        return Err("Choose a valid tier preset".into());
+    }
+    if definitions.is_empty() || definitions.len() > 100 {
+        return Err("Use between 1 and 100 tiers".into());
+    }
+    for tier in &mut definitions {
+        tier.name = tier.name.trim().to_string();
+        if tier.name.is_empty() || tier.name.chars().count() > 120 {
+            return Err("Tier names must contain 1 to 120 characters".into());
+        }
+        if !tier.color.is_empty()
+            && !(tier.color.len() == 7 && tier.color.starts_with('#')
+                && tier.color[1..].bytes().all(|byte| byte.is_ascii_hexdigit()))
+        {
+            return Err("Choose a valid tier colour".into());
+        }
+    }
+
+    let mut tx = pool.begin().await.map_err(|e| format!("Could not start tier update: {}", e))?;
+    let cleared_shows = sqlx::query("UPDATE shows SET tier_id = NULL, rank_order = NULL WHERE tier_id IS NOT NULL OR rank_order IS NOT NULL")
+        .execute(&mut *tx).await.map_err(|e| format!("Could not clear show tiers: {}", e))?.rows_affected();
+    let cleared_movies = sqlx::query("UPDATE movies SET tier_id = NULL, rank_order = NULL WHERE tier_id IS NOT NULL OR rank_order IS NOT NULL")
+        .execute(&mut *tx).await.map_err(|e| format!("Could not clear movie tiers: {}", e))?.rows_affected();
+    sqlx::query("DELETE FROM tiers").execute(&mut *tx).await
+        .map_err(|e| format!("Could not replace tiers: {}", e))?;
+    let count = definitions.len() as i64;
+    let mut saved = Vec::with_capacity(definitions.len());
+    for (index, definition) in definitions.into_iter().enumerate() {
+        let tier = sqlx::query_as::<_, Tier>("INSERT INTO tiers (position, name, color) VALUES (?, ?, ?) RETURNING id, position, name, color, created_at")
+            .bind(count - index as i64).bind(definition.name).bind(definition.color)
+            .fetch_one(&mut *tx).await.map_err(|e| format!("Could not save tier: {}", e))?;
+        saved.push(tier);
+    }
+    sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES ('tier_preset', ?)")
+        .bind(preset).execute(&mut *tx).await.map_err(|e| format!("Could not save tier preset: {}", e))?;
+    tx.commit().await.map_err(|e| format!("Could not finish tier update: {}", e))?;
+    Ok(ApplyTierConfigurationResult { tiers: saved, cleared_shows, cleared_movies })
+}
+
+#[cfg(test)]
+mod configuration_tests {
+    use super::{apply_configuration, TierDefinition};
+    use sqlx::{sqlite::SqlitePoolOptions, Row};
+
+    async fn fixture() -> sqlx::SqlitePool {
+        let pool = SqlitePoolOptions::new().max_connections(1).connect("sqlite::memory:").await.unwrap();
+        sqlx::raw_sql("PRAGMA foreign_keys=ON;
+            CREATE TABLE tiers(id INTEGER PRIMARY KEY AUTOINCREMENT, position INTEGER, name TEXT, color TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+            CREATE TABLE settings(key TEXT PRIMARY KEY, value TEXT);
+            CREATE TABLE shows(id INTEGER PRIMARY KEY, name TEXT, tier_id INTEGER REFERENCES tiers(id) ON DELETE SET NULL, rank_order INTEGER, tier_only INTEGER, archived INTEGER, notes TEXT);
+            CREATE TABLE movies(id INTEGER PRIMARY KEY, title TEXT, tier_id INTEGER REFERENCES tiers(id) ON DELETE SET NULL, rank_order INTEGER, tier_only INTEGER, archived INTEGER, watched INTEGER, watched_at TEXT, scheduled_date TEXT);
+            INSERT INTO tiers(id,position,name,color) VALUES(1,2,'Old best',''),(2,1,'Old good','');
+            INSERT INTO settings VALUES('tier_preset','10-star');
+            INSERT INTO shows VALUES(11,'Tracked',1,0,0,0,'Keep notes'),(12,'Tier only',2,1,1,0,'Keep history'),(13,'Archived',1,2,1,1,'Keep archived');
+            INSERT INTO movies VALUES(21,'Tracked movie',1,0,0,0,1,'2026-10-01','2026-10-30'),(22,'Tier movie',2,1,1,0,0,NULL,NULL),(23,'Archived movie',1,2,1,1,1,'2025-01-01',NULL);").execute(&pool).await.unwrap();
+        pool
+    }
+
+    fn definitions() -> Vec<TierDefinition> {
+        vec![TierDefinition { name: "  Favourite  ".into(), color: "#8b5cf6".into() }, TierDefinition { name: "Good".into(), color: "".into() }]
+    }
+
+    #[tokio::test]
+    async fn confirmed_configuration_clears_both_lists_but_keeps_personal_data() {
+        let pool = fixture().await;
+        let result = apply_configuration(&pool, "custom", definitions()).await.unwrap();
+        assert_eq!((result.cleared_shows, result.cleared_movies), (3, 3));
+        assert_eq!(result.tiers[0].name, "Favourite");
+        assert_eq!((result.tiers[0].position, result.tiers[1].position), (2, 1));
+        for table in ["shows", "movies"] {
+            let remaining: i64 = sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {table} WHERE tier_id IS NOT NULL OR rank_order IS NOT NULL")).fetch_one(&pool).await.unwrap();
+            assert_eq!(remaining, 0);
+            let titles: i64 = sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {table}")).fetch_one(&pool).await.unwrap();
+            assert_eq!(titles, 3);
+        }
+        let movie = sqlx::query("SELECT watched,watched_at,scheduled_date,tier_only,archived FROM movies WHERE id=21").fetch_one(&pool).await.unwrap();
+        assert_eq!(movie.get::<i64,_>("watched"), 1);
+        assert_eq!(movie.get::<String,_>("watched_at"), "2026-10-01");
+        assert_eq!(movie.get::<String,_>("scheduled_date"), "2026-10-30");
+        assert_eq!(sqlx::query_scalar::<_,String>("SELECT notes FROM shows WHERE id=12").fetch_one(&pool).await.unwrap(), "Keep history");
+        assert_eq!(sqlx::query_scalar::<_,i64>("SELECT archived FROM movies WHERE id=23").fetch_one(&pool).await.unwrap(), 1);
+        assert_eq!(sqlx::query_scalar::<_,i64>("SELECT tier_only FROM movies WHERE id=22").fetch_one(&pool).await.unwrap(), 1);
+        assert_eq!(sqlx::query_scalar::<_,String>("SELECT value FROM settings WHERE key='tier_preset'").fetch_one(&pool).await.unwrap(), "custom");
+    }
+
+    #[tokio::test]
+    async fn failed_configuration_rolls_back_tiers_assignments_and_preset() {
+        let pool = fixture().await;
+        sqlx::raw_sql("CREATE TRIGGER reject_new_tier BEFORE INSERT ON tiers WHEN NEW.name='Good' BEGIN SELECT RAISE(ABORT,'fixture failure'); END;").execute(&pool).await.unwrap();
+        assert!(apply_configuration(&pool, "custom", definitions()).await.is_err());
+        assert_eq!(sqlx::query_scalar::<_,String>("SELECT name FROM tiers WHERE id=1").fetch_one(&pool).await.unwrap(), "Old best");
+        for table in ["shows", "movies"] {
+            assert_eq!(sqlx::query_scalar::<_,i64>(&format!("SELECT COUNT(*) FROM {table} WHERE tier_id IS NOT NULL AND rank_order IS NOT NULL")).fetch_one(&pool).await.unwrap(), 3);
+        }
+        assert_eq!(sqlx::query_scalar::<_,String>("SELECT value FROM settings WHERE key='tier_preset'").fetch_one(&pool).await.unwrap(), "10-star");
+    }
+
+    #[tokio::test]
+    async fn invalid_configuration_never_changes_the_existing_layout() {
+        let pool = fixture().await;
+        assert!(apply_configuration(&pool, "unknown", definitions()).await.is_err());
+        assert!(apply_configuration(&pool, "custom", vec![]).await.is_err());
+        assert!(apply_configuration(&pool, "custom", vec![TierDefinition { name: " ".into(), color: "".into() }]).await.is_err());
+        assert!(apply_configuration(&pool, "custom", vec![TierDefinition { name: "Good".into(), color: "red; background:url(x)".into() }]).await.is_err());
+        assert_eq!(sqlx::query_scalar::<_,i64>("SELECT tier_id FROM shows WHERE id=11").fetch_one(&pool).await.unwrap(), 1);
+        assert_eq!(sqlx::query_scalar::<_,i64>("SELECT COUNT(*) FROM tiers").fetch_one(&pool).await.unwrap(), 2);
+    }
+}
+
 // ============================================
 // Tier CRUD commands
 // ============================================
