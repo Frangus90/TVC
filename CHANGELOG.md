@@ -2,6 +2,13 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.15.2] - Unreleased
+
+### TV Show Sync
+
+- Fixed an episode sync error when saved episodes move or change numbering. Watch history, schedules, ratings and tags stay attached to the episode.
+- Sync errors now identify conflicting episode IDs and shows more clearly. A failed sync keeps the saved data intact.
+
 ## [0.15.1] - 24.10.2026
 
 ### TV Shows and Movies

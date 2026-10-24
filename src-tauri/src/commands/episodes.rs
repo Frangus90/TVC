@@ -2,11 +2,11 @@ use crate::db::connection;
 use crate::tmdb;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use tauri::AppHandle;
 
-/// User-controlled per-episode state. Preserved across re-syncs by keying on
-/// (season, episode) — TMDB episode IDs can change when the show is updated.
+/// Personal state follows an unchanged provider ID when numbering moves, with
+/// season/episode matching as a fallback when the provider replaces an ID.
 #[derive(Debug, Clone, Default)]
 struct PreservedEpisodeState {
     watched: bool,
@@ -14,6 +14,13 @@ struct PreservedEpisodeState {
     scheduled_date: Option<String>,
     rating: Option<f64>,
     tags: Option<String>,
+    legacy_tvdb_id: Option<i64>,
+}
+
+struct SavedEpisode {
+    id: i64,
+    key: Option<(i32, i32)>,
+    state: PreservedEpisodeState,
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -151,6 +158,19 @@ async fn apply_show_refresh(
     episodes: Vec<tmdb::TvEpisode>,
 ) -> Result<(), String> {
     let show_id = show_details.id;
+    let mut incoming_ids = HashSet::new();
+    let mut incoming_keys = HashSet::new();
+    for ep in &episodes {
+        if ep.id <= 0 || !incoming_ids.insert(ep.id) {
+            return Err(format!(
+                "TMDB returned an invalid or duplicate episode ID {} for {}; saved data was kept",
+                ep.id, show_details.name
+            ));
+        }
+        if !incoming_keys.insert((ep.season_number, ep.episode_number)) {
+            return Err("TMDB returned a duplicate season/episode; saved data was kept".into());
+        }
+    }
     let mut tx = pool
         .begin()
         .await
@@ -159,6 +179,52 @@ async fn apply_show_refresh(
     let preserved = snapshot_episode_state(&mut tx, show_id).await?;
     if episodes.is_empty() && !preserved.is_empty() {
         return Err("TMDB returned no episodes; the saved episodes were kept".into());
+    }
+
+    let by_id: HashMap<_, _> = preserved.iter().map(|saved| (saved.id, saved)).collect();
+    let mut replacements = Vec::with_capacity(episodes.len());
+    for ep in &episodes {
+        let saved = if let Some(saved) = by_id.get(&ep.id) {
+            Some(*saved)
+        } else {
+            // An old row whose ID returns elsewhere already has an identity match.
+            // Do not copy its personal state onto a second episode by number.
+            let mut candidates = preserved.iter().filter(|saved| {
+                saved.key == Some((ep.season_number, ep.episode_number))
+                    && !incoming_ids.contains(&saved.id)
+            });
+            let candidate = candidates.next();
+            if candidates.next().is_some() {
+                return Err(format!(
+                    "Multiple saved episodes match {} S{:02}E{:02}; saved data was kept",
+                    show_details.name, ep.season_number, ep.episode_number
+                ));
+            }
+            candidate
+        };
+        // IDs are global. Never replace an episode belonging to another show.
+        if !by_id.contains_key(&ep.id) {
+            let owner = sqlx::query(
+                "SELECT e.show_id, s.name FROM episodes e LEFT JOIN shows s ON s.id = e.show_id WHERE e.id = ? AND e.show_id <> ?",
+            )
+            .bind(ep.id)
+            .bind(show_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| format!("Could not check episode ID {}: {e}", ep.id))?;
+            if let Some(owner) = owner {
+                let owner_id: i64 = owner.get("show_id");
+                let owner_name = owner
+                    .get::<Option<String>, _>("name")
+                    .unwrap_or_else(|| format!("show {owner_id}"));
+                return Err(format!(
+                    "Cannot sync {} S{:02}E{:02}: episode ID {} is already saved for {} (show ID {}). Saved data was kept",
+                    show_details.name, ep.season_number, ep.episode_number,
+                    ep.id, owner_name, owner_id
+                ));
+            }
+        }
+        replacements.push((ep, saved));
     }
 
     if let Err(e) = sqlx::query(
@@ -190,9 +256,23 @@ async fn apply_show_refresh(
         return Err(format!("Failed to update show: {}", e));
     }
 
-    // Remove disposable cached rows, retaining unmatched episodes with personal state.
-    // Returned episodes are replaced by season/episode below, even if provider IDs change.
-    if let Err(e) = sqlx::query("DELETE FROM episodes WHERE show_id = ? AND COALESCE(watched,0) = 0 AND watched_at IS NULL AND scheduled_date IS NULL AND rating IS NULL AND COALESCE(tags, '') IN ('', '[]')")
+    // Retain unmatched personal episodes, including rows referenced by history.
+    if let Err(e) = sqlx::query(
+        r#"
+        DELETE FROM episodes
+        WHERE show_id = ? AND COALESCE(watched, 0) = 0
+          AND watched_at IS NULL AND scheduled_date IS NULL AND rating IS NULL
+          AND COALESCE(tags, '') IN ('', '[]')
+          AND NOT EXISTS (
+              SELECT 1 FROM change_history h WHERE h.entity_type = 'episode'
+                AND (h.entity_id = episodes.id OR h.entity_id = episodes.legacy_tvdb_id)
+          )
+          AND NOT EXISTS (
+              SELECT 1 FROM plex_scrobble_log p WHERE p.matched_entity_type = 'episode'
+                AND (p.matched_entity_id = episodes.id OR p.matched_entity_id = episodes.legacy_tvdb_id)
+          )
+        "#,
+    )
         .bind(show_id)
         .execute(&mut *tx)
         .await
@@ -201,35 +281,26 @@ async fn apply_show_refresh(
         return Err(format!("Failed to clear old episodes: {}", e));
     }
 
-    let mut keys = std::collections::HashSet::new();
-    for ep in episodes {
-        if !keys.insert((ep.season_number, ep.episode_number)) {
-            return Err("TMDB returned a duplicate season/episode; saved data was kept".into());
-        }
-        sqlx::query(
-            "DELETE FROM episodes WHERE show_id = ? AND season_number = ? AND episode_number = ?",
-        )
-        .bind(show_id)
-        .bind(ep.season_number)
-        .bind(ep.episode_number)
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| format!("Could not replace episode: {e}"))?;
-        let scheduled_date = match preserved.get(&(ep.season_number, ep.episode_number)) {
-            Some(state) => state.scheduled_date.clone(),
-            None => None,
-        };
-        let state = preserved
-            .get(&(ep.season_number, ep.episode_number))
-            .cloned()
-            .unwrap_or_default();
+    // Delete every matched row before inserting any replacements. A moved episode
+    // can otherwise collide with a protected old row still waiting for its turn.
+    for (_, saved) in &replacements {
+        let Some(saved) = saved else { continue };
+        sqlx::query("DELETE FROM episodes WHERE show_id = ? AND id = ?")
+            .bind(show_id)
+            .bind(saved.id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| format!("Could not replace episode: {e}"))?;
+    }
+    for (ep, saved) in &replacements {
+        let state = saved.map(|saved| saved.state.clone()).unwrap_or_default();
 
         if let Err(e) = sqlx::query(
             r#"
             INSERT INTO episodes
             (id, show_id, season_number, episode_number, name, overview, aired,
-             runtime, image_url, scheduled_date, watched, watched_at, rating, tags)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             runtime, image_url, scheduled_date, watched, watched_at, rating, tags, legacy_tvdb_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
         )
         .bind(ep.id)
@@ -241,16 +312,40 @@ async fn apply_show_refresh(
         .bind(ep.air_date.as_ref())
         .bind(ep.runtime)
         .bind(ep.image_url())
-        .bind(scheduled_date)
+        .bind(state.scheduled_date)
         .bind(if state.watched { 1 } else { 0 })
         .bind(state.watched_at)
         .bind(state.rating)
         .bind(state.tags)
+        .bind(state.legacy_tvdb_id)
         .execute(&mut *tx)
         .await
         {
             let _ = tx.rollback().await;
-            return Err(format!("Failed to sync episode: {}", e));
+            return Err(format!(
+                "Failed to sync episode {} ({} S{:02}E{:02}): {e}; saved data was kept",
+                ep.id, show_details.name, ep.season_number, ep.episode_number
+            ));
+        }
+    }
+
+    for (ep, saved) in &replacements {
+        let Some(saved) = saved else { continue };
+        if saved.id == ep.id {
+            continue;
+        }
+        // Changed-ID fallbacks only use old IDs absent from the entire response.
+        // Sources and destinations cannot overlap, so these rewrites cannot chain.
+        for sql in [
+            "UPDATE change_history SET entity_id = ? WHERE entity_type = 'episode' AND entity_id = ?",
+            "UPDATE plex_scrobble_log SET matched_entity_id = ? WHERE matched_entity_type = 'episode' AND matched_entity_id = ?",
+        ] {
+            sqlx::query(sql)
+                .bind(ep.id)
+                .bind(saved.id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| format!("Could not preserve episode history: {e}"))?;
         }
     }
 
@@ -264,11 +359,11 @@ async fn apply_show_refresh(
 async fn snapshot_episode_state(
     connection: &mut sqlx::SqliteConnection,
     show_id: i64,
-) -> Result<HashMap<(i32, i32), PreservedEpisodeState>, String> {
+) -> Result<Vec<SavedEpisode>, String> {
     let rows = sqlx::query(
         r#"
-        SELECT season_number, episode_number, watched, watched_at,
-               scheduled_date, rating, tags
+        SELECT id, season_number, episode_number, COALESCE(watched, 0) AS watched, watched_at,
+               scheduled_date, rating, tags, legacy_tvdb_id
         FROM episodes
         WHERE show_id = ?
         "#,
@@ -278,25 +373,29 @@ async fn snapshot_episode_state(
     .await
     .map_err(|e| format!("Failed to snapshot episode state: {}", e))?;
 
-    let mut map = HashMap::new();
+    let mut saved = Vec::with_capacity(rows.len());
     for row in rows {
-        let key = (
-            row.get::<i32, _>("season_number"),
-            row.get::<i32, _>("episode_number"),
-        );
-        map.insert(
-            key,
-            PreservedEpisodeState {
+        saved.push(SavedEpisode {
+            id: row.get("id"),
+            key: row
+                .get::<Option<i32>, _>("season_number")
+                .zip(row.get::<Option<i32>, _>("episode_number")),
+            state: PreservedEpisodeState {
                 watched: row.get::<i32, _>("watched") == 1,
                 watched_at: row.get("watched_at"),
                 scheduled_date: row.get("scheduled_date"),
                 rating: row.get("rating"),
                 tags: row.get("tags"),
+                legacy_tvdb_id: row.get("legacy_tvdb_id"),
             },
-        );
+        });
     }
-    Ok(map)
+    Ok(saved)
 }
+
+#[cfg(test)]
+#[path = "episode_sync_tests.rs"]
+mod collision_tests;
 
 #[cfg(test)]
 mod sync_tests {
@@ -304,18 +403,7 @@ mod sync_tests {
     use serde_json::json;
 
     async fn database() -> sqlx::SqlitePool {
-        let pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .max_connections(1)
-            .connect("sqlite::memory:")
-            .await
-            .unwrap();
-        for migration in [
-            include_str!("../../migrations/001_initial.sql"),
-            include_str!("../../migrations/002_add_indexes.sql"),
-            include_str!("../../migrations/004_add_episode_metadata.sql"),
-        ] {
-            sqlx::raw_sql(migration).execute(&pool).await.unwrap();
-        }
+        let pool = crate::audit_tests::database().await;
         sqlx::raw_sql("INSERT INTO shows (id, name) VALUES (1, 'Original');
             INSERT INTO episodes (id, show_id, season_number, episode_number, watched, watched_at, scheduled_date, rating, tags)
             VALUES (10, 1, 1, 1, 1, '2026-09-15T20:00:00Z', '2026-09-14', 8.5, '[\"favorite\"]'),
@@ -382,16 +470,18 @@ mod sync_tests {
             .await
             .unwrap();
         assert_eq!(other, 0);
-        let first_date: String = sqlx::query_scalar("SELECT watched_at FROM episodes WHERE id = 11")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
+        let first_date: String =
+            sqlx::query_scalar("SELECT watched_at FROM episodes WHERE id = 11")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
 
         mark_show_watched_in_pool(&pool, 1, true).await.unwrap();
-        let repeated_date: String = sqlx::query_scalar("SELECT watched_at FROM episodes WHERE id = 11")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
+        let repeated_date: String =
+            sqlx::query_scalar("SELECT watched_at FROM episodes WHERE id = 11")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
         assert_eq!(repeated_date, first_date);
     }
 
@@ -443,14 +533,13 @@ mod sync_tests {
     }
 
     #[tokio::test]
-    async fn empty_response_and_write_failure_leave_saved_library_unchanged() {
+    async fn empty_response_and_duplicate_ids_leave_saved_library_unchanged() {
         let pool = database().await;
         assert!(apply_show_refresh(&pool, &details(), vec![])
             .await
             .unwrap_err()
             .contains("saved episodes were kept"));
-        // Duplicate IDs fail after deleting the old rows and inserting the first new row.
-        // The transaction must restore both the original metadata and watched episodes.
+        // Duplicate IDs are rejected before changing metadata or watched episodes.
         assert!(
             apply_show_refresh(&pool, &details(), vec![episode(100, 1), episode(100, 2)])
                 .await
