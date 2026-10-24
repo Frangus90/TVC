@@ -2,7 +2,7 @@
 
 All notable changes to TVC will be documented in this file.
 
-## [0.15.1] - Unreleased
+## [0.15.1] - 24.10.2026
 
 ### TV Shows and Movies
 
