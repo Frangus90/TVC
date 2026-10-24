@@ -298,6 +298,7 @@ async fn portable_backup_transfers_only_allowlisted_preferences() {
     let mut general = crate::commands::preferences::GeneralPreferences::default();
     general.release_country = "NO".into();
     general.calendar_view = "agenda".into();
+    general.default_tier_list = "movies".into();
     sqlx::query("INSERT OR REPLACE INTO settings(key,value) VALUES ('general_preferences',?)")
         .bind(serde_json::to_string(&general).unwrap())
         .execute(&source)
@@ -310,6 +311,10 @@ async fn portable_backup_transfers_only_allowlisted_preferences() {
     let backup = export_with_settings(&source, true).await.unwrap();
     assert_eq!(backup.version, "4.0");
     backup.validate().unwrap();
+    assert_eq!(
+        backup.portable_settings.as_ref().unwrap().general["default_tier_list"],
+        "movies"
+    );
     let encoded = serde_json::to_string(&backup).unwrap();
     for excluded in [
         "secret-not-portable",
@@ -355,6 +360,47 @@ async fn portable_backup_transfers_only_allowlisted_preferences() {
             .unwrap(),
         "https://target.invalid/feed"
     );
+}
+
+#[tokio::test]
+async fn older_v4_backups_and_saved_preferences_default_the_tier_list_to_shows() {
+    let source = database().await;
+    let mut general =
+        serde_json::to_value(crate::commands::preferences::GeneralPreferences::default()).unwrap();
+    general.as_object_mut().unwrap().remove("default_tier_list");
+    general["release_country"] = json!("NO");
+    sqlx::query("INSERT INTO settings(key,value) VALUES ('general_preferences',?)")
+        .bind(general.to_string())
+        .execute(&source)
+        .await
+        .unwrap();
+
+    let mut backup = export_with_settings(&source, true).await.unwrap();
+    let settings = backup.portable_settings.as_mut().unwrap();
+    assert_eq!(settings.general["default_tier_list"], "shows");
+    settings
+        .general
+        .as_object_mut()
+        .unwrap()
+        .remove("default_tier_list");
+    backup.validate().unwrap();
+
+    let target = database().await;
+    let mut preferences = crate::commands::preferences::GeneralPreferences::default();
+    preferences.default_tier_list = "movies".into();
+    sqlx::query("INSERT INTO settings(key,value) VALUES ('general_preferences',?)")
+        .bind(serde_json::to_string(&preferences).unwrap())
+        .execute(&target)
+        .await
+        .unwrap();
+    replace_from_pool(&target, &backup, &HashMap::new())
+        .await
+        .unwrap();
+    let restored = crate::commands::preferences::preferences_from_pool(&target)
+        .await
+        .unwrap();
+    assert_eq!(restored.default_tier_list, "shows");
+    assert_eq!(restored.release_country, "NO");
 }
 
 #[tokio::test]
@@ -410,6 +456,8 @@ async fn portable_schema_rejects_unknown_groups_invalid_values_and_old_versions(
         ("appearance", "accentColor", json!("red")),
         ("appearance", "fontSize", json!(10)),
         ("general", "close_action", json!("execute")),
+        ("general", "default_tier_list", json!("all")),
+        ("general", "default_tier_list", json!(null)),
         ("notifications", "quiet_hours_start", json!("10 PM")),
         ("notifications", "sound_volume", json!(999)),
         ("notifications", "sound_enabled", json!("true")),

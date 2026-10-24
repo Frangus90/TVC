@@ -8,6 +8,7 @@ const defaults = {
   startup_page: 'calendar', remember_calendar: false, close_action: 'tray',
   start_minimized: false, release_country: 'US', last_page: 'calendar',
   calendar_view: 'month', calendar_filter: 'all',
+  default_tier_list: 'shows',
 };
 function load(invoke) {
   const code = ts.transpileModule(readFileSync('src/lib/stores/general.svelte.ts', 'utf8'), {
@@ -32,7 +33,7 @@ test('general preferences serialize edits and navigation, including returning to
     ? Promise.resolve({ ...defaults })
     : new Promise((resolve, reject) => writes.push({ args, resolve, reject })));
   await api.loadGeneralPreferences();
-  const first = api.updateGeneralPreferences({ release_country: 'NO' });
+  const first = api.updateGeneralPreferences({ release_country: 'NO', default_tier_list: 'movies' });
   const away = api.rememberLastPage('movies');
   const back = api.rememberLastPage('calendar');
   await tick();
@@ -40,14 +41,17 @@ test('general preferences serialize edits and navigation, including returning to
   writes[0].resolve(writes[0].args.preferences);
   await first; await tick();
   assert.equal(writes[1].args.preferences.release_country, 'NO');
+  assert.equal(writes[1].args.preferences.default_tier_list, 'movies');
   assert.equal(writes[1].args.preferences.last_page, 'movies');
   writes[1].resolve(writes[1].args.preferences);
   await away; await tick();
   assert.equal(writes[2].args.preferences.last_page, 'calendar');
+  assert.equal(writes[2].args.preferences.default_tier_list, 'movies');
   writes[2].resolve(writes[2].args.preferences);
   await back;
   assert.equal(api.getGeneralPreferences().release_country, 'NO');
   assert.equal(api.getGeneralPreferences().last_page, 'calendar');
+  assert.equal(api.getGeneralPreferences().default_tier_list, 'movies');
 });
 
 test('failed preference saves keep confirmed values and allow later successful changes', async () => {
@@ -58,12 +62,14 @@ test('failed preference saves keep confirmed values and allow later successful c
     return args.preferences;
   });
   await api.loadGeneralPreferences();
-  await assert.rejects(api.updateGeneralPreferences({ close_action: 'quit' }), /write failed/);
+  await assert.rejects(api.updateGeneralPreferences({ close_action: 'quit', default_tier_list: 'movies' }), /write failed/);
   assert.equal(api.getGeneralPreferences().close_action, 'tray');
+  assert.equal(api.getGeneralPreferences().default_tier_list, 'shows');
   fail = false;
-  await api.updateGeneralPreferences({ release_country: 'NO' });
+  await api.updateGeneralPreferences({ release_country: 'NO', default_tier_list: 'movies' });
   assert.equal(api.getGeneralPreferences().release_country, 'NO');
   assert.equal(api.getGeneralPreferences().close_action, 'tray');
+  assert.equal(api.getGeneralPreferences().default_tier_list, 'movies');
 });
 
 test('startup restoration uses saved page and calendar choices only when requested', async () => {

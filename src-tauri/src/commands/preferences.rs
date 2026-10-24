@@ -21,6 +21,7 @@ pub struct GeneralPreferences {
     pub last_page: String,
     pub calendar_view: String,
     pub calendar_filter: String,
+    pub default_tier_list: String,
 }
 
 impl Default for GeneralPreferences {
@@ -34,6 +35,7 @@ impl Default for GeneralPreferences {
             last_page: "calendar".into(),
             calendar_view: "month".into(),
             calendar_filter: "all".into(),
+            default_tier_list: "shows".into(),
         }
     }
 }
@@ -69,6 +71,9 @@ impl GeneralPreferences {
         }
         if !["all", "shows", "movies"].contains(&self.calendar_filter.as_str()) {
             return Err("Invalid remembered calendar filter".into());
+        }
+        if !["shows", "movies"].contains(&self.default_tier_list.as_str()) {
+            return Err("Choose TV shows or movies as the default tier list".into());
         }
         Ok(())
     }
@@ -260,6 +265,7 @@ mod tests {
         let defaults = preferences_from_pool(&pool).await.unwrap();
         assert_eq!(defaults.release_country, "US");
         assert_eq!(defaults.close_action, "tray");
+        assert_eq!(defaults.default_tier_list, "shows");
         let preferences = GeneralPreferences {
             startup_page: "last_used".into(),
             remember_calendar: true,
@@ -269,6 +275,7 @@ mod tests {
             last_page: "movies".into(),
             calendar_view: "week".into(),
             calendar_filter: "movies".into(),
+            default_tier_list: "movies".into(),
         };
         save_preferences(&pool, &preferences).await.unwrap();
         assert_eq!(preferences_from_pool(&pool).await.unwrap(), preferences);
@@ -281,7 +288,15 @@ mod tests {
 
     #[test]
     fn invalid_navigation_and_calendar_preferences_are_rejected() {
-        for field in ["startup", "close", "page", "view", "filter", "country"] {
+        for field in [
+            "startup",
+            "close",
+            "page",
+            "view",
+            "filter",
+            "country",
+            "tier_list",
+        ] {
             let mut preferences = GeneralPreferences::default();
             match field {
                 "startup" => preferences.startup_page = "invalid".into(),
@@ -289,10 +304,28 @@ mod tests {
                 "page" => preferences.last_page = "invalid".into(),
                 "view" => preferences.calendar_view = "invalid".into(),
                 "filter" => preferences.calendar_filter = "invalid".into(),
+                "tier_list" => preferences.default_tier_list = "invalid".into(),
                 _ => preferences.release_country = "us".into(),
             }
             assert!(preferences.validate().is_err(), "{field}");
         }
+    }
+
+    #[tokio::test]
+    async fn older_preferences_default_to_shows_without_replacing_other_choices() {
+        let pool = crate::audit_tests::database().await;
+        let mut saved = serde_json::to_value(GeneralPreferences::default()).unwrap();
+        saved.as_object_mut().unwrap().remove("default_tier_list");
+        saved["release_country"] = serde_json::json!("NO");
+        sqlx::query("INSERT INTO settings(key,value) VALUES (?,?)")
+            .bind(SETTINGS_KEY)
+            .bind(saved.to_string())
+            .execute(&pool)
+            .await
+            .unwrap();
+        let preferences = preferences_from_pool(&pool).await.unwrap();
+        assert_eq!(preferences.default_tier_list, "shows");
+        assert_eq!(preferences.release_country, "NO");
     }
 
     #[test]

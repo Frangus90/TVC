@@ -84,3 +84,16 @@ test("portable backup rejects missing groups and unsupported preference keys bef
   const absent = value(); delete absent.portable_settings;
   for (const data of [missing, secret, url, unsupported, absent]) assert.throws(() => parseBackup(JSON.stringify(data)));
 });
+
+test("portable backup supports old default-less preferences and validates the new tier list choice", () => {
+  const value = () => ({ ...backup(), version:"4.0", portable_settings:portable() });
+  assert.doesNotThrow(() => parseBackup(JSON.stringify(value())), "existing v4 backups remain usable");
+  for (const choice of ["shows", "movies"]) {
+    const data = value(); data.portable_settings.general.default_tier_list = choice;
+    assert.equal(parseBackup(JSON.stringify(data)).portable_settings.general.default_tier_list, choice);
+  }
+  for (const choice of ["movie", "all", "", null, true, 1, {}]) {
+    const data = value(); data.portable_settings.general.default_tier_list = choice;
+    assert.throws(() => parseBackup(JSON.stringify(data)), `invalid choice: ${JSON.stringify(choice)}`);
+  }
+});

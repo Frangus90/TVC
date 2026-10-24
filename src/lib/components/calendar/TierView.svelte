@@ -28,9 +28,11 @@
   import { openMovieDetail } from "../../stores/movies.svelte";
   import { removeShow } from "../../stores/shows.svelte";
   import { removeMovie } from "../../stores/movies.svelte";
+  import { getGeneralPreferences, loadGeneralPreferences, type TierListType } from "../../stores/general.svelte";
+  import { showError } from "../../stores/toast.svelte";
 
-  type TierSubTab = "shows" | "movies";
-  let subTab = $state<TierSubTab>("shows");
+  let subTab = $state<TierListType>(getGeneralPreferences().default_tier_list);
+  let listChosen = false;
   let exporting = $state(false);
 
   async function handleExport() {
@@ -45,7 +47,8 @@
 
   // Switch between the shows and movies tier lists (local to this view now that
   // Tiers is its own sidebar tab — must not touch the sidebar navigation).
-  function switchSubTab(tab: TierSubTab) {
+  function switchSubTab(tab: TierListType) {
+    listChosen = true;
     subTab = tab;
     searchQuery = "";
   }
@@ -60,9 +63,14 @@
 
   // Load data on init (onMount to avoid re-fetching on every reactive cycle)
   onMount(() => {
+    let active = true;
+    void loadGeneralPreferences().then(() => {
+      if (active && !listChosen) subTab = getGeneralPreferences().default_tier_list;
+    }).catch(error => { if (active) showError(`Could not load the default tier list: ${String(error)}`); });
     loadTiers();
     loadTierListShows();
     loadTierListMovies();
+    return () => { active = false; };
   });
 
   // Close menu on click outside

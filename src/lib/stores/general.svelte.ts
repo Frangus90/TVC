@@ -6,6 +6,7 @@ import { showError } from "./toast.svelte";
 export type StartupPage = "calendar" | "movies" | "shows" | "last_used";
 export type CalendarView = "month" | "week" | "agenda";
 export type CalendarFilter = "all" | "shows" | "movies";
+export type TierListType = "shows" | "movies";
 
 export interface GeneralPreferences {
   startup_page: StartupPage;
@@ -16,6 +17,7 @@ export interface GeneralPreferences {
   last_page: NavId;
   calendar_view: CalendarView;
   calendar_filter: CalendarFilter;
+  default_tier_list: TierListType;
 }
 
 interface WindowsStartup {
@@ -32,6 +34,7 @@ let preferences = $state<GeneralPreferences>({
   last_page: "calendar",
   calendar_view: "month",
   calendar_filter: "all",
+  default_tier_list: "shows",
 });
 let loaded = $state(false);
 let startup = $state<WindowsStartup>({ enabled: false, supported: false });

@@ -33,9 +33,11 @@ function exactKeys(value: unknown, keys: string[]): value is Record<string, unkn
 }
 
 function validatePortable(value: unknown): asserts value is PortableSettings {
+  const generalKeys = ["startup_page", "remember_calendar", "close_action", "start_minimized", "release_country", "last_page", "calendar_view", "calendar_filter"];
   if (!exactKeys(value, ["appearance", "general", "notifications", "racing", "tier_preset"])
     || !exactKeys(value.appearance, ["accentColor", "fontSize", "compactSpacing", "colorblindFriendly", "hidePosters", "posterSize"])
-    || !exactKeys(value.general, ["startup_page", "remember_calendar", "close_action", "start_minimized", "release_country", "last_page", "calendar_view", "calendar_filter"])
+    || !(exactKeys(value.general, generalKeys) || exactKeys(value.general, [...generalKeys, "default_tier_list"]))
+    || (Object.prototype.hasOwnProperty.call(value.general, "default_tier_list") && !["shows", "movies"].includes(value.general.default_tier_list as string))
     || !exactKeys(value.notifications, ["enabled", "sound_enabled", "sound_volume", "sound_choice", "popup_position", "popup_duration", "max_visible", "os_fallback", "tray_notifications", "racing_enabled", "plex_enabled", "premiere_enabled", "update_enabled", "system_enabled", "quiet_hours_enabled", "quiet_hours_start", "quiet_hours_end"])
     || !exactKeys(value.racing, ["notifications_enabled", "default_notify_minutes", "series"])
     || !Array.isArray(value.racing.series)

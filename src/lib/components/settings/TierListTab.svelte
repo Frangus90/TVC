@@ -5,6 +5,38 @@
   import { getTiers, getTierPreset, loadTiers, loadTierPreset, applyTierConfiguration, getTierDraft, saveTierDraft, clearTierDraft, type TierDefinition, type TierPreset } from "../../stores/tiers.svelte";
   import { openConfirmDialog } from "../../stores/confirmDialog.svelte";
   import { showSuccess } from "../../stores/toast.svelte";
+  import { getGeneralPreferences, isGeneralLoaded, loadGeneralPreferences, updateGeneralPreferences, type TierListType } from "../../stores/general.svelte";
+
+  let defaultListLoading = $state(true);
+  let defaultListSaving = $state(false);
+  let defaultListError = $state<string | null>(null);
+  let defaultListSaved = $state(false);
+
+  async function loadDefaultList() {
+    defaultListLoading = true;
+    defaultListError = null;
+    try { await loadGeneralPreferences(); }
+    catch (cause) { defaultListError = `Could not load the default tier list: ${String(cause)}`; }
+    finally { defaultListLoading = false; }
+  }
+
+  async function saveDefaultList(select: HTMLSelectElement) {
+    if (defaultListSaving) return;
+    const value = select.value as TierListType;
+    select.value = getGeneralPreferences().default_tier_list;
+    defaultListSaving = true;
+    defaultListSaved = false;
+    defaultListError = null;
+    try {
+      await updateGeneralPreferences({ default_tier_list: value });
+      defaultListSaved = true;
+    } catch (cause) {
+      defaultListError = `Could not save the default tier list: ${String(cause)}`;
+    } finally {
+      select.value = getGeneralPreferences().default_tier_list;
+      defaultListSaving = false;
+    }
+  }
 
   interface DraftTier extends TierDefinition { key: number }
   let draft = $state<DraftTier[]>([]);
@@ -34,6 +66,7 @@
 
   onMount(() => {
     let active = true;
+    void loadDefaultList();
     const savedDraft = getTierDraft();
     Promise.all([loadTiers(), loadTierPreset()]).then(() => {
       if (active) {
@@ -128,6 +161,27 @@
 </script>
 
 <div class="space-y-4">
+  <div class="border-b border-border pb-4 space-y-2">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <label for="default-tier-list" class="font-semibold">Default tier list</label>
+        <p id="default-tier-list-help" class="text-sm text-text-muted">Choose which list opens first. Saves automatically and keeps your rankings.</p>
+      </div>
+      <select id="default-tier-list" value={getGeneralPreferences().default_tier_list} aria-describedby="default-tier-list-help"
+        disabled={defaultListLoading || defaultListSaving || !isGeneralLoaded()} onchange={(event) => saveDefaultList(event.currentTarget)}
+        class="bg-background border border-border rounded-lg px-3 py-2 text-sm focus:border-accent focus:outline-none disabled:opacity-50">
+        <option value="shows">Shows</option>
+        <option value="movies">Movies</option>
+      </select>
+    </div>
+    {#if defaultListError}
+      <p role="alert" class="text-sm text-error">{defaultListError}</p>
+      {#if !isGeneralLoaded()}<button type="button" onclick={loadDefaultList} disabled={defaultListLoading} class="focus-button">Retry</button>{/if}
+    {:else if defaultListLoading || defaultListSaving || defaultListSaved}
+      <p role="status" class="text-xs text-text-muted">{defaultListLoading ? 'Loading…' : defaultListSaving ? 'Saving…' : 'Default tier list saved.'}</p>
+    {/if}
+  </div>
+
   <div class="focus-panel p-4 space-y-3">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>

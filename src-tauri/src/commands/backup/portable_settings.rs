@@ -16,6 +16,7 @@ const GENERAL_KEYS: &[&str] = &[
     "last_page",
     "calendar_view",
     "calendar_filter",
+    "default_tier_list",
 ];
 const NOTIFICATION_KEYS: &[&str] = &[
     "enabled",
@@ -114,8 +115,13 @@ impl PortableSettings {
         {
             return Err("Invalid appearance preferences in backup".into());
         }
-        exact_keys(&self.general, GENERAL_KEYS, "general")?;
-        let general: GeneralPreferences = serde_json::from_value(self.general.clone())
+        // Backups from before the default-list setting used the same v4 format.
+        let mut general_value = self.general.clone();
+        if let Some(object) = general_value.as_object_mut() {
+            object.entry("default_tier_list").or_insert(json!("shows"));
+        }
+        exact_keys(&general_value, GENERAL_KEYS, "general")?;
+        let general: GeneralPreferences = serde_json::from_value(general_value)
             .map_err(|e| format!("Invalid general settings: {e}"))?;
         if !["calendar", "movies", "shows", "last_used"].contains(&general.startup_page.as_str())
             || !["tray", "quit"].contains(&general.close_action.as_str())
@@ -137,6 +143,7 @@ impl PortableSettings {
             .contains(&general.last_page.as_str())
             || !["month", "week", "agenda"].contains(&general.calendar_view.as_str())
             || !["all", "shows", "movies"].contains(&general.calendar_filter.as_str())
+            || !["shows", "movies"].contains(&general.default_tier_list.as_str())
         {
             return Err("Invalid general preferences in backup".into());
         }
@@ -203,6 +210,9 @@ impl PortableSettings {
                         notifications[key] = if notifications[key].is_boolean() { serde_json::from_str(&value).map_err(|e| sqlx::Error::Decode(Box::new(e)))? } else { Value::String(value) };
                     }
                 }
+            }
+            if let Some(object) = general.as_object_mut() {
+                object.entry("default_tier_list").or_insert(json!("shows"));
             }
             let row = sqlx::query("SELECT * FROM notification_settings WHERE id = 1").fetch_one(&mut *connection).await?;
             for key in NOTIFICATION_KEYS.iter().filter(|key| !key.starts_with("quiet_hours_")) {

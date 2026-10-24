@@ -4,6 +4,10 @@ All notable changes to TVC will be documented in this file.
 
 ## [0.15.1] - Unreleased
 
+### Tier Lists
+
+- Choose **Shows** or **Movies** as your default in **Settings → Tier List**. Tier lists opens your preferred list each time, without changing your rankings.
+
 ### Data Management
 
 - In **Data → Sync**, choose **Accept failure** when a title's sync error is acceptable. It clears the reminder and moves the error into a separate list with **Undo**. The error stays in history, and future full syncs still try that title again.

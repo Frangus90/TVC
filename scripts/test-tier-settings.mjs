@@ -72,6 +72,75 @@ test('tier Apply failure keeps the draft; successful Apply refreshes both librar
   assert.equal(api.getTierDraft(), null);
 });
 
+test('tier list default loads on entry without replacing a list chosen during loading', async () => {
+  const component = readFileSync('src/lib/components/calendar/TierView.svelte', 'utf8').match(/<script lang="ts">([\s\S]*?)<\/script>/)[1];
+  function mount() {
+    let resolveLoad;
+    const preferences = { default_tier_list: 'shows' }, mounts = [];
+    const pending = new Promise(resolve => { resolveLoad = resolve; });
+    const derived = value => value; derived.by = callback => callback();
+    const api = load(component + '\nexport const harness = { choose: switchSubTab, current: () => subTab };', {
+      'svelte': { onMount: callback => mounts.push(callback) },
+      '../../stores/general.svelte': { getGeneralPreferences: () => preferences, loadGeneralPreferences: () => pending },
+      '../../stores/tiers.svelte': { getTiers: () => [], getTierListShows: () => [], getTierListMovies: () => [], loadTiers: noop, loadTierListShows: noop, loadTierListMovies: noop },
+      '../../utils/tierExport': {}, '../../utils/tierSearch': {}, '../../stores/showDetail.svelte': {}, '../../stores/movies.svelte': {}, '../../stores/shows.svelte': {},
+      '../../stores/toast.svelte': { showError: () => assert.fail('preference loading should succeed') },
+      '../../utils/logger': { logger: { error: () => assert.fail('preference loading should succeed') } },
+    }, { $derived: derived, $effect: noop });
+    const dispose = mounts.map(callback => callback());
+    return { ...api.harness, dispose: () => dispose.forEach(callback => callback?.()), finish: () => { preferences.default_tier_list = 'movies'; resolveLoad(); } };
+  }
+  const restored = mount();
+  assert.equal(restored.current(), 'shows');
+  restored.finish(); await tick();
+  assert.equal(restored.current(), 'movies');
+  const chosen = mount();
+  chosen.choose('shows');
+  chosen.finish(); await tick();
+  assert.equal(chosen.current(), 'shows', 'even choosing the already-visible list counts as an explicit choice');
+  const closed = mount();
+  closed.dispose(); closed.finish(); await tick();
+  assert.equal(closed.current(), 'shows', 'a closed view ignores late preferences');
+});
+
+test('default tier list saves independently of the draft and restores the select after a failed save', async () => {
+  const component = readFileSync('src/lib/components/settings/TierListTab.svelte', 'utf8').match(/<script lang="ts">([\s\S]*?)<\/script>/)[1];
+  const preferences = { default_tier_list: 'shows' }, mounts = [], writes = [];
+  let fail = true;
+  const api = load(component + '\nexport const harness = { save: saveDefaultList, snapshot: () => ({draft,draftPreset,defaultListSaving,defaultListSaved,defaultListError}) };', {
+    'svelte': { onMount: callback => mounts.push(callback), untrack: callback => callback() },
+    '../../stores/general.svelte': { getGeneralPreferences: () => preferences, isGeneralLoaded: () => true, loadGeneralPreferences: async () => {}, updateGeneralPreferences: async updates => {
+      writes.push(updates);
+      if (fail) throw new Error('disk is full');
+      Object.assign(preferences, updates);
+    } },
+    '../../stores/tiers.svelte': { getTiers: () => [{ name:'Saved tier', color:'' }], getTierPreset: () => 'custom', loadTiers: async () => {}, loadTierPreset: async () => {},
+      getTierDraft: () => ({ preset:'custom', tiers:[{ name:'Unapplied draft', color:'#8b5cf6' }] }), clearTierDraft: noop,
+      applyTierConfiguration: () => assert.fail('changing the default must not apply a layout'),
+    },
+    '../../stores/confirmDialog.svelte': { openConfirmDialog: () => assert.fail('changing the default must not clear rankings') },
+    '../../stores/toast.svelte': {},
+  }, { $effect: noop });
+  mounts.forEach(callback => callback()); await tick();
+  const draftBefore = JSON.stringify(api.harness.snapshot().draft);
+  const select = { value:'movies' };
+  const pending = api.harness.save(select);
+  assert.equal(select.value, 'shows', 'only confirmed values should be shown while saving');
+  assert.equal(api.harness.snapshot().defaultListSaving, true);
+  await pending;
+  assert.equal(select.value, 'shows');
+  assert.match(api.harness.snapshot().defaultListError, /disk is full/);
+  assert.equal(api.harness.snapshot().defaultListSaved, false);
+  assert.equal(JSON.stringify(api.harness.snapshot().draft), draftBefore);
+  fail = false; select.value = 'movies';
+  await api.harness.save(select);
+  assert.equal(select.value, 'movies');
+  assert.equal(api.harness.snapshot().defaultListSaved, true);
+  assert.equal(api.harness.snapshot().defaultListError, null);
+  assert.equal(JSON.stringify(api.harness.snapshot().draft), draftBefore);
+  assert.equal(JSON.stringify(writes), '[{"default_tier_list":"movies"},{"default_tier_list":"movies"}]');
+});
+
 test('Tiermaker matching and cancelled import never create tiers; confirmed import maps preview IDs to saved tiers', async () => {
   const mutations = [];
   let confirmed = false;
