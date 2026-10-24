@@ -1,7 +1,7 @@
 <script lang="ts">
   import { fade, scale } from "svelte/transition";
   import { modalFocus } from "../utils/modalFocus";
-  import { X, Trash2, RefreshCw, ExternalLink, Star, Eye, EyeOff, Calendar, Archive, Play, Users, FileText, ArrowUpCircle } from "lucide-svelte";
+  import { X, Trash2, RefreshCw, ExternalLink, Star, Eye, EyeOff, LoaderCircle, Calendar, Archive, Play, Users, FileText, ArrowUpCircle } from "lucide-svelte";
   import { invoke } from "@tauri-apps/api/core";
   import {
     isMovieDetailOpen,
@@ -30,6 +30,7 @@
 
   type Tab = "overview" | "info";
   let activeTab = $state<Tab>("overview");
+  let watchPendingId = $state<number | null>(null);
 
   // Cast/crew state managed locally
   let localCast = $state<MovieCastMember[]>([]);
@@ -110,7 +111,7 @@
 
   async function handleRemove() {
     const movie = getCurrentMovie();
-    if (!movie) return;
+    if (!movie || watchPendingId !== null) return;
 
     const confirmed = await openConfirmDialog({
       title: "Remove Movie",
@@ -135,16 +136,21 @@
 
   async function handleSync() {
     const movie = getCurrentMovie();
-    if (!movie) return;
+    if (!movie || watchPendingId !== null) return;
 
     await syncMovie(movie.id);
   }
 
   async function handleToggleWatched() {
     const movie = getCurrentMovie();
-    if (!movie) return;
+    if (!movie || watchPendingId !== null) return;
 
-    await markMovieWatched(movie.id, !movie.watched);
+    watchPendingId = movie.id;
+    try {
+      await markMovieWatched(movie.id, !movie.watched);
+    } finally {
+      watchPendingId = null;
+    }
   }
 
   async function handleOpenTMDB() {
@@ -305,7 +311,7 @@
       </div>
 
       <!-- Actions -->
-      <div class="flex items-center gap-2 p-4 border-b border-border">
+      <div class="flex flex-wrap items-center gap-2 p-4 border-b border-border">
         {#if movie.tier_only}
           <!-- Tier-only movie actions -->
           {#if movie.id > 0}
@@ -330,21 +336,9 @@
           <!-- Tracked movie: full action bar -->
           <button
             type="button"
-            onclick={handleToggleWatched}
-            class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
-          >
-            {#if movie.watched}
-              <EyeOff class="w-4 h-4" />
-              Mark Unwatched
-            {:else}
-              <Eye class="w-4 h-4" />
-              Mark Watched
-            {/if}
-          </button>
-          <button
-            type="button"
             onclick={handleSync}
-            class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
+            disabled={watchPendingId !== null}
+            class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-wait"
           >
             <RefreshCw class="w-4 h-4" />
             Refresh
@@ -368,20 +362,43 @@
           <button
             type="button"
             onclick={handleArchive}
-            class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2 ml-auto"
+            class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
           >
             <Archive class="w-4 h-4" />
             Archive
           </button>
         {/if}
-        <button
-          type="button"
-          onclick={handleRemove}
-          class="px-3 py-1.5 text-sm bg-error/20 hover:bg-error/30 text-error rounded-lg transition-colors flex items-center gap-2 {movie.tier_only ? 'ml-auto' : ''}"
-        >
-          <Trash2 class="w-4 h-4" />
-          Remove
-        </button>
+        <div class="flex items-center gap-2 ml-auto">
+          <button
+            type="button"
+            onclick={handleToggleWatched}
+            disabled={watchPendingId !== null}
+            aria-busy={watchPendingId === movie.id}
+            aria-pressed={movie.watched}
+            title={movie.watched ? "Mark as unwatched" : "Mark as watched"}
+            class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-wait"
+          >
+            {#if watchPendingId === movie.id}
+              <LoaderCircle class="w-4 h-4 animate-spin" />
+              Saving…
+            {:else if movie.watched}
+              <EyeOff class="w-4 h-4" />
+              Mark as unwatched
+            {:else}
+              <Eye class="w-4 h-4" />
+              Mark as watched
+            {/if}
+          </button>
+          <button
+            type="button"
+            onclick={handleRemove}
+            disabled={watchPendingId !== null}
+            class="px-3 py-1.5 text-sm bg-error/20 hover:bg-error/30 text-error rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-wait"
+          >
+            <Trash2 class="w-4 h-4" />
+            Remove
+          </button>
+        </div>
       </div>
 
       <!-- Tabs -->

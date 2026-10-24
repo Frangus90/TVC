@@ -325,7 +325,7 @@ export async function loadMoviesForRange(
 export async function markMovieWatched(
   movieId: number,
   watched: boolean
-): Promise<void> {
+): Promise<boolean> {
   try {
     await invoke("mark_movie_watched", { id: movieId, watched });
     // Update local state
@@ -335,12 +335,17 @@ export async function markMovieWatched(
     trackedMovies = trackedMovies.map((m) =>
       m.id === movieId ? { ...m, watched } : m
     );
+    archivedMovies = archivedMovies.map(m => m.id === movieId ? { ...m, watched } : m);
     if (currentMovie && currentMovie.id === movieId) {
       currentMovie = { ...currentMovie, watched };
     }
+    const { updateTierMovieWatched } = await import("./tiers.svelte");
+    updateTierMovieWatched(movieId, watched);
+    return true;
   } catch (error) {
     logger.error("Failed to mark movie watched:", error);
     showError("Failed to mark movie watched:" + ": " + String(error));
+    return false;
   }
 }
 

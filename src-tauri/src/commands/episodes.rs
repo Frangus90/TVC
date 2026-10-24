@@ -333,6 +333,69 @@ mod sync_tests {
     }
 
     #[tokio::test]
+    async fn whole_show_watched_rejects_missing_episode_information() {
+        let pool = database().await;
+        sqlx::query("INSERT INTO shows (id,name) VALUES (2,'No saved episodes')")
+            .execute(&pool)
+            .await
+            .unwrap();
+        for id in [2, 999] {
+            let error = mark_show_watched_in_pool(&pool, id, true)
+                .await
+                .unwrap_err();
+            assert!(error.contains("Sync episode information first"));
+        }
+        let unwatched: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM episodes WHERE watched = 0")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(unwatched, 1);
+    }
+
+    #[tokio::test]
+    async fn whole_show_watched_includes_specials_and_future_episodes_and_preserves_history() {
+        let pool = database().await;
+        sqlx::raw_sql(
+            "INSERT INTO shows (id,name) VALUES (2,'Other show');
+            INSERT INTO episodes (id,show_id,season_number,episode_number,aired,watched) VALUES
+            (12,1,2,1,'2099-01-01',0),(13,1,0,1,NULL,0),(20,2,1,1,NULL,0);",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        mark_show_watched_in_pool(&pool, 1, true).await.unwrap();
+        let watched: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM episodes WHERE show_id = 1 AND watched = 1 AND watched_at IS NOT NULL")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(watched, 4);
+        let original = sqlx::query("SELECT watched_at,scheduled_date FROM episodes WHERE id = 10")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            original.get::<String, _>("watched_at"),
+            "2026-09-15T20:00:00Z"
+        );
+        assert_eq!(original.get::<String, _>("scheduled_date"), "2026-09-14");
+        let other: i64 = sqlx::query_scalar("SELECT watched FROM episodes WHERE id = 20")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(other, 0);
+        let first_date: String = sqlx::query_scalar("SELECT watched_at FROM episodes WHERE id = 11")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        mark_show_watched_in_pool(&pool, 1, true).await.unwrap();
+        let repeated_date: String = sqlx::query_scalar("SELECT watched_at FROM episodes WHERE id = 11")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(repeated_date, first_date);
+    }
+
+    #[tokio::test]
     async fn refresh_preserves_user_state_when_provider_ids_change() {
         let pool = database().await;
         apply_show_refresh(
@@ -475,10 +538,24 @@ pub async fn mark_show_watched(app: AppHandle, show_id: i64, watched: bool) -> R
         .await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    crate::watch_history::episodes(
-        &pool,
-        crate::watch_history::Episodes::Show(show_id),
-        watched,
-    )
-    .await
+    mark_show_watched_in_pool(&pool, show_id, watched).await
+}
+
+async fn mark_show_watched_in_pool(
+    pool: &sqlx::SqlitePool,
+    show_id: i64,
+    watched: bool,
+) -> Result<(), String> {
+    let has_episodes: bool =
+        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM episodes WHERE show_id = ?)")
+            .bind(show_id)
+            .fetch_one(pool)
+            .await
+            .map_err(|e| format!("Could not check saved episodes: {e}"))?;
+    if !has_episodes {
+        return Err("No saved episodes to mark. Sync episode information first; start tracking the show if necessary.".into());
+    }
+
+    crate::watch_history::episodes(pool, crate::watch_history::Episodes::Show(show_id), watched)
+        .await
 }

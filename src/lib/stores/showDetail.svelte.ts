@@ -221,11 +221,13 @@ export async function markSeasonWatched(
     await invoke("mark_season_watched", { showId, seasonNumber, watched });
     // Update local state immediately
     showEpisodes = showEpisodes.map((ep) =>
-      ep.season_number === seasonNumber ? { ...ep, watched } : ep
+      ep.show_id === showId && ep.season_number === seasonNumber ? { ...ep, watched } : ep
     );
     // Update calendar episodes as well
-    const { updateCalendarEpisodesWatched } = await import("./shows.svelte");
+    const { updateCalendarEpisodesWatched, loadTrackedShows } = await import("./shows.svelte");
     updateCalendarEpisodesWatched(showId, watched, seasonNumber);
+    const { loadTierListShows } = await import("./tiers.svelte");
+    await Promise.all([loadTrackedShows(), loadTierListShows()]);
   } catch (err) {
     logger.error("Failed to mark season watched", err);
     showError("Failed to mark season watched" + ": " + String(err));
@@ -236,18 +238,21 @@ export async function markSeasonWatched(
 export async function markShowWatched(
   showId: number,
   watched: boolean
-): Promise<void> {
+): Promise<boolean> {
   try {
     await invoke("mark_show_watched", { showId, watched });
     // Update local state immediately
-    showEpisodes = showEpisodes.map((ep) => ({ ...ep, watched }));
+    showEpisodes = showEpisodes.map((ep) => ep.show_id === showId ? { ...ep, watched } : ep);
     // Update calendar episodes as well
-    const { updateCalendarEpisodesWatched } = await import("./shows.svelte");
+    const { updateCalendarEpisodesWatched, loadTrackedShows } = await import("./shows.svelte");
     updateCalendarEpisodesWatched(showId, watched);
+    const { loadTierListShows } = await import("./tiers.svelte");
+    await Promise.all([loadTrackedShows(), loadTierListShows()]);
+    return true;
   } catch (err) {
     logger.error("Failed to mark show watched", err);
     showError("Failed to mark show watched" + ": " + String(err));
-    error = err instanceof Error ? err.message : "Failed to mark show watched";
+    return false;
   }
 }
 
@@ -262,8 +267,10 @@ export async function markEpisodeWatched(
       ep.id === episodeId ? { ...ep, watched } : ep
     );
     // Update calendar episodes as well
-    const { updateEpisodeWatched } = await import("./shows.svelte");
+    const { updateEpisodeWatched, loadTrackedShows } = await import("./shows.svelte");
     updateEpisodeWatched(episodeId, watched);
+    const { loadTierListShows } = await import("./tiers.svelte");
+    await Promise.all([loadTrackedShows(), loadTierListShows()]);
   } catch (err) {
     logger.error("Failed to mark episode watched", err);
     showError("Failed to mark episode watched" + ": " + String(err));

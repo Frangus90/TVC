@@ -19,6 +19,8 @@ pub struct TrackedShow {
     pub tier_id: Option<i64>,
     pub tier_only: bool,
     pub unmigrated: bool,
+    pub episode_count: i64,
+    pub watched_episodes: i64,
 }
 
 #[tauri::command]
@@ -87,7 +89,9 @@ pub async fn get_tracked_shows(app: AppHandle) -> Result<Vec<TrackedShow>, Strin
 
     let rows = sqlx::query(
         r#"
-        SELECT id, name, poster_url, first_aired, status, color, notes, tags, rating, rank_order, tier_id, tier_only, unmigrated
+        SELECT id, name, poster_url, first_aired, status, color, notes, tags, rating, rank_order, tier_id, tier_only, unmigrated,
+               (SELECT COUNT(*) FROM episodes WHERE show_id = shows.id) AS episode_count,
+               (SELECT COUNT(*) FROM episodes WHERE show_id = shows.id AND watched = 1) AS watched_episodes
         FROM shows
         WHERE (archived = 0 OR archived IS NULL) AND tier_only = 0
         ORDER BY name
@@ -112,6 +116,8 @@ pub async fn get_tracked_shows(app: AppHandle) -> Result<Vec<TrackedShow>, Strin
         tier_id: row.get("tier_id"),
         tier_only: row.get::<i32, _>("tier_only") == 1,
         unmigrated: row.get::<i32, _>("unmigrated") == 1,
+        episode_count: row.get("episode_count"),
+        watched_episodes: row.get("watched_episodes"),
     }).collect();
 
     Ok(shows)
@@ -124,7 +130,9 @@ pub async fn get_archived_shows(app: AppHandle) -> Result<Vec<TrackedShow>, Stri
 
     let rows = sqlx::query(
         r#"
-        SELECT id, name, poster_url, first_aired, status, color, notes, tags, rating, rank_order, tier_id, tier_only, unmigrated
+        SELECT id, name, poster_url, first_aired, status, color, notes, tags, rating, rank_order, tier_id, tier_only, unmigrated,
+               (SELECT COUNT(*) FROM episodes WHERE show_id = shows.id) AS episode_count,
+               (SELECT COUNT(*) FROM episodes WHERE show_id = shows.id AND watched = 1) AS watched_episodes
         FROM shows
         WHERE archived = 1
         ORDER BY name
@@ -149,6 +157,8 @@ pub async fn get_archived_shows(app: AppHandle) -> Result<Vec<TrackedShow>, Stri
         tier_id: row.get("tier_id"),
         tier_only: row.get::<i32, _>("tier_only") == 1,
         unmigrated: row.get::<i32, _>("unmigrated") == 1,
+        episode_count: row.get("episode_count"),
+        watched_episodes: row.get("watched_episodes"),
     }).collect();
 
     Ok(shows)

@@ -18,6 +18,8 @@ export interface TierListShow {
   tier_id: number | null;
   rank_order: number | null;
   tier_only: boolean;
+  episode_count: number;
+  watched_episodes: number;
 }
 
 export interface TierListMovie {
@@ -28,6 +30,7 @@ export interface TierListMovie {
   tier_id: number | null;
   rank_order: number | null;
   tier_only: boolean;
+  watched: boolean;
 }
 
 export interface DeleteTierResult {
@@ -99,6 +102,10 @@ export function getTierListShows(): TierListShow[] {
 
 export function getTierListMovies(): TierListMovie[] {
   return tierListMovies;
+}
+
+export function updateTierMovieWatched(id: number, watched: boolean) {
+  tierListMovies = tierListMovies.map(movie => movie.id === id ? { ...movie, watched } : movie);
 }
 
 export function isTiersLoading(): boolean {

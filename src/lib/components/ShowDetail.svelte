@@ -1,7 +1,7 @@
 <script lang="ts">
   import { fade, scale } from "svelte/transition";
   import { modalFocus } from "../utils/modalFocus";
-  import { X, Trash2, RefreshCw, ExternalLink, Check, CheckCheck, Circle, CheckCircle, Users, List, Play, ArrowUpCircle } from "lucide-svelte";
+  import { X, Trash2, RefreshCw, ExternalLink, Check, Eye, EyeOff, LoaderCircle, Circle, CheckCircle, Users, List, Play, ArrowUpCircle } from "lucide-svelte";
   import { invoke } from "@tauri-apps/api/core";
   import {
     isShowDetailOpen,
@@ -29,6 +29,7 @@
 
   type Tab = "episodes" | "info";
   let activeTab = $state<Tab>("episodes");
+  let watchPendingId = $state<number | null>(null);
 
   // Cast state managed locally since we fetch on demand
   let localCast = $state<CastMember[]>([]);
@@ -105,7 +106,7 @@
 
   async function handleRemove() {
     const show = getCurrentShow();
-    if (!show) return;
+    if (!show || watchPendingId !== null) return;
 
     const confirmed = await openConfirmDialog({
       title: "Remove Show",
@@ -123,7 +124,7 @@
 
   async function handleSync() {
     const show = getCurrentShow();
-    if (!show) return;
+    if (!show || watchPendingId !== null) return;
 
     await syncShowEpisodes(show.id);
     await openShowDetail(show.id);
@@ -181,21 +182,27 @@
   async function handleMarkShowWatched() {
     const show = getCurrentShow();
     const episodes = getShowEpisodes();
-    if (!show) return;
+    if (!show || watchPendingId !== null) return;
 
     const allWatched = isAllWatched(episodes);
-    await markShowWatched(show.id, !allWatched);
+    watchPendingId = show.id;
+    try {
+      await markShowWatched(show.id, !allWatched);
+    } finally {
+      watchPendingId = null;
+    }
   }
 
   async function handleMarkSeasonWatched(seasonNumber: number, seasonEpisodes: ReturnType<typeof getShowEpisodes>) {
     const show = getCurrentShow();
-    if (!show) return;
+    if (!show || watchPendingId !== null) return;
 
     const allWatched = isSeasonWatched(seasonEpisodes);
     await markSeasonWatched(show.id, seasonNumber, !allWatched);
   }
 
   async function handleMarkEpisodeWatched(episodeId: number, currentlyWatched: boolean) {
+    if (watchPendingId !== null) return;
     await markEpisodeWatched(episodeId, !currentlyWatched);
   }
 </script>
@@ -304,7 +311,7 @@
       </div>
 
       <!-- Actions -->
-      <div class="flex items-center gap-2 p-4 border-b border-border">
+      <div class="flex flex-wrap items-center gap-2 p-4 border-b border-border">
         {#if show.unmigrated}
           <div class="flex-1 flex items-center gap-3 px-3 py-2 rounded-lg bg-warning/10 border border-warning/30 text-sm text-warning">
             <span class="font-medium">Needs TMDB mapping.</span>
@@ -337,18 +344,11 @@
           <button
             type="button"
             onclick={handleSync}
-            class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
+            disabled={watchPendingId !== null}
+            class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-wait"
           >
             <RefreshCw class="w-4 h-4" />
             Refresh Show
-          </button>
-          <button
-            type="button"
-            onclick={handleMarkShowWatched}
-            class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2"
-          >
-            <CheckCheck class="w-4 h-4" />
-            {isAllWatched(episodes) ? "Mark All Unwatched" : "Mark All Watched"}
           </button>
           <button
             type="button"
@@ -367,14 +367,37 @@
             Wikipedia
           </button>
         {/if}
-        <button
-          type="button"
-          onclick={handleRemove}
-          class="px-3 py-1.5 text-sm bg-error/20 hover:bg-error/30 text-error rounded-lg transition-colors flex items-center gap-2 ml-auto"
-        >
-          <Trash2 class="w-4 h-4" />
-          Remove
-        </button>
+        <div class="flex items-center gap-2 ml-auto">
+          <button
+            type="button"
+            onclick={handleMarkShowWatched}
+            disabled={watchPendingId !== null}
+            aria-busy={watchPendingId === show.id}
+            aria-pressed={isAllWatched(episodes)}
+            title={isAllWatched(episodes) ? "Mark all episodes as unwatched" : "Mark all episodes as watched"}
+            class="px-3 py-1.5 text-sm bg-surface-hover hover:bg-surface-hover/80 rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-wait"
+          >
+            {#if watchPendingId === show.id}
+              <LoaderCircle class="w-4 h-4 animate-spin" />
+              Saving…
+            {:else if isAllWatched(episodes)}
+              <EyeOff class="w-4 h-4" />
+              Mark as unwatched
+            {:else}
+              <Eye class="w-4 h-4" />
+              Mark as watched
+            {/if}
+          </button>
+          <button
+            type="button"
+            onclick={handleRemove}
+            disabled={watchPendingId !== null}
+            class="px-3 py-1.5 text-sm bg-error/20 hover:bg-error/30 text-error rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-wait"
+          >
+            <Trash2 class="w-4 h-4" />
+            Remove
+          </button>
+        </div>
       </div>
 
       <!-- Tabs -->
@@ -428,7 +451,8 @@
                       <button
                         type="button"
                         onclick={() => handleMarkSeasonWatched(season, seasonEpisodes)}
-                        class="px-2 py-1 text-xs bg-surface-hover hover:bg-surface-hover/80 rounded transition-colors flex items-center gap-1"
+                        disabled={watchPendingId !== null}
+                        class="px-2 py-1 text-xs bg-surface-hover hover:bg-surface-hover/80 rounded transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-wait"
                       >
                         <Check class="w-3 h-3" />
                         {isSeasonWatched(seasonEpisodes) ? "Mark Unwatched" : "Mark Watched"}
@@ -450,7 +474,8 @@
                           <button
                             type="button"
                             onclick={() => handleMarkEpisodeWatched(episode.id, episode.watched)}
-                            class="show-watch-button p-1.5 rounded-full transition-colors"
+                            disabled={watchPendingId !== null}
+                            class="show-watch-button p-1.5 rounded-full transition-colors disabled:opacity-50 disabled:cursor-wait"
                             class:episode-watched={episode.watched}
                             aria-pressed={episode.watched}
                             aria-label={episode.watched ? "Mark as unwatched" : "Mark as watched"}

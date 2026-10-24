@@ -4,6 +4,12 @@ All notable changes to TVC will be documented in this file.
 
 ## [0.15.1] - Unreleased
 
+### TV Shows and Movies
+
+- Use the eye button on a title to **Mark as watched** without opening its details. It works in poster and list views, including tier-only titles. For shows, it marks every saved episode, including specials and future episodes already listed. Existing watch dates are kept.
+- Both detail windows have a matching **Mark as watched** button beside **Remove**, including tier-only titles. The button changes to **Mark as unwatched** once everything is watched.
+- Poster cards now give tiers and action buttons their own rows. Titles, metadata and badges stay aligned, so a longer tier name such as **S – Masterpiece** no longer shifts the controls. Very long titles and tier names show their full text on hover.
+
 ### Tier Lists
 
 - Choose **Shows** or **Movies** as your default in **Settings → Tier List**. Tier lists opens your preferred list each time, without changing your rankings.

@@ -21,6 +21,8 @@ export interface TrackedShow {
   tier_id: number | null;
   tier_only: boolean;
   unmigrated: boolean;
+  episode_count: number;
+  watched_episodes: number;
 }
 
 export interface SearchResult {
@@ -269,7 +271,7 @@ export async function loadTrackedShows(): Promise<boolean> {
         tier_only: number;
         unmigrated: number;
       })[]>(
-        "SELECT id, name, poster_url, first_aired, status, color, notes, tags, rating, rank_order, tier_id, COALESCE(tier_only, 0) as tier_only, COALESCE(unmigrated, 0) as unmigrated FROM shows WHERE COALESCE(archived, 0) = 0 AND COALESCE(tier_only, 0) = 0 ORDER BY name"
+        "SELECT id, name, poster_url, first_aired, status, color, notes, tags, rating, rank_order, tier_id, COALESCE(tier_only, 0) as tier_only, COALESCE(unmigrated, 0) as unmigrated, (SELECT COUNT(*) FROM episodes WHERE show_id = shows.id) as episode_count, (SELECT COUNT(*) FROM episodes WHERE show_id = shows.id AND watched = 1) as watched_episodes FROM shows WHERE COALESCE(archived, 0) = 0 AND COALESCE(tier_only, 0) = 0 ORDER BY name"
       );
       trackedShows = rows.map((r) => ({
         ...r,
@@ -462,9 +464,9 @@ export async function toggleEpisodeWatched(
   try {
     await invoke("mark_episode_watched", { episodeId, watched });
 
-    calendarEpisodes = calendarEpisodes.map((ep) =>
-      ep.id === episodeId ? { ...ep, watched } : ep
-    );
+    updateEpisodeWatched(episodeId, watched);
+    const { loadTierListShows } = await import("./tiers.svelte");
+    await Promise.all([loadTrackedShows(), loadTierListShows()]);
   } catch (error) {
     logger.error("Failed to toggle episode watched", error);
     showError("Failed to toggle episode watched" + ": " + String(error));
@@ -482,6 +484,11 @@ export function updateCalendarEpisodesWatched(
     if (seasonNumber !== undefined && ep.season_number !== seasonNumber) return ep;
     return { ...ep, watched };
   });
+  if (episodePickerShow?.id === showId) {
+    episodePickerEpisodes = episodePickerEpisodes.map(ep =>
+      seasonNumber === undefined || ep.season_number === seasonNumber ? { ...ep, watched } : ep
+    );
+  }
 }
 
 // Update a single episode's watched status in calendar
@@ -492,6 +499,7 @@ export function updateEpisodeWatched(
   calendarEpisodes = calendarEpisodes.map((ep) =>
     ep.id === episodeId ? { ...ep, watched } : ep
   );
+  episodePickerEpisodes = episodePickerEpisodes.map(ep => ep.id === episodeId ? { ...ep, watched } : ep);
 }
 
 // Episode scheduling functions

@@ -518,6 +518,8 @@ pub struct TierListShow {
     pub tier_id: Option<i64>,
     pub rank_order: Option<i32>,
     pub tier_only: bool,
+    pub episode_count: i64,
+    pub watched_episodes: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -529,6 +531,7 @@ pub struct TierListMovie {
     pub tier_id: Option<i64>,
     pub rank_order: Option<i32>,
     pub tier_only: bool,
+    pub watched: bool,
 }
 
 #[tauri::command]
@@ -542,7 +545,9 @@ pub async fn get_tier_list_shows(app: AppHandle) -> Result<Vec<TierListShow>, St
 pub(crate) async fn tier_list_shows(pool: &sqlx::SqlitePool) -> Result<Vec<TierListShow>, String> {
     let rows = sqlx::query(
         r#"
-        SELECT id, name, first_aired, poster_url, tier_id, rank_order, tier_only
+        SELECT id, name, first_aired, poster_url, tier_id, rank_order, tier_only,
+               (SELECT COUNT(*) FROM episodes WHERE show_id = shows.id) AS episode_count,
+               (SELECT COUNT(*) FROM episodes WHERE show_id = shows.id AND watched = 1) AS watched_episodes
         FROM shows
         WHERE tier_only = 1 OR tier_id IS NOT NULL
         ORDER BY name
@@ -563,6 +568,8 @@ pub(crate) async fn tier_list_shows(pool: &sqlx::SqlitePool) -> Result<Vec<TierL
             tier_id: row.get("tier_id"),
             rank_order: row.get("rank_order"),
             tier_only: row.get::<i32, _>("tier_only") == 1,
+            episode_count: row.get("episode_count"),
+            watched_episodes: row.get("watched_episodes"),
         })
         .collect();
 
@@ -582,7 +589,7 @@ pub async fn get_tier_list_movies(app: AppHandle) -> Result<Vec<TierListMovie>, 
 pub(crate) async fn tier_list_movies(pool: &sqlx::SqlitePool) -> Result<Vec<TierListMovie>, String> {
     let rows = sqlx::query(
         r#"
-        SELECT id, title, release_date, poster_url, tier_id, rank_order, tier_only
+        SELECT id, title, release_date, poster_url, tier_id, rank_order, tier_only, watched
         FROM movies
         WHERE tier_only = 1 OR tier_id IS NOT NULL
         ORDER BY title
@@ -603,12 +610,76 @@ pub(crate) async fn tier_list_movies(pool: &sqlx::SqlitePool) -> Result<Vec<Tier
             tier_id: row.get("tier_id"),
             rank_order: row.get("rank_order"),
             tier_only: row.get::<i32, _>("tier_only") == 1,
+            watched: row.get::<i32, _>("watched") == 1,
         })
         .collect();
 
     eprintln!("[tier-add] get_tier_list_movies returned {} rows", movies.len());
 
     Ok(movies)
+}
+
+#[cfg(test)]
+mod watched_summary_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn show_summaries_count_all_saved_episodes_and_keep_empty_shows_unwatched() {
+        let pool = crate::audit_tests::database().await;
+        sqlx::raw_sql(
+            "INSERT INTO tiers (id,position,name,color) VALUES (1001,1001,'Test','#ffffff');
+            INSERT INTO shows (id,name,tier_id,rank_order,tier_only) VALUES
+            (1,'Ranked show',1001,3,0),(2,'Empty tier show',NULL,NULL,1),
+            (-1,'Manual tier show',1001,4,1),(3,'Outside tiers',NULL,NULL,0);
+            INSERT INTO episodes (id,show_id,season_number,episode_number,aired,watched) VALUES
+            (10,1,1,1,'2020-01-01',1),(11,1,1,2,'2099-01-01',0),
+            (12,1,0,1,NULL,1),(-10,-1,1,1,NULL,1),(30,3,1,1,NULL,1);",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let shows = tier_list_shows(&pool).await.unwrap();
+        assert_eq!(shows.len(), 3);
+        let ranked = shows.iter().find(|show| show.id == 1).unwrap();
+        assert_eq!((ranked.episode_count, ranked.watched_episodes), (3, 2));
+        assert_eq!((ranked.tier_id, ranked.rank_order), (Some(1001), Some(3)));
+        let empty = shows.iter().find(|show| show.id == 2).unwrap();
+        assert_eq!((empty.episode_count, empty.watched_episodes), (0, 0));
+        let manual = shows.iter().find(|show| show.id == -1).unwrap();
+        assert_eq!((manual.episode_count, manual.watched_episodes), (1, 1));
+        assert!(manual.tier_only);
+
+        crate::watch_history::episodes(&pool, crate::watch_history::Episodes::Show(1), true)
+            .await
+            .unwrap();
+        let refreshed = tier_list_shows(&pool).await.unwrap();
+        let ranked = refreshed.iter().find(|show| show.id == 1).unwrap();
+        assert_eq!((ranked.episode_count, ranked.watched_episodes), (3, 3));
+    }
+
+    #[tokio::test]
+    async fn movie_summaries_expose_saved_watched_state_for_tracked_and_tier_only_titles() {
+        let pool = crate::audit_tests::database().await;
+        sqlx::raw_sql(
+            "INSERT INTO tiers (id,position,name,color) VALUES (1001,1001,'Test','#ffffff');
+            INSERT INTO movies (id,title,tier_id,rank_order,tier_only,watched) VALUES
+            (1,'Watched ranked',1001,3,0,1),(2,'Watched tier only',NULL,NULL,1,1),
+            (3,'Unwatched tier only',NULL,NULL,1,0),(4,'Outside tiers',NULL,NULL,0,1);",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let movies = tier_list_movies(&pool).await.unwrap();
+        assert_eq!(movies.len(), 3);
+        assert!(movies.iter().find(|movie| movie.id == 1).unwrap().watched);
+        assert!(movies.iter().find(|movie| movie.id == 2).unwrap().watched);
+        assert!(!movies.iter().find(|movie| movie.id == 3).unwrap().watched);
+        let ranked = movies.iter().find(|movie| movie.id == 1).unwrap();
+        assert_eq!((ranked.tier_id, ranked.rank_order), (Some(1001), Some(3)));
+        assert!(!ranked.tier_only);
+    }
 }
 
 // ============================================

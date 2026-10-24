@@ -2,7 +2,7 @@
   import { untrack } from "svelte";
   import {
     Archive, CalendarX, Check, Film, Grid2X2, Layers, List, Loader2,
-    Plus, Search, Trash2, Tv, AlertTriangle,
+    Plus, Search, Trash2, Tv, AlertTriangle, Eye,
   } from "lucide-svelte";
   import {
     getTrackedShows, getArchivedShows, loadTrackedShows, loadArchivedShows,
@@ -10,9 +10,10 @@
   } from "../stores/shows.svelte";
   import {
     getTrackedMovies, getArchivedMovies, loadTrackedMovies, loadArchivedMovies,
-    openMovieSearchModal, openMovieDetail, removeMovie, archiveMovie, unscheduleMovie,
+    openMovieSearchModal, openMovieDetail, removeMovie, archiveMovie, unscheduleMovie, markMovieWatched,
   } from "../stores/movies.svelte";
-  import { openShowDetail } from "../stores/showDetail.svelte";
+  import { openShowDetail, markShowWatched } from "../stores/showDetail.svelte";
+  import { showSuccess } from "../stores/toast.svelte";
   import {
     getTierListShows, getTierListMovies, loadTierListShows, loadTierListMovies,
     loadTiers, getTierById,
@@ -48,6 +49,7 @@
   let selected = $state<Set<number>>(new Set());
   let loading = $state(true);
   let busy = $state(false);
+  let marking = $state<string | null>(null);
   let resolverOpen = $state(false);
   const theme = $derived(getThemeSettings());
   const isList = $derived(theme.hidePosters || layout === "list");
@@ -67,7 +69,7 @@
           id: show.id, title: show.name, poster: show.poster_url, color: null,
           status: null, tierId: show.tier_id, tierOnly: true,
           releaseDate: show.first_aired, runtime: null, scheduledDate: null,
-          watched: false, unmigrated: false,
+          watched: show.episode_count > 0 && show.watched_episodes === show.episode_count, unmigrated: false,
         });
       }
       for (const show of getTrackedShows()) {
@@ -77,7 +79,7 @@
           id: show.id, title: show.name, poster: show.poster_url, color: show.color,
           status: show.status, tierId: tierShow?.tier_id ?? null, tierOnly: show.tier_only,
           releaseDate: tierShow?.first_aired ?? null, runtime: null, scheduledDate: null,
-          watched: false, unmigrated: show.unmigrated,
+          watched: show.episode_count > 0 && show.watched_episodes === show.episode_count, unmigrated: show.unmigrated,
         });
       }
     } else {
@@ -90,7 +92,7 @@
           id: movie.id, title: movie.title, poster: movie.poster_url, color: null,
           status: null, tierId: movie.tier_id, tierOnly: true,
           releaseDate: movie.release_date, runtime: null, scheduledDate: null,
-          watched: false, unmigrated: false,
+          watched: movie.watched, unmigrated: false,
         });
       }
       for (const movie of getTrackedMovies()) {
@@ -209,6 +211,20 @@
     finally { busy = false; }
   }
 
+  async function markWatched(item: LibraryItem) {
+    if (busy || item.watched) return;
+    const kind = mediaType;
+    busy = true;
+    marking = `${kind}:${item.id}`;
+    try {
+      const saved = kind === "shows" ? await markShowWatched(item.id, true) : await markMovieWatched(item.id, true);
+      if (saved) showSuccess(kind === "shows" ? `All saved episodes of ${item.title} marked as watched.` : `${item.title} marked as watched.`);
+    } finally {
+      busy = false;
+      marking = null;
+    }
+  }
+
   function metadata(item: LibraryItem) {
     const parts = [item.releaseDate?.slice(0, 4), item.runtime ? `${item.runtime} min` : null];
     if (item.status && mediaType === "shows") parts.push(item.status);
@@ -297,18 +313,25 @@
               </span>
             {/if}
             <span class="library-copy">
-              <span class="library-title">{#if item.color}<span class="library-color" style:background={item.color}></span>{/if}{item.title}</span>
-              {#if metadata(item)}<span class="library-metadata">{metadata(item)}</span>{/if}
+              <span class="library-title" title={item.title}>{#if item.color}<span class="library-color" style:background={item.color}></span>{/if}{item.title}</span>
+              <span class="library-metadata" title={metadata(item)}>{metadata(item)}</span>
               <span class="library-state">
-                {#if !item.tierOnly && mediaType === "movies" && item.watched}<WatchedBadge />{:else}<span>{item.tierOnly ? "Tier only" : "Tracking"}</span>{/if}
+                {#if item.watched}<WatchedBadge />{/if}
+                {#if item.tierOnly || !item.watched}<span>{item.tierOnly ? "Tier only" : "Tracking"}</span>{/if}
                 {#if item.unmigrated}<span class="library-unmapped">Needs matching</span>{/if}
-                {#if tier}<span class="library-tier" style:--tier-color={tier.color}>{tier.name}</span>{/if}
               </span>
-              {#if item.scheduledDate}<span class="library-schedule">Scheduled · {formatDate(item.scheduledDate)}</span>{/if}
+              <span class="library-tier-row">{#if tier}<span class="library-tier" title={tier.name} style:--tier-color={tier.color}>{tier.name}</span>{/if}</span>
+              {#if mediaType === "movies"}<span class="library-schedule" title={item.scheduledDate ? `Scheduled · ${formatDate(item.scheduledDate)}` : undefined}>{#if item.scheduledDate}Scheduled · {formatDate(item.scheduledDate)}{/if}</span>{/if}
             </span>
           </button>
           {#if !bulkMode}
             <div class="library-actions">
+              <button type="button" disabled={busy || item.watched} class:library-watched={item.watched}
+                onclick={() => markWatched(item)} aria-label={item.watched ? `${item.title}: Watched` : `Mark ${item.title} as watched`}
+                title={item.watched ? 'Watched' : 'Mark as watched'}>
+                {#if marking === `${mediaType}:${item.id}`}<Loader2 size={16} class="animate-spin" aria-hidden="true" />
+                {:else}<Eye size={16} aria-hidden="true" />{/if}
+              </button>
               {#if mediaType === "movies" && item.scheduledDate}
                 <button type="button" disabled={busy} onclick={() => unschedule(item)} aria-label={`Remove ${item.title} from schedule`} title="Remove from schedule"><CalendarX size={16} /></button>
               {/if}
@@ -354,47 +377,51 @@
   .library-loading, .library-empty { display: flex; align-items: center; justify-content: center; gap: 1rem; padding: 5rem 1rem; color: var(--color-text-muted); }
   .library-empty { flex-direction: column; text-align: center; }
   .library-empty h2 { color: var(--color-text); font-weight: 600; font-size: 1.15em; }
-  .library-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(165px * var(--poster-size-scale, 1)), 1fr)); gap: 1.6rem 1.25rem; list-style: none; margin: 0; padding: 0; }
-  .library-card { position: relative; min-width: 0; padding: .45rem; border: 1px solid transparent; border-radius: .85rem; }
+  .library-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(max(9rem, calc(165px * var(--poster-size-scale, 1))), 1fr)); gap: 1.6rem 1.25rem; list-style: none; margin: 0; padding: 0; }
+  .library-card { position: relative; min-width: 0; padding: .45rem; border: 1px solid transparent; border-radius: .85rem; display: flex; flex-direction: column; }
   .library-card:hover { background: var(--color-surface); }
   .library-card.selected { background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface)); border-color: var(--accent-focus); }
-  .library-open { display: flex; flex-direction: column; width: 100%; text-align: left; border-radius: .65rem; }
+  .library-open { display: flex; flex-direction: column; width: 100%; text-align: left; border-radius: .65rem; flex: 1; }
   .library-poster { display: flex; width: 100%; aspect-ratio: 2 / 3; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--color-border); border-radius: .65rem; background: var(--color-surface-hover); color: var(--color-text-muted); }
   .library-poster img { width: 100%; height: 100%; object-fit: cover; }
   .library-copy { display: flex; flex-direction: column; min-width: 0; width: 100%; padding-top: .75rem; gap: .3rem; }
   .library-title { display: block; font-size: .85em; font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; }
   .library-color { display: inline-block; width: .55rem; height: .55rem; border-radius: 50%; margin-right: .4rem; }
-  .library-metadata, .library-schedule { color: var(--color-text-muted); font-size: .72em; }
+  .library-metadata, .library-schedule { color: var(--color-text-muted); font-size: .72em; min-height: 1.4em; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .library-schedule { color: var(--accent-text); }
   .library-state { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; font-size: .7em; color: var(--color-text-muted); margin-top: .2rem; }
-  .library-tier { border: 1px solid var(--color-border); border-left: 3px solid var(--tier-color, var(--color-border)); background: var(--color-surface); color: var(--color-text); padding: .15rem .45rem; border-radius: .3rem; }
+  .library-tier-row { min-height: calc(1.5em + .3rem + 2px); font-size: .7em; display: flex; align-items: flex-start; min-width: 0; }
+  .library-tier { display: block; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border: 1px solid var(--color-border); border-left: 3px solid var(--tier-color, var(--color-border)); background: var(--color-surface); color: var(--color-text); padding: .15rem .45rem; border-radius: .3rem; }
   .library-unmapped { color: var(--color-warning); }
-  .library-actions { display: flex; justify-content: flex-end; gap: .15rem; padding-top: .4rem; }
+  .library-actions { display: flex; justify-content: flex-end; gap: .15rem; padding-top: .4rem; margin-top: auto; }
   .library-actions button { padding: .35rem; border-radius: .4rem; color: var(--color-text-muted); }
   .library-actions button:hover { background: var(--color-surface-hover); color: var(--accent-text); }
   .library-actions button.library-danger:hover { color: var(--color-error); }
+  .library-actions button.library-watched { color: var(--color-success); }
+  .library-items:not(.library-list) .library-title { min-height: 2.9em; max-height: 2.9em; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+  .library-items:not(.library-list) .library-state { height: calc(3em + .5rem); align-content: flex-start; }
   .library-checkbox { position: absolute; top: .9rem; left: .9rem; display: flex; align-items: center; justify-content: center; width: 1.3rem; height: 1.3rem; border: 1px solid var(--color-text-muted); border-radius: .3rem; background: var(--color-surface); }
   .library-checkbox.checked { background: var(--color-accent); color: var(--accent-foreground); border-color: var(--accent-focus); }
   .library-count { margin-top: 1.75rem; font-size: .75em; color: var(--color-text-muted); }
   .library-list { grid-template-columns: 1fr; gap: .5rem; }
-  .library-list .library-card { display: flex; align-items: center; gap: 1rem; padding: .8rem 1rem; border-color: var(--color-border); background: var(--color-surface); }
+  .library-list .library-card { display: flex; flex-direction: row; align-items: center; gap: 1rem; padding: .8rem 1rem; border-color: var(--color-border); background: var(--color-surface); }
   .library-list .library-open { flex: 1; min-width: 0; flex-direction: row; align-items: center; gap: 1rem; }
   .library-list .library-poster { width: calc(3rem * var(--poster-size-scale, 1)); height: calc(4.5rem * var(--poster-size-scale, 1)); flex-shrink: 0; }
   .library-list .library-copy { padding-top: 0; }
-  .library-list .library-actions { flex-shrink: 0; padding-top: 0; }
+  .library-list .library-actions { flex-shrink: 0; padding-top: 0; margin-top: 0; }
   .library-list .library-checkbox { position: static; flex-shrink: 0; }
-  .library-compact .library-items:not(.library-list) { grid-template-columns: repeat(auto-fill, minmax(calc(140px * var(--poster-size-scale, 1)), 1fr)); gap: 1rem .85rem; }
+  .library-compact .library-items:not(.library-list) { grid-template-columns: repeat(auto-fill, minmax(max(9rem, calc(140px * var(--poster-size-scale, 1))), 1fr)); gap: 1rem .85rem; }
   .library-compact .library-list .library-card { padding: .5rem .75rem; }
   .library-compact .library-list .library-poster { width: calc(2rem * var(--poster-size-scale, 1)); height: calc(3rem * var(--poster-size-scale, 1)); }
   @media (min-width: 2400px) {
-    .library-items:not(.library-list) { grid-template-columns: repeat(auto-fill, minmax(calc(220px * var(--poster-size-scale, 1)), 1fr)); }
-    .library-compact .library-items:not(.library-list) { grid-template-columns: repeat(auto-fill, minmax(calc(180px * var(--poster-size-scale, 1)), 1fr)); }
+    .library-items:not(.library-list) { grid-template-columns: repeat(auto-fill, minmax(max(9rem, calc(220px * var(--poster-size-scale, 1))), 1fr)); }
+    .library-compact .library-items:not(.library-list) { grid-template-columns: repeat(auto-fill, minmax(max(9rem, calc(180px * var(--poster-size-scale, 1))), 1fr)); }
   }
   @media (max-width: 700px) {
     .library-tools { width: 100%; }
     .library-search { flex: 1; }
     .library-search input { width: 100%; }
-    .library-items:not(.library-list) { grid-template-columns: repeat(auto-fill, minmax(calc(140px * var(--poster-size-scale, 1)), 1fr)); gap: 1rem; }
+    .library-items:not(.library-list) { grid-template-columns: repeat(auto-fill, minmax(max(9rem, calc(140px * var(--poster-size-scale, 1))), 1fr)); gap: 1rem; }
     .library-list .library-card { gap: .5rem; padding: .65rem; }
     .library-list .library-open { gap: .65rem; }
     .library-list .library-poster { width: calc(2.5rem * var(--poster-size-scale, 1)); height: calc(3.75rem * var(--poster-size-scale, 1)); }
