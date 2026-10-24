@@ -34,11 +34,13 @@ function exactKeys(value: unknown, keys: string[]): value is Record<string, unkn
 
 function validatePortable(value: unknown): asserts value is PortableSettings {
   const generalKeys = ["startup_page", "remember_calendar", "close_action", "start_minimized", "release_country", "last_page", "calendar_view", "calendar_filter"];
+  const notificationKeys = ["enabled", "sound_enabled", "sound_volume", "sound_choice", "popup_position", "popup_duration", "max_visible", "os_fallback", "tray_notifications", "racing_enabled", "plex_enabled", "premiere_enabled", "update_enabled", "system_enabled", "quiet_hours_enabled", "quiet_hours_start", "quiet_hours_end"];
   if (!exactKeys(value, ["appearance", "general", "notifications", "racing", "tier_preset"])
     || !exactKeys(value.appearance, ["accentColor", "fontSize", "compactSpacing", "colorblindFriendly", "hidePosters", "posterSize"])
     || !(exactKeys(value.general, generalKeys) || exactKeys(value.general, [...generalKeys, "default_tier_list"]))
     || (Object.prototype.hasOwnProperty.call(value.general, "default_tier_list") && !["shows", "movies"].includes(value.general.default_tier_list as string))
-    || !exactKeys(value.notifications, ["enabled", "sound_enabled", "sound_volume", "sound_choice", "popup_position", "popup_duration", "max_visible", "os_fallback", "tray_notifications", "racing_enabled", "plex_enabled", "premiere_enabled", "update_enabled", "system_enabled", "quiet_hours_enabled", "quiet_hours_start", "quiet_hours_end"])
+    || !(exactKeys(value.notifications, notificationKeys) || exactKeys(value.notifications, [...notificationKeys, "auto_clear_after_days"]))
+    || (Object.prototype.hasOwnProperty.call(value.notifications, "auto_clear_after_days") && ![0, 1, 7, 30].includes(value.notifications.auto_clear_after_days as number))
     || !exactKeys(value.racing, ["notifications_enabled", "default_notify_minutes", "series"])
     || !Array.isArray(value.racing.series)
     || value.racing.series.some(series => !exactKeys(series, ["slug", "enabled", "notify_enabled", "notify_minutes", "custom_color"]))) {
@@ -85,7 +87,7 @@ export function describeBackup(data: BackupData): string {
     ? `Also replace awards with ${personal.ceremonies.length} ceremonies and ${personal.predictions.length} saved predictions, plus ${personal.title_mappings.length} Plex title corrections, ${personal.scrobble_history.length} scrobbles, and ${personal.change_history.length} change-history entries.`
     : "This older backup contains no predictions or history. Existing awards and predictions will be kept. Plex title corrections, scrobble logs, and change history will be cleared because the file cannot restore them. Export a new backup first if you need to keep them.";
   const settings = data.portable_settings
-    ? `Also replace Appearance, General and calendar preferences, Notifications (including quiet hours), the tier preset, and Racing series/reminder preferences (${data.portable_settings.racing.series.length} supplied series; series absent from the backup are disabled). Credentials, Windows startup registration, backup folders and schedules, sync schedules, Plex/Sonarr/Radarr connections, custom Racing feed URLs, and downloaded Racing events stay unchanged.`
+    ? `Also replace Appearance, General and calendar preferences, Notifications (including quiet hours and automatic clearing), the tier preset, and Racing series/reminder preferences (${data.portable_settings.racing.series.length} supplied series; series absent from the backup are disabled). Credentials, Windows startup registration, backup folders and schedules, sync schedules, Plex/Sonarr/Radarr connections, custom Racing feed URLs, and downloaded Racing events stay unchanged.`
     : "Settings, credentials, and racing data stay unchanged.";
   return `${library}\n\n${history}\n\n${settings} Cached cast/crew and Sonarr/Radarr import links are cleared. Restart TVC after importing.`;
 }

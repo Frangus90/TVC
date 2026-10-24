@@ -34,6 +34,7 @@ export interface NotificationSettings extends QuietHoursSettings {
   premiere_enabled: boolean;
   update_enabled: boolean;
   system_enabled: boolean;
+  auto_clear_after_days: number;
 }
 
 // State
@@ -50,6 +51,13 @@ let settingsLoadPromise: Promise<void> | null = null;
 let settingsSaveQueue: Promise<void> = Promise.resolve();
 let pendingSettingsSaves = 0;
 let settingsRevision = 0;
+let confirmedAutoClearDays = 0;
+let notificationsRequest = 0;
+let notificationsRevision = 0;
+let unreadRequest = 0;
+let unreadRevision = 0;
+let cleanupPromise: Promise<boolean> | null = null;
+let cleanupErrorShown = false;
 
 export function isNotificationSettingsLoading() { return settingsLoading; }
 export function waitForNotificationSettingsSaves(): Promise<void> { return settingsSaveQueue; }
@@ -97,13 +105,21 @@ export function toggleNotificationCenter() {
 export async function loadNotifications(
   limit: number = 50,
   unreadOnly: boolean = false,
-) {
+): Promise<void> {
+  const request = ++notificationsRequest;
+  const revision = notificationsRevision;
   try {
-    notifications = await invoke("get_notifications", {
+    const result = await invoke<AppNotification[]>("get_notifications", {
       limit,
       offset: 0,
       unreadOnly,
     });
+    if (request !== notificationsRequest) return;
+    if (revision !== notificationsRevision) {
+      await loadNotifications(limit, unreadOnly);
+      return;
+    }
+    notifications = result;
   } catch (e) {
     logger.error("[Notifications] Failed to load notifications", e);
   }
@@ -111,8 +127,16 @@ export async function loadNotifications(
 
 // Load unread count
 export async function loadUnreadCount() {
+  const request = ++unreadRequest;
+  const revision = unreadRevision;
   try {
-    unreadCount = await invoke("get_unread_notification_count");
+    const count = await invoke<number>("get_unread_notification_count");
+    if (request !== unreadRequest) return;
+    if (revision !== unreadRevision) {
+      await loadUnreadCount();
+      return;
+    }
+    unreadCount = count;
   } catch (e) {
     logger.error("[Notifications] Failed to load unread count", e);
   }
@@ -125,7 +149,12 @@ export function loadNotificationSettings(): Promise<void> {
   settingsLoadError = null;
   const revision = settingsRevision;
   settingsLoadPromise = invoke<NotificationSettings>("get_notification_settings")
-    .then(result => { if (revision === settingsRevision) settings = { ...defaultQuietHours, ...result }; })
+    .then(result => {
+      if (revision === settingsRevision) {
+        settings = { ...defaultQuietHours, ...result, auto_clear_after_days: result.auto_clear_after_days ?? 0 };
+        confirmedAutoClearDays = settings.auto_clear_after_days;
+      }
+    })
     .catch(error => {
       logger.error("[Notifications] Failed to load settings", error);
       settingsLoadError = `Could not load notification settings: ${error}`;
@@ -148,7 +177,11 @@ export async function updateNotificationSettings(updates: Partial<NotificationSe
   settingsSaveQueue = operation.then(() => {}, () => {}); // Failure is surfaced below; allow a later save/retry.
   try {
     await operation;
-    if (revision === settingsRevision) settingsSaveError = null;
+    confirmedAutoClearDays = snapshot.auto_clear_after_days;
+    if (revision === settingsRevision) {
+      settingsSaveError = null;
+      if (confirmedAutoClearDays > 0) await clearOldNotifications();
+    }
     return true;
   } catch (error) {
     logger.error("[Notifications] Failed to update settings", error);
@@ -161,14 +194,44 @@ export async function updateNotificationSettings(updates: Partial<NotificationSe
 
 export function retryNotificationSettingsSave() { return updateNotificationSettings({}); }
 
+// Native cleanup uses the saved policy; optimistic or failed preference changes
+// cannot select a more aggressive retention period for this operation.
+export function clearOldNotifications(): Promise<boolean> {
+  if (cleanupPromise) return cleanupPromise;
+  cleanupPromise = invoke<number[]>("clear_old_notifications")
+    .then(async ids => {
+      if (ids.length) {
+        const cleared = new Set(ids);
+        ++notificationsRevision;
+        notifications = notifications.filter(notification => !cleared.has(notification.id));
+        for (const id of ids) removePopup(id);
+        ++unreadRevision;
+      }
+      await loadUnreadCount();
+      cleanupErrorShown = false;
+      return true;
+    })
+    .catch(error => {
+      logger.error("[Notifications] Automatic cleanup failed", error);
+      if (!cleanupErrorShown) showError(`Could not automatically clear notification history: ${error}`);
+      cleanupErrorShown = true;
+      return false;
+    })
+    .finally(() => { cleanupPromise = null; });
+  return cleanupPromise;
+}
+
 // Mark a notification as read
 export async function markRead(id: number) {
   try {
     await invoke("mark_notification_read", { id });
+    ++notificationsRevision;
+    const notification = notifications.find(notification => notification.id === id);
     notifications = notifications.map((n) =>
       n.id === id ? { ...n, read: true } : n,
     );
-    unreadCount = Math.max(0, unreadCount - 1);
+    ++unreadRevision;
+    if (notification && !notification.read) unreadCount = Math.max(0, unreadCount - 1);
   } catch (e) {
     logger.error("[Notifications] Failed to mark read", e);
   }
@@ -178,6 +241,8 @@ export async function markRead(id: number) {
 export async function markAllRead() {
   try {
     await invoke("mark_all_notifications_read");
+    ++notificationsRevision;
+    ++unreadRevision;
     notifications = notifications.map((n) => ({ ...n, read: true }));
     unreadCount = 0;
   } catch (e) {
@@ -189,6 +254,8 @@ export async function markAllRead() {
 export async function dismissNotification(id: number) {
   try {
     await invoke("dismiss_notification", { id });
+    ++notificationsRevision;
+    ++unreadRevision;
     const dismissed = notifications.find((n) => n.id === id);
     notifications = notifications.filter((n) => n.id !== id);
     if (dismissed && !dismissed.read) {
@@ -203,6 +270,8 @@ export async function dismissNotification(id: number) {
 export async function dismissAllNotifications() {
   try {
     await invoke("dismiss_all_notifications");
+    ++notificationsRevision;
+    ++unreadRevision;
     unreadCount = 0;
     notifications = [];
   } catch (e) {
@@ -266,7 +335,9 @@ export function setupNotificationListener(): () => void {
   };
   listen<AppNotification>("notification", (event) => {
     const notif = event.payload;
+    ++notificationsRevision;
     notifications = [notif, ...notifications];
+    ++unreadRevision;
     unreadCount++;
     void deliver(notif);
   }).then((fn) => {
@@ -274,5 +345,11 @@ export function setupNotificationListener(): () => void {
   }).catch(error => showError(`Could not listen for notifications: ${error}`));
   // Remove persistent popups when quiet hours begin, even without a new event.
   const timer = setInterval(() => { if (settings && isWithinQuietHours(settings)) clearPopups(); }, 1000);
-  return () => { disposed = true; clearInterval(timer); unlisten?.(); clearPopups(); };
+  const cleanup = () => {
+    if (!disposed && confirmedAutoClearDays > 0 && settings?.auto_clear_after_days
+      && !settingsSaving && !settingsSaveError) void clearOldNotifications();
+  };
+  void loadNotificationSettings().then(cleanup);
+  const cleanupTimer = setInterval(cleanup, 60_000);
+  return () => { disposed = true; clearInterval(timer); clearInterval(cleanupTimer); unlisten?.(); clearPopups(); };
 }

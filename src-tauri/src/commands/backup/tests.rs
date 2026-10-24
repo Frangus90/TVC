@@ -404,6 +404,153 @@ async fn older_v4_backups_and_saved_preferences_default_the_tier_list_to_shows()
 }
 
 #[tokio::test]
+async fn portable_notification_auto_clear_choices_round_trip_without_a_schema_change() {
+    for days in [0, 1, 7, 30] {
+        let source = database().await;
+        sqlx::query(
+            "INSERT INTO settings(key,value) VALUES ('notification_auto_clear_after_days',?)",
+        )
+        .bind(days.to_string())
+        .execute(&source)
+        .await
+        .unwrap();
+        let backup = export_with_settings(&source, true).await.unwrap();
+        assert_eq!(backup.version, "4.0");
+        assert_eq!(
+            backup.portable_settings.as_ref().unwrap().notifications["auto_clear_after_days"],
+            days
+        );
+        let decoded: BackupData =
+            serde_json::from_str(&serde_json::to_string(&backup).unwrap()).unwrap();
+        decoded.validate().unwrap();
+        let target = database().await;
+        replace_from_pool(&target, &decoded, &HashMap::new())
+            .await
+            .unwrap();
+        assert_eq!(
+            sqlx::query_scalar::<_, String>(
+                "SELECT value FROM settings WHERE key='notification_auto_clear_after_days'"
+            )
+            .fetch_one(&target)
+            .await
+            .unwrap(),
+            days.to_string()
+        );
+        assert_eq!(
+            export_with_settings(&target, true)
+                .await
+                .unwrap()
+                .portable_settings
+                .as_ref()
+                .unwrap()
+                .notifications["auto_clear_after_days"],
+            days
+        );
+    }
+}
+
+#[tokio::test]
+async fn older_v4_notifications_restore_with_automatic_clearing_off() {
+    let source = database().await;
+    let mut backup = export_with_settings(&source, true).await.unwrap();
+    assert_eq!(
+        backup.portable_settings.as_ref().unwrap().notifications["auto_clear_after_days"],
+        0
+    );
+    backup
+        .portable_settings
+        .as_mut()
+        .unwrap()
+        .notifications
+        .as_object_mut()
+        .unwrap()
+        .remove("auto_clear_after_days");
+    let decoded: BackupData =
+        serde_json::from_str(&serde_json::to_string(&backup).unwrap()).unwrap();
+    decoded.validate().unwrap();
+
+    let target = database().await;
+    sqlx::query(
+        "INSERT INTO settings(key,value) VALUES ('notification_auto_clear_after_days','1')",
+    )
+    .execute(&target)
+    .await
+    .unwrap();
+    replace_from_pool(&target, &decoded, &HashMap::new())
+        .await
+        .unwrap();
+    assert_eq!(
+        sqlx::query_scalar::<_, String>(
+            "SELECT value FROM settings WHERE key='notification_auto_clear_after_days'"
+        )
+        .fetch_one(&target)
+        .await
+        .unwrap(),
+        "0"
+    );
+}
+
+#[tokio::test]
+async fn invalid_portable_notification_auto_clear_settings_reject_before_library_writes() {
+    let pool = database().await;
+    seed(&pool).await;
+    sqlx::query(
+        "INSERT INTO settings(key,value) VALUES ('notification_auto_clear_after_days','7')",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    let encoded = serde_json::to_value(export_with_settings(&pool, true).await.unwrap()).unwrap();
+    let before = snapshot(&pool).await;
+    for invalid in [
+        json!(-1),
+        json!(2),
+        json!(31),
+        json!(1.5),
+        json!("7"),
+        json!(null),
+        json!(true),
+        json!([]),
+        json!({}),
+    ] {
+        let mut value = encoded.clone();
+        value["shows"][0]["name"] = json!("Must not be restored");
+        value["portable_settings"]["notifications"]["auto_clear_after_days"] = invalid.clone();
+        let backup: BackupData = serde_json::from_value(value).unwrap();
+        assert!(backup.validate().is_err(), "invalid choice {invalid}");
+        assert!(replace_from_pool(&pool, &backup, &HashMap::new())
+            .await
+            .is_err());
+        assert_eq!(snapshot(&pool).await, before);
+        assert_eq!(
+            sqlx::query_scalar::<_, String>(
+                "SELECT value FROM settings WHERE key='notification_auto_clear_after_days'"
+            )
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+            "7"
+        );
+    }
+    for old in [false, true] {
+        let mut value = encoded.clone();
+        if old {
+            value["portable_settings"]["notifications"]
+                .as_object_mut()
+                .unwrap()
+                .remove("auto_clear_after_days");
+        }
+        value["portable_settings"]["notifications"]["unsupported_notification_key"] = json!(true);
+        let backup: BackupData = serde_json::from_value(value).unwrap();
+        assert!(backup.validate().is_err());
+        assert!(replace_from_pool(&pool, &backup, &HashMap::new())
+            .await
+            .is_err());
+        assert_eq!(snapshot(&pool).await, before);
+    }
+}
+
+#[tokio::test]
 async fn portable_preferences_validate_before_writes_and_roll_back_with_library() {
     let pool = database().await;
     seed(&pool).await;

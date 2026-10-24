@@ -145,6 +145,24 @@
     <p id="quiet-hours-help" class="text-xs text-text-muted">Quiet hours use your computer's local 24-hour clock and can run overnight.{#if quietError}<span role="alert" class="text-error block mt-1">{quietError}</span>{/if}</p>
     {#if settings.quiet_hours_enabled && isWithinQuietHours(settings, getNow())}<p class="text-xs text-text-muted">Quiet hours are active. New notifications appear in the bell's history without alerts.</p>{/if}
 
+    <div class="settings-group">
+      <div class="settings-row">
+        <div>
+          <label for="notification-auto-clear" class="font-medium text-sm">Automatically clear history</label>
+          <p id="notification-auto-clear-help" class="text-xs text-text-muted">Clear notifications older than this, including unread entries. 1 month means 30 days.</p>
+          <p class="text-xs text-text-muted">Checked when TVC opens and every minute while it is running. Older entries clear when you save a period.</p>
+        </div>
+        <select id="notification-auto-clear" value={settings.auto_clear_after_days} aria-describedby="notification-auto-clear-help"
+          onchange={(event) => updateNotificationSettings({ auto_clear_after_days: Number(event.currentTarget.value) })}
+          class="bg-surface border border-border rounded-lg px-3 py-1.5 text-sm">
+          <option value={0}>Off</option>
+          <option value={1}>1 day</option>
+          <option value={7}>1 week</option>
+          <option value={30}>1 month</option>
+        </select>
+      </div>
+    </div>
+
     <div class="flex flex-wrap items-center justify-between gap-3">
       <span role="status" class="text-xs text-text-muted">{isNotificationSettingsSaving() ? 'Saving notification settings…' : getNotificationSettingsSaveError() ? 'Changes are not saved.' : 'Changes save automatically.'}</span>
       <button type="button" onclick={sendTest} disabled={testing || !settings.enabled || !settings.system_enabled || !!getNotificationSettingsSaveError()}

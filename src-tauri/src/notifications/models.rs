@@ -35,6 +35,7 @@ pub struct NotificationSettings {
     pub quiet_hours_enabled: bool,
     pub quiet_hours_start: String,
     pub quiet_hours_end: String,
+    pub auto_clear_after_days: i32,
 }
 
 impl Default for NotificationSettings {
@@ -57,6 +58,7 @@ impl Default for NotificationSettings {
             quiet_hours_enabled: false,
             quiet_hours_start: "22:00".to_string(),
             quiet_hours_end: "08:00".to_string(),
+            auto_clear_after_days: 0,
         }
     }
 }

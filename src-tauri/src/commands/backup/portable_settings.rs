@@ -36,6 +36,7 @@ const NOTIFICATION_KEYS: &[&str] = &[
     "quiet_hours_enabled",
     "quiet_hours_start",
     "quiet_hours_end",
+    "auto_clear_after_days",
 ];
 const APPEARANCE_KEYS: &[&str] = &[
     "accentColor",
@@ -147,8 +148,13 @@ impl PortableSettings {
         {
             return Err("Invalid general preferences in backup".into());
         }
-        exact_keys(&self.notifications, NOTIFICATION_KEYS, "notification")?;
-        let n: NotificationSettings = serde_json::from_value(self.notifications.clone())
+        // Earlier v4 backups predate automatic notification clearing.
+        let mut notification_value = self.notifications.clone();
+        if let Some(object) = notification_value.as_object_mut() {
+            object.entry("auto_clear_after_days").or_insert(json!(0));
+        }
+        exact_keys(&notification_value, NOTIFICATION_KEYS, "notification")?;
+        let n: NotificationSettings = serde_json::from_value(notification_value)
             .map_err(|e| format!("Invalid notification settings: {e}"))?;
         if !(0..=100).contains(&n.sound_volume)
             || !["chime", "bell", "soft", "alert"].contains(&n.sound_choice.as_str())
@@ -159,6 +165,7 @@ impl PortableSettings {
             || !clock(&n.quiet_hours_start)
             || !clock(&n.quiet_hours_end)
             || (n.quiet_hours_enabled && n.quiet_hours_start == n.quiet_hours_end)
+            || ![0, 1, 7, 30].contains(&n.auto_clear_after_days)
         {
             return Err("Invalid notification preferences in backup".into());
         }
@@ -194,7 +201,7 @@ impl PortableSettings {
             let mut general = serde_json::to_value(GeneralPreferences::default()).expect("General preferences are serializable");
             let mut notifications = serde_json::to_value(NotificationSettings::default()).expect("Notification preferences are serializable");
             let mut tier_preset = "10-star".to_string();
-            let rows = sqlx::query("SELECT key, value FROM settings WHERE key LIKE 'theme_%' OR key = 'general_preferences' OR key = 'tier_preset' OR key LIKE 'notification_quiet_hours_%'").fetch_all(&mut *connection).await?;
+            let rows = sqlx::query("SELECT key, value FROM settings WHERE key LIKE 'theme_%' OR key = 'general_preferences' OR key = 'tier_preset' OR key LIKE 'notification_quiet_hours_%' OR key = 'notification_auto_clear_after_days'").fetch_all(&mut *connection).await?;
             for row in rows {
                 let key: String = row.get("key");
                 let Some(value) = row.get::<Option<String>, _>("value") else { continue; };
@@ -207,7 +214,7 @@ impl PortableSettings {
                     }
                 } else if let Some(key) = key.strip_prefix("notification_") {
                     if NOTIFICATION_KEYS.contains(&key) {
-                        notifications[key] = if notifications[key].is_boolean() { serde_json::from_str(&value).map_err(|e| sqlx::Error::Decode(Box::new(e)))? } else { Value::String(value) };
+                        notifications[key] = if notifications[key].is_boolean() || notifications[key].is_number() { serde_json::from_str(&value).map_err(|e| sqlx::Error::Decode(Box::new(e)))? } else { Value::String(value) };
                     }
                 }
             }
@@ -215,7 +222,7 @@ impl PortableSettings {
                 object.entry("default_tier_list").or_insert(json!("shows"));
             }
             let row = sqlx::query("SELECT * FROM notification_settings WHERE id = 1").fetch_one(&mut *connection).await?;
-            for key in NOTIFICATION_KEYS.iter().filter(|key| !key.starts_with("quiet_hours_")) {
+            for key in NOTIFICATION_KEYS.iter().filter(|key| !key.starts_with("quiet_hours_") && **key != "auto_clear_after_days") {
                 notifications[*key] = if notifications[*key].is_boolean() { Value::Bool(row.get::<i32, _>(*key) == 1) }
                     else if notifications[*key].is_number() { json!(row.get::<i32, _>(*key)) }
                     else { Value::String(row.get::<String, _>(*key)) };
@@ -249,6 +256,7 @@ impl PortableSettings {
             put(connection, "notification_quiet_hours_enabled", n.quiet_hours_enabled.to_string()).await?;
             put(connection, "notification_quiet_hours_start", n.quiet_hours_start).await?;
             put(connection, "notification_quiet_hours_end", n.quiet_hours_end).await?;
+            put(connection, "notification_auto_clear_after_days", n.auto_clear_after_days.to_string()).await?;
             let saved = sqlx::query("UPDATE racing_config SET notifications_enabled=?,default_notify_minutes=?,updated_at=datetime('now') WHERE id=1")
                 .bind(self.racing.notifications_enabled).bind(self.racing.default_notify_minutes).execute(&mut *connection).await?;
             if saved.rows_affected() != 1 { return Err(sqlx::Error::Protocol("Racing settings are missing from the current database".into())); }

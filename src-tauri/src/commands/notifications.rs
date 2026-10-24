@@ -95,6 +95,15 @@ pub async fn dismiss_all_notifications(app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub async fn clear_old_notifications(app: AppHandle) -> Result<Vec<i64>, String> {
+    let pool = connection::get_pool(&app)
+        .await
+        .map_err(|e| format!("Database error: {}", e))?;
+
+    notifications::clear_old_notifications(&pool).await
+}
+
+#[tauri::command]
 pub async fn test_in_app_notification(
     app: AppHandle,
     notification_type: Option<String>,

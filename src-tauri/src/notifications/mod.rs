@@ -1,6 +1,6 @@
 pub mod models;
 
-use chrono::{Local, NaiveTime};
+use chrono::{DateTime, Duration, Local, NaiveDateTime, NaiveTime, Utc};
 use sqlx::{Pool, Row, Sqlite};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_notification::NotificationExt;
@@ -51,8 +51,8 @@ pub async fn get_settings_checked(pool: &Pool<Sqlite>) -> Result<NotificationSet
         None => NotificationSettings::default(),
     };
     // New preferences use the existing generic table; released migrations stay unchanged.
-    let rows = sqlx::query("SELECT key, value FROM settings WHERE key IN ('notification_quiet_hours_enabled', 'notification_quiet_hours_start', 'notification_quiet_hours_end')")
-        .fetch_all(pool).await.map_err(|error| format!("Failed to read quiet hours: {}", error))?;
+    let rows = sqlx::query("SELECT key, value FROM settings WHERE key IN ('notification_quiet_hours_enabled', 'notification_quiet_hours_start', 'notification_quiet_hours_end', 'notification_auto_clear_after_days')")
+        .fetch_all(pool).await.map_err(|error| format!("Failed to read notification preferences: {}", error))?;
     for row in rows {
         let Some(value) = row.get::<Option<String>, _>("value") else {
             continue;
@@ -61,11 +61,24 @@ pub async fn get_settings_checked(pool: &Pool<Sqlite>) -> Result<NotificationSet
             "notification_quiet_hours_enabled" => settings.quiet_hours_enabled = value == "true",
             "notification_quiet_hours_start" => settings.quiet_hours_start = value,
             "notification_quiet_hours_end" => settings.quiet_hours_end = value,
+            "notification_auto_clear_after_days" => {
+                settings.auto_clear_after_days = value
+                    .parse()
+                    .map_err(|_| "Invalid saved notification auto-clear setting.".to_string())?;
+            }
             _ => {}
         }
     }
     validate_quiet_hours(&settings)?;
+    validate_auto_clear_after_days(settings.auto_clear_after_days)?;
     Ok(settings)
+}
+
+fn validate_auto_clear_after_days(days: i32) -> Result<(), String> {
+    if ![0, 1, 7, 30].contains(&days) {
+        return Err("Auto-clear must be Off, 1 day, 1 week or 1 month.".to_string());
+    }
+    Ok(())
 }
 
 fn parse_clock(value: &str) -> Option<NaiveTime> {
@@ -118,6 +131,7 @@ pub async fn update_settings(
     settings: &NotificationSettings,
 ) -> Result<(), String> {
     validate_quiet_hours(settings)?;
+    validate_auto_clear_after_days(settings.auto_clear_after_days)?;
     let mut transaction = pool
         .begin()
         .await
@@ -163,13 +177,17 @@ pub async fn update_settings(
             "notification_quiet_hours_end",
             settings.quiet_hours_end.clone(),
         ),
+        (
+            "notification_auto_clear_after_days",
+            settings.auto_clear_after_days.to_string(),
+        ),
     ] {
         sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
             .bind(key)
             .bind(value)
             .execute(&mut *transaction)
             .await
-            .map_err(|error| format!("Failed to save quiet hours: {}", error))?;
+            .map_err(|error| format!("Failed to save notification preferences: {}", error))?;
     }
     transaction
         .commit()
@@ -305,6 +323,81 @@ pub async fn dismiss_all(pool: &Pool<Sqlite>) -> Result<(), String> {
         .map_err(|e| format!("Failed to dismiss all notifications: {}", e))?;
 
     Ok(())
+}
+
+/// Clear old history using the saved age limit, including read and unread items.
+pub async fn clear_old_notifications(pool: &Pool<Sqlite>) -> Result<Vec<i64>, String> {
+    clear_old_notifications_at(pool, Utc::now()).await
+}
+
+async fn clear_old_notifications_at(
+    pool: &Pool<Sqlite>,
+    now: DateTime<Utc>,
+) -> Result<Vec<i64>, String> {
+    let mut transaction = pool
+        .begin()
+        .await
+        .map_err(|error| format!("Failed to clear old notifications: {}", error))?;
+    // Read the policy in the same snapshot as the history being dismissed.
+    let saved_days: Option<Option<String>> = sqlx::query_scalar(
+        "SELECT value FROM settings WHERE key = 'notification_auto_clear_after_days'",
+    )
+    .fetch_optional(&mut *transaction)
+    .await
+    .map_err(|error| format!("Failed to read notification auto-clear setting: {}", error))?;
+    let days = saved_days
+        .flatten()
+        .map(|value| {
+            value
+                .parse()
+                .map_err(|_| "Invalid saved notification auto-clear setting.".to_string())
+        })
+        .transpose()?
+        .unwrap_or(0);
+    validate_auto_clear_after_days(days)?;
+    if days == 0 {
+        transaction
+            .commit()
+            .await
+            .map_err(|error| format!("Failed to finish clearing old notifications: {}", error))?;
+        return Ok(Vec::new());
+    }
+    let cutoff = now - Duration::days(i64::from(days));
+    let rows =
+        sqlx::query("SELECT id, created_at FROM notifications WHERE dismissed = 0 ORDER BY id")
+            .fetch_all(&mut *transaction)
+            .await
+            .map_err(|error| format!("Failed to read old notifications: {}", error))?;
+    let mut cleared = Vec::new();
+    for row in rows {
+        // SQLite's default timestamps are UTC without an offset. Exported/imported
+        // timestamps may instead use RFC3339. Invalid dates stay in history.
+        let Some(created_at) = row.get::<Option<String>, _>("created_at") else {
+            continue;
+        };
+        let created_at = DateTime::parse_from_rfc3339(&created_at)
+            .map(|date| date.with_timezone(&Utc))
+            .ok()
+            .or_else(|| {
+                NaiveDateTime::parse_from_str(&created_at, "%Y-%m-%d %H:%M:%S%.f")
+                    .ok()
+                    .map(|date| date.and_utc())
+            });
+        if created_at.is_some_and(|date| date < cutoff) {
+            let id = row.get::<i64, _>("id");
+            sqlx::query("UPDATE notifications SET dismissed = 1 WHERE id = ?")
+                .bind(id)
+                .execute(&mut *transaction)
+                .await
+                .map_err(|error| format!("Failed to clear old notifications: {}", error))?;
+            cleared.push(id);
+        }
+    }
+    transaction
+        .commit()
+        .await
+        .map_err(|error| format!("Failed to finish clearing old notifications: {}", error))?;
+    Ok(cleared)
 }
 
 /// Check if a specific notification type is enabled

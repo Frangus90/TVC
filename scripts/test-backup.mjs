@@ -97,3 +97,28 @@ test("portable backup supports old default-less preferences and validates the ne
     assert.throws(() => parseBackup(JSON.stringify(data)), `invalid choice: ${JSON.stringify(choice)}`);
   }
 });
+
+test("portable backups accept old notification settings and supported automatic clearing choices", () => {
+  const value = () => ({ ...backup(), version:"4.0", portable_settings:portable() });
+  assert.doesNotThrow(() => parseBackup(JSON.stringify(value())), "older v4 notifications remain usable");
+  for (const days of [0, 1, 7, 30]) {
+    const data = value(); data.portable_settings.notifications.auto_clear_after_days = days;
+    const parsed = parseBackup(JSON.stringify(data));
+    assert.equal(parsed.portable_settings.notifications.auto_clear_after_days, days);
+    assert.match(describeBackup(parsed), /automatic clearing/);
+  }
+});
+
+test("portable backup rejects invalid automatic clearing values and unknown notification preferences", () => {
+  const value = () => ({ ...backup(), version:"4.0", portable_settings:portable() });
+  for (const days of [-1, 2, 31, 1.5, "7", null, true, [], {}]) {
+    const data = value(); data.portable_settings.notifications.auto_clear_after_days = days;
+    assert.throws(() => parseBackup(JSON.stringify(data)), `invalid automatic clearing value: ${JSON.stringify(days)}`);
+  }
+  for (const current of [false, true]) {
+    const data = value();
+    if (current) data.portable_settings.notifications.auto_clear_after_days = 7;
+    data.portable_settings.notifications.unsupported_notification_key = true;
+    assert.throws(() => parseBackup(JSON.stringify(data)), "unknown preferences reject for old and new v4 shapes");
+  }
+});

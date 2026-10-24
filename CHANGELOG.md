@@ -4,6 +4,11 @@ All notable changes to TVC will be documented in this file.
 
 ## [0.15.2] - Unreleased
 
+### Notifications
+
+- In **Settings → Notifications**, choose to automatically clear notification history after **1 day**, **1 week** or **1 month (30 days)**. It is turned off by default.
+- This clears older notifications, including unread ones, when you save the setting, when TVC opens and while it is running.
+
 ### TV Show Sync
 
 - Fixed an episode sync error when saved episodes move or change numbering. Watch history, schedules, ratings and tags stay attached to the episode.

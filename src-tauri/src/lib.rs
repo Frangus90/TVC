@@ -418,6 +418,7 @@ pub fn run() {
             commands::notifications::mark_all_notifications_read,
             commands::notifications::dismiss_notification,
             commands::notifications::dismiss_all_notifications,
+            commands::notifications::clear_old_notifications,
             commands::notifications::test_in_app_notification,
             // Awards commands
             commands::awards::sync_awards,
