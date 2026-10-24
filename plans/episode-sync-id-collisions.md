@@ -16,7 +16,7 @@ The reported error is `Failed to sync episode: UNIQUE constraint failed: episode
 
 ## Safeguards
 
-Work on `codex/fix-episode-sync-collisions`. Never open, copy, repair or otherwise touch the release database or its sidecars. No data deletion/repair command is run against installed libraries. Do not release, tag, merge main or modify the pre-Focus recovery backup.
+The initial fix was developed on `codex/fix-episode-sync-collisions`; the owner's next-update request continues that work on `codex/0.15.2`. Never open, copy, repair or otherwise touch the release database or its sidecars. No data deletion/repair command is run against installed libraries. Do not release, tag, merge main or modify the pre-Focus recovery backup.
 
 ## Validation
 
@@ -32,3 +32,9 @@ Work on `codex/fix-episode-sync-collisions`. Never open, copy, repair or otherwi
 ## Remaining limits
 
 The public current feed and synthetic saved-state reproductions establish sync bugs, but they do not identify the exact stored row behind the reported Top Gear failure. The fix is intended to resolve same-show moves/reordering. Genuine cross-show ID ownership conflicts or malformed provider responses still stop with preserved data and a clearer diagnostic; they are not silently discarded. The owner must retry the affected title after testing/installing the fix. No release is published as part of this work.
+
+## 0.15.2 development handoff
+
+- The owner requested starting the next update. `codex/0.15.2` carries the tested episode-sync fix (`539ce97`) as its first change and the existing **0.15.2 Unreleased** changelog entry.
+- App version files remain **0.15.1** until the owner runs the release script. The branch setup changes no application code, so the recorded 101 frontend/139 Rust tests and build remain the current validation.
+- Save this development branch to GitHub; keep main, release tags, the recovery backup and installed databases untouched.
