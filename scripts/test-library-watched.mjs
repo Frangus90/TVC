@@ -184,17 +184,17 @@ test('a rejected show watched write leaves episodes unchanged and does not assig
   assert.match(data.errors[0], /Write rejected/);
 });
 
-function libraryHandler(kind, mark) {
+function libraryHandler(kind, mark, records = {}) {
   const script = readFileSync('src/lib/components/LibraryView.svelte', 'utf8').match(/<script[^>]*>([\s\S]*?)<\/script>/)[1];
   const successes = [], opened = [];
   const derived = value => value;
   derived.by = callback => callback();
-  const api = load(script + '\nexport const harness = { markWatched, switchMedia: value => mediaType = value, snapshot: () => ({ busy, marking, selected: [...selected], bulkMode }) };', {
+  const api = load(script + '\nexport const harness = { markWatched, items, switchMedia: value => mediaType = value, snapshot: () => ({ busy, marking, selected: [...selected], bulkMode }) };', {
     'svelte': {},
-    '../stores/shows.svelte': { getTrackedShows: () => [], getArchivedShows: () => [] },
-    '../stores/movies.svelte': { getTrackedMovies: () => [], getArchivedMovies: () => [], markMovieWatched: (id, watched) => mark('movies', id, watched), openMovieDetail: id => opened.push(id) },
+    '../stores/shows.svelte': { getTrackedShows: () => records.trackedShows ?? [], getArchivedShows: () => [] },
+    '../stores/movies.svelte': { getTrackedMovies: () => records.trackedMovies ?? [], getArchivedMovies: () => [], markMovieWatched: (id, watched) => mark('movies', id, watched), openMovieDetail: id => opened.push(id) },
     '../stores/showDetail.svelte': { markShowWatched: (id, watched) => mark('shows', id, watched), openShowDetail: id => opened.push(id) },
-    '../stores/tiers.svelte': { getTierListShows: () => [], getTierListMovies: () => [] },
+    '../stores/tiers.svelte': { getTierListShows: () => records.tierShows ?? [], getTierListMovies: () => records.tierMovies ?? [] },
     '../stores/theme.svelte': { getThemeSettings: () => ({}) },
     '../stores/toast.svelte': { showSuccess: message => successes.push(message) },
     '../stores/sidebar.svelte': {}, '../stores/confirmDialog.svelte': {}, '../utils/dateFormat': {},
@@ -203,6 +203,31 @@ function libraryHandler(kind, mark) {
 }
 
 for (const kind of ['shows', 'movies']) {
+  test(`${kind}: library eye toggles watched titles off and unwatched or partially watched titles on`, async () => {
+    const calls = [];
+    const records = kind === 'shows' ? {
+      trackedShows: [
+        { id: 41, name: 'Fully watched show', episode_count: 2, watched_episodes: 2 },
+        { id: 42, name: 'Partially watched show', episode_count: 2, watched_episodes: 1 },
+      ],
+      tierShows: [{ id: 43, name: 'Watched tier-only show', tier_only: true, episode_count: 1, watched_episodes: 1 }],
+    } : {
+      trackedMovies: [
+        { id: 41, title: 'Watched movie', watched: true },
+        { id: 42, title: 'Unwatched movie', watched: false },
+      ],
+      tierMovies: [{ id: 43, title: 'Watched tier-only movie', tier_only: true, watched: true }],
+    };
+    const api = libraryHandler(kind, async (...args) => { calls.push(args); return true; }, records);
+    for (const id of [41, 42, 43]) await api.markWatched(api.items.find(item => item.id === id));
+    assert.deepEqual(calls, [[kind, 41, false], [kind, 42, true], [kind, 43, false]]);
+    assert.equal(api.successes.length, 3);
+    assert.match(api.successes[0], /marked as unwatched/);
+    assert.match(api.successes[1], /marked as watched/);
+    assert.match(api.successes[2], /marked as unwatched/);
+    assert.equal(api.opened.length, 0, 'toggling the eye must not open a detail dialog');
+  });
+
   test(`${kind}: library watched buttons report only saved changes and retain the original media during an overlapping click`, async () => {
     const calls = [], pending = deferred();
     let result = false;
@@ -210,10 +235,9 @@ for (const kind of ['shows', 'movies']) {
       calls.push(args);
       return result ? pending.promise : false;
     });
-    const item = { id: 42, title: 'Saved title', watched: false };
-    await api.markWatched({ ...item, watched: true });
-    assert.equal(calls.length, 0, 'already watched titles need no second write');
+    const item = { id: 42, title: 'Saved title', watched: true };
     await api.markWatched(item);
+    assert.deepEqual(calls[0], [kind, 42, false]);
     assert.equal(api.successes.length, 0, 'a rejected or empty-show write must not claim success');
     assert.equal(api.snapshot().busy, false);
     result = true;
@@ -223,11 +247,12 @@ for (const kind of ['shows', 'movies']) {
     api.switchMedia(kind === 'shows' ? 'movies' : 'shows');
     await api.markWatched({ id: 43, title: 'Other title', watched: false });
     assert.equal(calls.length, 2, 'overlapping clicks cannot issue another write');
-    assert.deepEqual(calls[1], [kind, 42, true]);
+    assert.deepEqual(calls[1], [kind, 42, false]);
     pending.resolve(true);
     await marking;
     assert.equal(api.successes.length, 1);
     assert.match(api.successes[0], kind === 'shows' ? /All saved episodes of Saved title/ : /^Saved title marked/);
+    assert.match(api.successes[0], /marked as unwatched/);
     assert.deepEqual(copy(api.snapshot()), { busy: false, marking: null, selected: [], bulkMode: false });
     assert.equal(api.opened.length, 0, 'the eye action must not open a detail dialog');
   });

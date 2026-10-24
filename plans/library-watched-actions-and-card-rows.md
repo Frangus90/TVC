@@ -6,7 +6,7 @@ For 0.15.1, add an eye button to each title in the TV Shows and Movies library p
 
 Also align poster cards regardless of tier-name length: use a dedicated tier row and a separate action row below it, with consistent title/metadata/status space and bounded long labels. Keep the Focus look and existing list controls.
 
-The follow-up also places the matching whole-title watch toggle beside **Remove** in both detail modals, including tier-only entries, while preserving season/episode controls and the ability to mark titles as unwatched.
+The follow-up also places the matching whole-title watch toggle beside **Remove** in both detail modals, including tier-only entries, while preserving season/episode controls and the ability to mark titles as unwatched. Library eye buttons also toggle both ways: fully watched titles become unwatched, and partially watched shows mark all saved episodes watched. The icon, hover text and success message name the next action or saved result.
 
 Stay on `codex/focus-redesign`. Never access the installed release database or sidecars; use only development/disposable data. No migrations, app version changes or release publication.
 
@@ -18,7 +18,7 @@ Stay on `codex/focus-redesign`. Never access the installed release database or s
 
 ## Validation
 
-- Implemented one-way eye actions in the library, a visible Watched badge and confirmed saved watched status for tracked and tier-only titles. Both detail modals expose the watched/unwatched toggle immediately beside Remove, outside tracking-only branches.
+- Implemented watched/unwatched eye toggles in the library, a visible Watched badge and confirmed saved watched status for tracked and tier-only titles. Both detail modals expose the watched/unwatched toggle immediately beside Remove, outside tracking-only branches.
 - Whole-show updates cover every saved episode, preserve existing timestamps and schedules, and reject empty episode sets with a useful message. A rejected save keeps the modal content and recovery instructions available. Pending whole-title saves block duplicate and conflicting watch/refresh/removal actions.
 - Calendar, detail, episode-picker and library summaries update for the affected title. A late result for one show cannot change a different show's detail or picker. Movie updates include tier-only and archived caches.
 - Poster titles reserve two lines; metadata/status/tier rows have consistent space, long tier names truncate with a full-text hover label, and action icons have their own aligned row. A minimum width in rem keeps all four movie actions inside small compact cards at larger text sizes. List actions stay vertically centred.
@@ -29,6 +29,13 @@ Stay on `codex/focus-redesign`. Never access the installed release database or s
 - Empty-show failure stays unwatched and leaves its detail modal intact with the existing matching/tracking instructions. The preview console recorded only this deliberately exercised save failure; no unexpected errors/warnings.
 - Local ignored proofs: `focus-redesign-screenshots/library-watched-aligned-movies.jpg`, `show-detail-whole-title-watched.jpg`, and `movie-detail-whole-title-watched.jpg`.
 - Independent store/backend/modal review and `git diff --check` passed. Only in-memory/disposable test data was used. No installed release database, sidecars, released migration, app version or recovery backup was accessed or changed.
+
+## Eye toggle follow-up
+
+- Library eye controls now toggle watched and unwatched in poster, list and hidden-poster views, matching the detail windows. Watched titles stay clickable; the crossed-out eye and hover text offer **Mark as unwatched**. Partially watched shows still mark all saved episodes watched.
+- Captured media type and intended watched state stay fixed during a pending save. Existing busy guards, truthful failure feedback, saved episode scope and cache updates remain in place.
+- `npm run check` passed: **0 Svelte errors/warnings; 100 frontend tests; 130 Rust tests; 1 live Wikipedia test ignored; production frontend build passed**. The isolated handler suite passed **11/11**, including fully watched tracked/tier-only shows and movies, partial shows, failures and overlapping clicks.
+- Compiled UI with memory fixtures confirmed a tier-only movie toggles watched → unwatched in poster view and a whole tier-only show toggles back to unwatched in list view. The icon, hover label, badge and success feedback follow the saved state. Proof: `focus-redesign-screenshots/library-eye-toggle.jpg`. The installed release database was never accessed.
 
 ## Limits and release handoff
 

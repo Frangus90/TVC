@@ -2,7 +2,7 @@
   import { untrack } from "svelte";
   import {
     Archive, CalendarX, Check, Film, Grid2X2, Layers, List, Loader2,
-    Plus, Search, Trash2, Tv, AlertTriangle, Eye,
+    Plus, Search, Trash2, Tv, AlertTriangle, Eye, EyeOff,
   } from "lucide-svelte";
   import {
     getTrackedShows, getArchivedShows, loadTrackedShows, loadArchivedShows,
@@ -212,13 +212,17 @@
   }
 
   async function markWatched(item: LibraryItem) {
-    if (busy || item.watched) return;
+    if (busy) return;
     const kind = mediaType;
+    const watched = !item.watched;
     busy = true;
     marking = `${kind}:${item.id}`;
     try {
-      const saved = kind === "shows" ? await markShowWatched(item.id, true) : await markMovieWatched(item.id, true);
-      if (saved) showSuccess(kind === "shows" ? `All saved episodes of ${item.title} marked as watched.` : `${item.title} marked as watched.`);
+      const saved = kind === "shows" ? await markShowWatched(item.id, watched) : await markMovieWatched(item.id, watched);
+      if (saved) {
+        const state = watched ? "watched" : "unwatched";
+        showSuccess(kind === "shows" ? `All saved episodes of ${item.title} marked as ${state}.` : `${item.title} marked as ${state}.`);
+      }
     } finally {
       busy = false;
       marking = null;
@@ -326,10 +330,11 @@
           </button>
           {#if !bulkMode}
             <div class="library-actions">
-              <button type="button" disabled={busy || item.watched} class:library-watched={item.watched}
-                onclick={() => markWatched(item)} aria-label={item.watched ? `${item.title}: Watched` : `Mark ${item.title} as watched`}
-                title={item.watched ? 'Watched' : 'Mark as watched'}>
+              <button type="button" disabled={busy} class:library-watched={item.watched}
+                onclick={() => markWatched(item)} aria-label={`Mark ${item.title} as ${item.watched ? 'unwatched' : 'watched'}`}
+                aria-pressed={item.watched} title={item.watched ? 'Mark as unwatched' : 'Mark as watched'}>
                 {#if marking === `${mediaType}:${item.id}`}<Loader2 size={16} class="animate-spin" aria-hidden="true" />
+                {:else if item.watched}<EyeOff size={16} aria-hidden="true" />
                 {:else}<Eye size={16} aria-hidden="true" />{/if}
               </button>
               {#if mediaType === "movies" && item.scheduledDate}
