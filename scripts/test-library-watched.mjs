@@ -61,6 +61,9 @@ function memoryLibrary() {
       case 'get_archived_shows': return [];
       case 'get_tier_list_shows': return copy(showRows());
       case 'get_episodes_for_range': return copy(episodes);
+      case 'sync_show_episodes':
+        episodes.push({ id: 104, show_id: args.showId, season_number: 2, watched: false });
+        return;
       case 'mark_movie_watched':
         await beforeWrite();
         movies.find(movie => movie.id === args.id).watched = args.watched;
@@ -147,6 +150,28 @@ test('marking a whole show updates all its seasons, calendar, picker and library
   assert.equal(data.shows.getTrackedShows()[0].watched_episodes, 2);
   assert.equal(data.tiers.getTierListShows()[0].watched_episodes, 2);
   assert.deepEqual(copy(data.tiers.getTierListShows()).map(({ id, tier_id, rank_order }) => ({ id, tier_id, rank_order })), ranks);
+  assert.equal(data.errors.length, 0);
+});
+
+test('refreshing a fully watched show reloads library summaries when TMDB adds an unwatched episode', async () => {
+  const data = memoryLibrary();
+  await data.shows.loadEpisodesForRange('2026-10-01', '2026-10-31');
+  await data.detail.markShowWatched(11, true);
+  assert.equal(data.shows.getTrackedShows()[0].watched_episodes, 2);
+  assert.equal(data.shows.getTrackedShows()[0].episode_count, 2);
+
+  await data.shows.syncShowEpisodes(11);
+
+  for (const rows of [data.shows.getTrackedShows(), data.tiers.getTierListShows()]) {
+    const show = rows.find(show => show.id === 11);
+    assert.equal(show.episode_count, 3);
+    assert.equal(show.watched_episodes, 2);
+    assert.equal(show.tier_id, 1);
+    assert.equal(show.rank_order, 2);
+  }
+  const calendar = data.shows.getCalendarEpisodes().filter(episode => episode.show_id === 11);
+  assert.equal(calendar.filter(episode => episode.watched).length, 2);
+  assert.equal(calendar.find(episode => episode.id === 104).watched, false);
   assert.equal(data.errors.length, 0);
 });
 

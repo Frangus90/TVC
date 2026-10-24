@@ -373,7 +373,10 @@ export async function unarchiveShow(showId: number, onFailure?: (message: string
 export async function syncShowEpisodes(showId: number): Promise<void> {
   try {
     await invoke("sync_show_episodes", { showId });
-    await refreshCalendar();
+    const { loadTierListShows } = await import("./tiers.svelte");
+    await Promise.all([
+      loadTrackedShows(), loadArchivedShows(), loadTierListShows(), refreshCalendar(),
+    ]);
   } catch (error) {
     logger.error("Failed to sync episodes", error);
     showError("Failed to sync episodes" + ": " + String(error));

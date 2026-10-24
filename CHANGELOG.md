@@ -6,17 +6,19 @@ All notable changes to TVC will be documented in this file.
 
 ### TV Shows and Movies
 
-- Use the eye button on a title to **Mark as watched**, then click it again to **Mark as unwatched**, without opening its details. It works in poster and list views, including tier-only titles. For shows, it changes every saved episode, including specials and future episodes already listed. Marking a title as watched keeps existing watch dates.
-- Both detail windows have a matching **Mark as watched** button beside **Remove**, including tier-only titles. The button changes to **Mark as unwatched** once everything is watched.
+- Click a title's eye button to **Mark as watched**, then click it again to **Mark as unwatched**. This works in poster and list views, including tier-only titles.
+- Show and movie details have the same watched/unwatched button beside **Remove**.
+- For shows, the button changes every saved episode, including specials and future episodes already listed. Sync episode information first if a show has no saved episodes. Marking a title as watched keeps any existing watch dates.
+- Refreshing a show now updates its library watched status when new episodes are found, so the eye button offers the correct next action.
 - Poster cards now give tiers and action buttons their own rows. Titles, metadata and badges stay aligned, so a longer tier name such as **S – Masterpiece** no longer shifts the controls. Very long titles and tier names show their full text on hover.
 
 ### Tier Lists
 
-- Choose **Shows** or **Movies** as your default in **Settings → Tier List**. Tier lists opens your preferred list each time, without changing your rankings.
+- Choose **Shows** or **Movies** as your default in **Settings → Tier List**. Your preferred list opens each time you visit Tier lists, without changing your rankings.
 
 ### Data Management
 
-- In **Data → Sync**, choose **Accept failure** when a title's sync error is acceptable. It clears the reminder and moves the error into a separate list with **Undo**. The error stays in history, and future full syncs still try that title again.
+- In **Data → Sync**, choose **Accept failure** to clear an acceptable error from the outstanding failures. Accepted errors stay in sync history, and future full syncs still try those titles again. Use **Undo** to bring an error back before starting another sync.
 
 ## [0.15.0] - 13.10.2026
 
