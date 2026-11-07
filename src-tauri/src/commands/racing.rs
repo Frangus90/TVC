@@ -2,6 +2,7 @@ use tauri::AppHandle;
 use tauri_plugin_notification::NotificationExt;
 
 use crate::db::connection;
+use crate::library_sync::lock_for_sync;
 use crate::racing::{
     self,
     models::{RacingConfig, RacingEvent, RacingSeries},
@@ -87,21 +88,8 @@ pub async fn get_racing_events_for_range(
 }
 
 #[tauri::command]
-pub async fn refresh_racing_data(app: AppHandle) -> Result<racing::RefreshReport, String> {
-    let pool = connection::get_pool(&app)
-        .await
-        .map_err(|e| format!("Database error: {}", e))?;
-
-    let count = racing::refresh_all_enabled(&pool).await?;
-
-    // Reschedule notifications after data refresh
-    racing::scheduler::reschedule(app).await;
-
-    Ok(count)
-}
-
-#[tauri::command]
 pub async fn refresh_single_racing_series(app: AppHandle, slug: String) -> Result<usize, String> {
+    let _guard = lock_for_sync()?;
     let pool = connection::get_pool(&app)
         .await
         .map_err(|e| format!("Database error: {}", e))?;

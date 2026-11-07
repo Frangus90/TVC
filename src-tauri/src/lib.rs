@@ -379,7 +379,6 @@ pub fn run() {
             commands::racing::update_racing_series_notification,
             commands::racing::update_racing_series_ics_url,
             commands::racing::get_racing_events_for_range,
-            commands::racing::refresh_racing_data,
             commands::racing::refresh_single_racing_series,
             commands::racing::get_racing_config,
             commands::racing::update_racing_config,

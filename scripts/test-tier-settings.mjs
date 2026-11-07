@@ -203,7 +203,7 @@ test('Racing settings includes returned categories and reports central reminder 
     'lucide-svelte': {},
     '../../stores/racing.svelte': { getRacingSeries: () => rows, getRacingConfig: () => ({ notifications_enabled: true }), toggleSeries: async () => false, refreshSingleSeries: async () => { refreshed++; } },
     '../../stores/notifications.svelte': { getNotificationSettings: () => ({ enabled: false, racing_enabled: true }) },
-    '../../stores/settings.svelte': {}, '../../utils/dateFormat': {},
+    '../../stores/settings.svelte': {}, '../../stores/dataManagement.svelte': {}, '../../stores/sidebar.svelte': {},
   }, { $derived: derived, $effect: noop, });
   api.harness.setFilter('all');
   assert.equal(api.harness.grouped().touring[0].slug, 'dtm');

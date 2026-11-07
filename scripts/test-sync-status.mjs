@@ -20,6 +20,8 @@ test('the shared library badge requires both distinct libraries to have complete
   assert.equal(allLibrariesHaveSynced([status('shows', true), status('movies', false)]), false);
   assert.equal(allLibrariesHaveSynced([status('shows', false), status('movies', true)]), false);
   assert.equal(allLibrariesHaveSynced([status('shows', true), status('movies', true)]), true);
+  assert.equal(allLibrariesHaveSynced([status('shows', true), status('movies', true), status('racing', false)]), true);
+  assert.equal(allLibrariesHaveSynced([status('shows', true), status('racing', true)]), false);
 });
 
 test('a failed loader result after sync is surfaced and does not reopen the current detail', async () => {
@@ -44,19 +46,20 @@ test('a failed loader result after sync is surfaced and does not reopen the curr
   stop();
 });
 
-test('a saved sync schedule stays visible when status readback fails, and recovery clears the notice', async () => {
+test('a saved Racing schedule stays visible when status readback fails, and recovery clears the notice', async () => {
   const script = readFileSync('src/lib/components/data/SyncTab.svelte', 'utf8').match(/<script[^>]*>([\s\S]*?)<\/script>/)[1];
   const code = ts.transpileModule(`${script}\nexports.syncTest = { refresh, saveSchedule, read: () => ({ libraries, loadError, actionError, savedScheduleStatusUnavailable }) };`, {
     compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS },
   }).outputText;
-  let failStatus = false, frequency = 'weekly';
+  let failStatus = false, frequency = 'off';
+  const writes = [];
   const exports = {};
   const dependencies = {
     svelte: { onMount() {}, tick: async () => {} },
     '@tauri-apps/api/core': { invoke: async (command, args) => {
-      if (command === 'set_library_sync_schedule') { frequency = args.frequency; failStatus = true; return; }
+      if (command === 'set_library_sync_schedule') { writes.push({ ...args }); frequency = args.frequency; failStatus = true; return; }
       if (failStatus) throw new Error('status unavailable');
-      return [{ kind: 'movies', frequency, running: false, report: null }];
+      return [{ kind: 'movies', frequency: 'weekly', running: false, report: null }, { kind: 'racing', frequency, running: false, report: null }];
     } },
     '../../stores/dataManagement.svelte': { setActiveTab() {} },
     '../../stores/sidebar.svelte': { setSidebarTab() {} },
@@ -66,8 +69,10 @@ test('a saved sync schedule stays visible when status readback fails, and recove
   const api = exports.syncTest;
   await api.refresh();
   const select = { value: 'monthly' };
-  await api.saveSchedule(api.read().libraries[0], select);
-  assert.equal(api.read().libraries[0].frequency, 'monthly');
+  await api.saveSchedule(api.read().libraries[1], select);
+  assert.deepEqual(writes, [{ kind: 'racing', frequency: 'monthly' }]);
+  assert.equal(api.read().libraries[0].frequency, 'weekly');
+  assert.equal(api.read().libraries[1].frequency, 'monthly');
   assert.equal(select.value, 'monthly');
   assert.equal(api.read().actionError, null, 'a readback failure is not a failed save');
   assert.equal(api.read().savedScheduleStatusUnavailable, true);
@@ -201,29 +206,30 @@ test('a saved acceptance cannot replace a newer run returned by a pending status
   assert.equal(api.read().libraries[0].last_full_report.started_at, newer.started_at);
 });
 
-test('open history reloads acceptance and Undo even though the run timestamps do not change', async () => {
-  let report = syncReport(), historyReads = 0;
+test('open Racing history reloads acceptance and Undo even though the run timestamps do not change', async () => {
+  let report = syncReport('racing'), historyReads = 0;
+  report.failures[0] = { id: 42, title: 'MotoGP', error: 'Calendar feed timed out' };
   const api = makeSyncTab(async (command, args) => {
     if (command === 'get_library_sync_status') return [syncStatus(report)];
-    if (command === 'get_library_sync_history') { historyReads++; return [report]; }
+    if (command === 'get_library_sync_history') { assert.equal(args.kind, 'racing'); historyReads++; return [report]; }
     if (command === 'set_library_sync_failure_accepted') { report = withAcceptance(report, args.accepted); return report; }
     throw new Error(`Unexpected command: ${command}`);
   });
   await api.refresh();
-  api.toggleHistory('movies', { currentTarget: { open: true } });
-  await api.loadHistory('movies');
+  api.toggleHistory('racing', { currentTarget: { open: true } });
+  await api.loadHistory('racing');
   const originalTimestamp = report.started_at;
   const originalFinish = report.finished_at;
-  await api.setFailureAccepted('movies', report, report.failures[0], true);
+  await api.setFailureAccepted('racing', report, report.failures[0], true);
   assert.equal(historyReads, 2);
-  assert.equal(api.read().histories.movies[0].failures[0].accepted, true);
-  await api.setFailureAccepted('movies', report, report.failures[0], false);
+  assert.equal(api.read().histories.racing[0].failures[0].accepted, true);
+  await api.setFailureAccepted('racing', report, report.failures[0], false);
   assert.equal(historyReads, 3);
-  assert.equal(api.read().histories.movies[0].failures[0].accepted, false);
+  assert.equal(api.read().histories.racing[0].failures[0].accepted, false);
   assert.equal(api.read().libraries[0].report.started_at, originalTimestamp);
   assert.equal(api.read().libraries[0].report.finished_at, originalFinish);
   assert.equal(exports.unacceptedSyncFailures(api.read().libraries[0].report).length, 1);
-  assert.match(api.read().failureFeedback, /Acceptance undone for Alpha.*retry/);
+  assert.match(api.read().failureFeedback, /Acceptance undone for MotoGP.*retry/);
 });
 
 test('a pending failure change prevents a second acceptance request', async () => {

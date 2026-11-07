@@ -1,9 +1,8 @@
 <script lang="ts">
-  import { Bell, BellOff, Link, ChevronDown, ChevronUp, ChevronRight, RefreshCw, Zap } from "lucide-svelte";
+  import { ArrowRight, Bell, BellOff, Link, ChevronDown, ChevronUp, ChevronRight, RefreshCw, Zap } from "lucide-svelte";
   import {
     getRacingSeries,
     getRacingConfig,
-    getRacingRefreshReport,
     toggleSeries,
     updateSeriesColor,
     updateSeriesNotification,
@@ -20,7 +19,8 @@
 
   import { getNotificationSettings } from "../../stores/notifications.svelte";
   import { openSettings } from "../../stores/settings.svelte";
-  import { formatDateTime } from "../../utils/dateFormat";
+  import { setActiveTab as setDataTab } from "../../stores/dataManagement.svelte";
+  import { setSidebarTab } from "../../stores/sidebar.svelte";
 
   const isDev = import.meta.env.DEV;
 
@@ -121,22 +121,15 @@
     await updateAllSeriesLeadTime(minutes);
   }
 
+  function openRacingSync() {
+    setDataTab("sync");
+    setSidebarTab("data");
+  }
+
   const minuteOptions = [5, 10, 15, 30, 45, 60, 90, 120];
 </script>
 
 <div class="space-y-6">
-  {#if getRacingRefreshReport()}
-    {@const report = getRacingRefreshReport()!}
-    <div class="text-sm text-text-muted space-y-2">
-      <p>Last attempt: {formatDateTime(report.attempted_at)} — {report.succeeded} series refreshed.</p>
-      <p>Last complete success: {getRacingConfig()?.last_refreshed ? formatDateTime(getRacingConfig()!.last_refreshed!) : "Never"}</p>
-      {#each report.failures as failure}
-        <div class="text-error">{failure.name}: {failure.error}
-          <button class="underline ml-2" onclick={() => refreshSingleSeries(failure.slug)}>Retry</button>
-        </div>
-      {/each}
-    </div>
-  {/if}
   <!-- Global settings -->
   <div class="space-y-3">
     <h3 class="text-sm font-semibold text-text-muted uppercase tracking-wider">Global Settings</h3>
@@ -183,15 +176,16 @@
       </select>
     </div>
 
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2">
       <button
         onclick={() => refreshRacingData()}
         disabled={isRacingRefreshing()}
         class="flex items-center gap-2 px-4 py-2 rounded-lg bg-accent/10 text-accent hover:bg-accent/20 transition-colors text-sm font-medium disabled:opacity-50"
       >
         <RefreshCw class="w-4 h-4 {isRacingRefreshing() ? 'animate-spin' : ''}" />
-        {isRacingRefreshing() ? "Refreshing..." : "Refresh All Data"}
+        {isRacingRefreshing() ? "Refreshing…" : "Refresh racing feeds"}
       </button>
+      <button type="button" class="focus-button" onclick={openRacingSync}>Sync schedule and results <ArrowRight size={15} /></button>
 
       {#if isDev}
         <button

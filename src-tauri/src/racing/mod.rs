@@ -55,29 +55,24 @@ pub async fn get_all_series(pool: &Pool<Sqlite>) -> Result<Vec<RacingSeries>, St
     .await
     .map_err(|e| format!("Failed to get racing series: {}", e))?;
 
-    Ok(rows
-        .into_iter()
-        .map(|r| RacingSeries {
-            id: r.get("id"),
-            slug: r.get("slug"),
-            name: r.get("name"),
-            category: r.get("category"),
-            ics_url: r.get("ics_url"),
-            fallback_ics_url: r.get("fallback_ics_url"),
-            custom_ics_url: r.get("custom_ics_url"),
-            enabled: r.get::<i32, _>("enabled") == 1,
-            notify_enabled: r.get::<i32, _>("notify_enabled") == 1,
-            notify_minutes: r.get("notify_minutes"),
-            color: r.get("color"),
-            custom_color: r.get("custom_color"),
-        })
-        .collect())
+    Ok(rows.into_iter().map(row_to_series).collect())
 }
 
-/// Get only enabled series
-pub async fn get_enabled_series(pool: &Pool<Sqlite>) -> Result<Vec<RacingSeries>, String> {
-    let all = get_all_series(pool).await?;
-    Ok(all.into_iter().filter(|s| s.enabled).collect())
+fn row_to_series(r: sqlx::sqlite::SqliteRow) -> RacingSeries {
+    RacingSeries {
+        id: r.get("id"),
+        slug: r.get("slug"),
+        name: r.get("name"),
+        category: r.get("category"),
+        ics_url: r.get("ics_url"),
+        fallback_ics_url: r.get("fallback_ics_url"),
+        custom_ics_url: r.get("custom_ics_url"),
+        enabled: r.get::<i32, _>("enabled") == 1,
+        notify_enabled: r.get::<i32, _>("notify_enabled") == 1,
+        notify_minutes: r.get("notify_minutes"),
+        color: r.get("color"),
+        custom_color: r.get("custom_color"),
+    }
 }
 
 /// Toggle a series enabled/disabled
@@ -263,49 +258,15 @@ pub async fn refresh_series(pool: &Pool<Sqlite>, series: &RacingSeries) -> Resul
     Err(last_err)
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Default)]
-pub struct RefreshReport {
-    pub attempted_at: String,
-    pub events: usize,
-    pub succeeded: usize,
-    pub failures: Vec<RefreshFailure>,
-}
-#[derive(serde::Serialize, serde::Deserialize)]
-pub struct RefreshFailure {
-    pub slug: String,
-    pub name: String,
-    pub error: String,
-}
-
-pub async fn refresh_all_enabled(pool: &Pool<Sqlite>) -> Result<RefreshReport, String> {
-    let series_list = get_enabled_series(pool).await?;
-    let mut report = RefreshReport {
-        attempted_at: chrono::Utc::now().to_rfc3339(),
-        ..Default::default()
-    };
-    for series in &series_list {
-        match refresh_series(pool, series).await {
-            Ok(count) => {
-                report.events += count;
-                report.succeeded += 1;
-            }
-            Err(error) => report.failures.push(RefreshFailure {
-                slug: series.slug.clone(),
-                name: series.name.clone(),
-                error,
-            }),
-        }
-    }
-    if report.failures.is_empty() && report.succeeded > 0 {
-        sqlx::query("UPDATE racing_config SET last_refreshed = ?, updated_at = datetime('now') WHERE id = 1")
-            .bind(&report.attempted_at).execute(pool).await.map_err(|e| e.to_string())?;
-    }
-    sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES ('racing_refresh_report', ?)")
-        .bind(serde_json::to_string(&report).map_err(|e| e.to_string())?)
-        .execute(pool)
+/// Refresh one of the series selected at the start of a shared sync run.
+pub(crate) async fn refresh_series_by_id(pool: &Pool<Sqlite>, id: i64) -> Result<(), String> {
+    let row = sqlx::query("SELECT * FROM racing_series WHERE id = ?")
+        .bind(id)
+        .fetch_optional(pool)
         .await
-        .map_err(|e| e.to_string())?;
-    Ok(report)
+        .map_err(|e| format!("Failed to load racing series: {e}"))?
+        .ok_or("Racing series no longer exists")?;
+    refresh_series(pool, &row_to_series(row)).await.map(|_| ())
 }
 
 /// Auto-start notification scheduler on app launch
@@ -340,30 +301,5 @@ fn row_to_event(r: sqlx::sqlite::SqliteRow) -> RacingEvent {
         end_time: r.get("end_time"),
         description: r.get("description"),
         notified: r.get::<i32, _>("notified") == 1,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #[tokio::test]
-    async fn all_failed_refreshes_keep_last_success_and_persist_named_errors() {
-        let pool = crate::audit_tests::database().await;
-        sqlx::raw_sql("UPDATE racing_series SET enabled=0; UPDATE racing_series SET enabled=1,custom_ics_url='invalid://fixture' WHERE slug='f1'; UPDATE racing_config SET last_refreshed='2026-01-01T12:00:00Z';")
-            .execute(&pool).await.unwrap();
-        let report = super::refresh_all_enabled(&pool).await.unwrap();
-        assert_eq!(report.succeeded, 0);
-        assert_eq!(report.failures.len(), 1);
-        assert_eq!(report.failures[0].slug, "f1");
-        assert_eq!(
-            super::get_config(&pool).await.last_refreshed.as_deref(),
-            Some("2026-01-01T12:00:00Z")
-        );
-        let saved: String =
-            sqlx::query_scalar("SELECT value FROM settings WHERE key='racing_refresh_report'")
-                .fetch_one(&pool)
-                .await
-                .unwrap();
-        assert!(saved.contains("Formula 1"));
-        assert!(saved.contains(&report.attempted_at));
     }
 }

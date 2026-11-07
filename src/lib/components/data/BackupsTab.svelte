@@ -144,7 +144,7 @@
     <div class="space-y-2 pt-2">
       <p>All new backups include shows, episodes, movies, watched state, notes, ratings, tiers, awards, predictions, Plex title corrections, scrobble logs and change history.</p>
       <p>Portable settings add Appearance, General and calendar preferences, Notifications and quiet hours, your tier preset, and Racing series choices, colours and reminders.</p>
-      <p>Credentials, Windows startup registration, Plex/Sonarr/Radarr connections, backup folders and schedules, TMDB sync schedules, custom Racing feed URLs and downloaded Racing events are excluded. Set up these connections on the new laptop.</p>
+      <p>Credentials, Windows startup registration, Plex/Sonarr/Radarr connections, backup folders and schedules, sync schedules, custom Racing feed URLs and downloaded Racing events are excluded. Set up these connections on the new laptop.</p>
       <p>Restore replaces the data described in its confirmation. Create a backup of the current app first if you need to keep it. Older v1/v2/v3 backups are supported and keep your existing settings.</p>
     </div>
   </details>

@@ -1,4 +1,4 @@
-//! Bulk TMDB refreshes and opt-in schedules. All state uses the active app database.
+//! Bulk TV, movie and racing refreshes with opt-in schedules.
 use chrono::{DateTime, Duration, Months, Utc};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use sqlx::SqlitePool;
@@ -9,7 +9,7 @@ use std::{
 use tauri::{AppHandle, Emitter};
 use tokio::sync::Mutex;
 
-use crate::{commands, db::connection};
+use crate::{commands, db::connection, racing};
 
 static SYNC_LOCK: Mutex<()> = Mutex::const_new(());
 static ACTIVE: AtomicU8 = AtomicU8::new(0);
@@ -27,20 +27,30 @@ pub(crate) fn lock_for_maintenance() -> Result<tokio::sync::MutexGuard<'static, 
         .map_err(|_| "Wait for the current sync or restore before cleanup".into())
 }
 
+pub(crate) fn lock_for_sync() -> Result<tokio::sync::MutexGuard<'static, ()>, String> {
+    SYNC_LOCK
+        .try_lock()
+        .map_err(|_| "A sync or restore is already running".into())
+}
+
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum Library {
     Shows,
     Movies,
+    Racing,
 }
 
 impl Library {
+    const ALL: [Self; 3] = [Self::Shows, Self::Movies, Self::Racing];
+
     fn key(self, suffix: &str) -> String {
         format!(
             "library_sync_{}_{}",
             match self {
                 Self::Shows => "shows",
                 Self::Movies => "movies",
+                Self::Racing => "racing",
             },
             suffix
         )
@@ -49,6 +59,7 @@ impl Library {
         match self {
             Self::Shows => 1,
             Self::Movies => 2,
+            Self::Racing => 3,
         }
     }
 }
@@ -185,18 +196,40 @@ async fn status(pool: &SqlitePool, kind: Library) -> Result<Status, String> {
         read_setting(pool, &kind.key("last_stopped_at")).await?;
     let running = ACTIVE.load(Ordering::SeqCst) == kind.code();
     let interrupted = !running && report.as_ref().is_some_and(|r| r.finished_at.is_none());
+    let mut last_success_at = read_setting(pool, &kind.key("last_success")).await?;
+    if kind == Library::Racing && last_success_at.is_none() {
+        // Older versions tracked Racing's successful full refresh separately.
+        let legacy: Option<String> =
+            sqlx::query_scalar("SELECT last_refreshed FROM racing_config WHERE id = 1")
+                .fetch_optional(pool)
+                .await
+                .map_err(|e| format!("Cannot read the last racing refresh: {e}"))?
+                .flatten();
+        last_success_at = legacy.and_then(|value| value.parse().ok());
+    }
+    let mut next_sync_at = scheduled_due(
+        frequency,
+        if interrupted { None } else { last },
+        stopped_at,
+        Utc::now(),
+    );
+    if kind == Library::Racing && next_sync_at.is_some() && !running {
+        let has_series: bool =
+            sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM racing_series WHERE enabled = 1)")
+                .fetch_one(pool)
+                .await
+                .map_err(|e| format!("Cannot check enabled racing series: {e}"))?;
+        if !has_series {
+            next_sync_at = None;
+        }
+    }
     Ok(Status {
-        last_success_at: read_setting(pool, &kind.key("last_success")).await?,
+        last_success_at,
         kind,
         frequency,
         running,
         interrupted,
-        next_sync_at: scheduled_due(
-            frequency,
-            if interrupted { None } else { last },
-            stopped_at,
-            Utc::now(),
-        ),
+        next_sync_at,
         report,
         last_full_report,
         stop_requested: running && STOP_REQUESTED.load(Ordering::SeqCst),
@@ -263,7 +296,7 @@ async fn pause_schedules_after_stop(
     stopped_at: DateTime<Utc>,
 ) -> Result<(), String> {
     let mut transaction = pool.begin().await.map_err(|error| error.to_string())?;
-    for kind in [Library::Shows, Library::Movies] {
+    for kind in Library::ALL {
         sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
             .bind(kind.key("last_stopped_at"))
             .bind(serde_json::to_string(&stopped_at).map_err(|error| error.to_string())?)
@@ -282,10 +315,11 @@ pub async fn get_library_sync_status(app: AppHandle) -> Result<Vec<Status>, Stri
     let pool = connection::get_pool(&app)
         .await
         .map_err(|e| e.to_string())?;
-    Ok(vec![
-        status(&pool, Library::Shows).await?,
-        status(&pool, Library::Movies).await?,
-    ])
+    let mut statuses = Vec::with_capacity(Library::ALL.len());
+    for kind in Library::ALL {
+        statuses.push(status(&pool, kind).await?);
+    }
+    Ok(statuses)
 }
 
 #[tauri::command]
@@ -355,7 +389,7 @@ async fn set_failure_accepted(
         .failures
         .iter_mut()
         .find(|failure| failure.id == id)
-        .ok_or("This title is no longer a failure in the latest sync")?
+        .ok_or("This item is no longer a failure in the latest sync")?
         .accepted = accepted;
 
     let mut runs: Option<Vec<Report>> = read_setting(pool, &kind.key("history")).await?;
@@ -405,7 +439,7 @@ async fn set_failure_accepted(
 }
 
 // The callback keeps network requests separate from report persistence, so failure/retry
-// behavior can be tested against a disposable database without contacting TMDB.
+// behavior can be tested against a disposable database without fetching metadata or feeds.
 async fn sync_library<F, Fut>(
     pool: &SqlitePool,
     kind: Library,
@@ -421,7 +455,7 @@ where
     // in this report must use the same release country.
     let release_country = match kind {
         Library::Movies => Some(commands::preferences::release_country(pool).await?),
-        Library::Shows => None,
+        Library::Shows | Library::Racing => None,
     };
     let previous: Option<Report> = read_setting(pool, &kind.key("report")).await?;
     let mut runs = history(pool, kind).await?;
@@ -515,6 +549,9 @@ where
         let query = match kind {
             Library::Shows => "SELECT id, name, id > 0 AND unmigrated = 0 FROM shows ORDER BY name",
             Library::Movies => "SELECT id, title, id > 0 FROM movies ORDER BY title",
+            Library::Racing => {
+                "SELECT id, name, 1 FROM racing_series WHERE enabled = 1 ORDER BY name, id"
+            }
         };
         let mut items: Vec<(i64, String, bool)> = sqlx::query_as(query)
             .fetch_all(pool)
@@ -573,25 +610,32 @@ where
     }
     report.finished_at = Some(Utc::now());
     report.error = result.err();
-    if report.source != "retry"
+    let complete_success = report.source != "retry"
         && report.failures.is_empty()
         && report.error.is_none()
         && report.succeeded > 0
-        && !report.stopped
-    {
-        sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
-            .bind(kind.key("last_success"))
-            .bind(serde_json::to_string(&report.finished_at).map_err(|e| e.to_string())?)
-            .execute(pool)
-            .await
-            .map_err(|e| e.to_string())?;
-    }
+        && !report.stopped;
     report.current_title = None;
     save_report(pool, &report).await?;
     runs.retain(|run| run.started_at != report.started_at);
     runs.insert(0, report.clone());
     runs.truncate(5);
     let mut transaction = pool.begin().await.map_err(|error| error.to_string())?;
+    if complete_success {
+        sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+            .bind(kind.key("last_success"))
+            .bind(serde_json::to_string(&report.finished_at).map_err(|e| e.to_string())?)
+            .execute(&mut *transaction)
+            .await
+            .map_err(|e| e.to_string())?;
+        if kind == Library::Racing {
+            sqlx::query("UPDATE racing_config SET last_refreshed = ?, updated_at = datetime('now') WHERE id = 1")
+                .bind(report.finished_at.map(|finished_at| finished_at.to_rfc3339()))
+                .execute(&mut *transaction)
+                .await
+                .map_err(|e| format!("Cannot save the last racing refresh: {e}"))?;
+        }
+    }
     sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
         .bind(kind.key("history"))
         .bind(serde_json::to_string(&runs).map_err(|error| error.to_string())?)
@@ -620,7 +664,7 @@ async fn run_one(
     source: &str,
 ) -> Result<(), String> {
     ACTIVE.store(kind.code(), Ordering::SeqCst);
-    let _active = ActiveRun;
+    let active = ActiveRun;
     let report = sync_library(
         pool,
         kind,
@@ -635,12 +679,19 @@ async fn run_one(
                     }
                     None => Err("Movie sync has no release country".into()),
                 },
+                Library::Racing => racing::refresh_series_by_id(pool, id).await,
             };
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             result
         },
     )
     .await;
+    if kind == Library::Racing {
+        // Completed feeds may have changed session times even if the run
+        // stopped or another feed failed. Rebuild timers from the saved events.
+        racing::scheduler::reschedule(app.clone()).await;
+    }
+    drop(active);
     // Even if saving the final report fails, completed items need a frontend refresh.
     app.emit("library-sync-finished", kind)
         .map_err(|e| format!("Cannot notify the UI of sync completion: {e}"))?;
@@ -678,17 +729,15 @@ pub async fn run_library_sync(
     kind: Option<Library>,
     retry_failed: bool,
 ) -> Result<(), String> {
-    let _guard = SYNC_LOCK
-        .try_lock()
-        .map_err(|_| "A library sync or restore is already running")?;
+    let _guard = lock_for_sync()?;
     let pool = connection::get_pool(&app)
         .await
         .map_err(|e| e.to_string())?;
     STOP_REQUESTED.store(false, Ordering::SeqCst);
     if retry_failed && kind.is_none() {
-        return Err("Choose a library to retry".into());
+        return Err("Choose a sync to retry".into());
     }
-    let kinds = kind.map_or_else(|| vec![Library::Shows, Library::Movies], |kind| vec![kind]);
+    let kinds = kind.map_or_else(|| Library::ALL.to_vec(), |kind| vec![kind]);
     let errors = run_batch(kinds, &STOP_REQUESTED, |kind| {
         run_one(
             &app,
@@ -714,7 +763,7 @@ async fn sync_due(app: &AppHandle) -> Result<(), String> {
     };
     let pool = connection::get_pool(app).await.map_err(|e| e.to_string())?;
     STOP_REQUESTED.store(false, Ordering::SeqCst);
-    for kind in [Library::Shows, Library::Movies] {
+    for kind in Library::ALL {
         if STOP_REQUESTED.load(Ordering::SeqCst) {
             break;
         }
@@ -792,6 +841,212 @@ mod tests {
         assert_eq!(
             next_due(Frequency::Monthly, Some(non_leap), non_leap),
             Some(at("2027-02-28T12:30:00Z"))
+        );
+    }
+
+    #[tokio::test]
+    async fn racing_schedule_waits_for_an_enabled_series_and_empty_runs_are_not_successes() {
+        let pool = crate::audit_tests::database().await;
+        sqlx::query("UPDATE racing_series SET enabled = 0")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let initial = status(&pool, Library::Racing).await.unwrap();
+        assert_eq!(initial.frequency, Frequency::Off);
+        assert!(initial.next_sync_at.is_none());
+        sqlx::query("INSERT INTO settings (key, value) VALUES (?, ?)")
+            .bind(Library::Racing.key("frequency"))
+            .bind(json!("daily").to_string())
+            .execute(&pool)
+            .await
+            .unwrap();
+        let empty = status(&pool, Library::Racing).await.unwrap();
+        assert_eq!(empty.frequency, Frequency::Daily);
+        assert!(empty.next_sync_at.is_none());
+
+        racing::toggle_series(&pool, "motogp", true).await.unwrap();
+        let enabled = status(&pool, Library::Racing).await.unwrap();
+        assert!(enabled.next_sync_at.unwrap() <= Utc::now());
+
+        racing::toggle_series(&pool, "motogp", false).await.unwrap();
+        let report = sync_library(
+            &pool,
+            Library::Racing,
+            "manual",
+            &AtomicBool::new(false),
+            |_, _| async { panic!("no disabled series should fetch") },
+        )
+        .await
+        .unwrap();
+        assert_eq!((report.total, report.succeeded), (0, 0));
+        assert!(report.error.is_none());
+        assert!(status(&pool, Library::Racing)
+            .await
+            .unwrap()
+            .last_success_at
+            .is_none());
+        assert_eq!(
+            status(&pool, Library::Shows).await.unwrap().frequency,
+            Frequency::Off
+        );
+        assert_eq!(
+            status(&pool, Library::Movies).await.unwrap().frequency,
+            Frequency::Off
+        );
+    }
+
+    #[tokio::test]
+    async fn racing_refreshes_enabled_feeds_and_preserves_failed_series_for_retry() {
+        let pool = crate::audit_tests::database().await;
+        sqlx::raw_sql(
+            "UPDATE racing_series SET enabled = (slug IN ('f1', 'motogp'));
+             UPDATE racing_series SET custom_ics_url = 'invalid://fixture' WHERE slug = 'f1';
+             UPDATE racing_config SET last_refreshed = '2026-01-01T12:00:00Z' WHERE id = 1;
+             INSERT INTO racing_events (series_slug, uid, event_title, start_time) VALUES
+                ('f1', 'existing', 'Keep this event', '2026-11-08T12:00:00Z'),
+                ('motogp', 'qatar', 'Qatar GP', '2026-11-08T17:00:00Z');",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        let enabled_ids: Vec<i64> =
+            sqlx::query_scalar("SELECT id FROM racing_series WHERE enabled = 1 ORDER BY name, id")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        let f1 = enabled_ids[0];
+        let legacy = Some(at("2026-01-01T12:00:00Z"));
+        let database = &pool;
+        let mut visited = Vec::new();
+        let report = sync_library(
+            &pool,
+            Library::Racing,
+            "automatic",
+            &AtomicBool::new(false),
+            |id, country| {
+                assert!(country.is_none());
+                visited.push(id);
+                async move {
+                    if id == f1 {
+                        // The unsupported URI fails before making a network request.
+                        racing::refresh_series_by_id(database, id).await
+                    } else {
+                        let feed = "BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:qatar\nSUMMARY:Qatar GP: Race\nDTSTART:20261108T160000Z\nEND:VEVENT\nEND:VCALENDAR";
+                        let events = racing::api::parse_ics(feed, "motogp")?;
+                        racing::replace_events(database, "motogp", &events).await
+                    }
+                }
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(visited, enabled_ids);
+        assert_eq!(
+            (report.total, report.succeeded, report.failures.len()),
+            (2, 1, 1)
+        );
+        assert_eq!(report.failures[0].id, f1);
+        assert_eq!(report.failures[0].title, "Formula 1");
+        let saved = status(&pool, Library::Racing).await.unwrap();
+        assert_eq!(saved.last_success_at, legacy);
+        assert_eq!(saved.report.unwrap().started_at, report.started_at);
+        let events: Vec<(String, String)> = sqlx::query_as(
+            "SELECT series_slug, start_time FROM racing_events ORDER BY series_slug",
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            events,
+            vec![
+                ("f1".into(), "2026-11-08T12:00:00Z".into()),
+                ("motogp".into(), "2026-11-08T16:00:00Z".into()),
+            ]
+        );
+
+        let accepted = set_failure_accepted(&pool, Library::Racing, report.started_at, f1, true)
+            .await
+            .unwrap();
+        assert!(accepted.failures[0].accepted);
+        set_failure_accepted(&pool, Library::Racing, report.started_at, f1, false)
+            .await
+            .unwrap();
+        let mut retried = Vec::new();
+        let retry = sync_library(
+            &pool,
+            Library::Racing,
+            "retry",
+            &AtomicBool::new(false),
+            |id, _| {
+                retried.push(id);
+                async { Ok(()) }
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(retried, vec![f1]);
+        assert_eq!(retry.succeeded, 1);
+        assert!(retry.failures.is_empty());
+        let saved = status(&pool, Library::Racing).await.unwrap();
+        assert_eq!(saved.last_success_at, legacy);
+        assert_eq!(
+            saved.last_full_report.unwrap().started_at,
+            report.started_at
+        );
+        assert_eq!(
+            read_setting::<DateTime<Utc>>(&pool, &Library::Racing.key("last_full_attempt"))
+                .await
+                .unwrap(),
+            Some(report.started_at)
+        );
+        assert_eq!(history(&pool, Library::Racing).await.unwrap().len(), 2);
+    }
+
+    #[tokio::test]
+    async fn stopping_racing_sync_finishes_one_series_and_postpones_its_schedule() {
+        let pool = crate::audit_tests::database().await;
+        sqlx::raw_sql(
+            "UPDATE racing_series SET enabled = (slug IN ('f1', 'motogp'));
+             INSERT INTO settings (key, value) VALUES ('library_sync_racing_frequency', '\"daily\"');",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        let stop = AtomicBool::new(false);
+        let report = sync_library(&pool, Library::Racing, "manual", &stop, |_, _| {
+            stop.store(true, Ordering::SeqCst);
+            async { Ok(()) }
+        })
+        .await
+        .unwrap();
+        assert!(report.stopped);
+        assert_eq!((report.total, report.succeeded), (2, 1));
+        assert_eq!(report.processed, Some(1));
+        let stopped_at = Utc::now();
+        pause_schedules_after_stop(&pool, stopped_at).await.unwrap();
+        let stopped = status(&pool, Library::Racing).await.unwrap();
+        assert_eq!(stopped.next_sync_at, Some(stopped_at + Duration::days(1)));
+        assert!(stopped.last_success_at.is_none());
+
+        let completed = sync_library(
+            &pool,
+            Library::Racing,
+            "manual",
+            &AtomicBool::new(false),
+            |_, _| async { Ok(()) },
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            status(&pool, Library::Racing)
+                .await
+                .unwrap()
+                .last_success_at,
+            completed.finished_at
+        );
+        assert_eq!(
+            racing::get_config(&pool).await.last_refreshed,
+            completed.finished_at.map(|at| at.to_rfc3339())
         );
     }
 

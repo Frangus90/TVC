@@ -1,5 +1,4 @@
 import { formatDateKey, localDayRange } from "../utils/dateFormat";
-import { getDatabase } from "../utils/database";
 let rangeRequest = 0;
 import { showError } from "./toast.svelte";
 import { invoke } from "@tauri-apps/api/core";
@@ -47,9 +46,6 @@ let isLoading = $state(false);
 let isRefreshing = $state(false);
 let currentRacingRange = $state<{ start: string; end: string } | null>(null);
 let refreshSignal = $state(0);
-export interface RacingRefreshReport { attempted_at: string; events: number; succeeded: number; failures: { slug: string; name: string; error: string }[] }
-let refreshReport = $state<RacingRefreshReport | null>(null);
-export function getRacingRefreshReport() { return refreshReport; }
 
 // Getters
 export function getRacingSeries(): RacingSeries[] {
@@ -115,9 +111,6 @@ export async function loadRacingConfig(): Promise<void> {
   try {
     const config = await invoke<RacingConfig>("get_racing_config");
     racingConfig = config;
-    const db = await getDatabase();
-    const rows = await db.select<{ value: string }[]>("SELECT value FROM settings WHERE key = 'racing_refresh_report'");
-    refreshReport = rows[0] ? JSON.parse(rows[0].value) : null;
   } catch (error) {
     logger.error("Failed to load racing config", error);
     showError("Failed to load racing config" + ": " + String(error));
@@ -216,18 +209,11 @@ export async function updateSeriesIcsUrl(
 }
 
 export async function refreshRacingData(): Promise<void> {
+  if (isRefreshing) return;
   isRefreshing = true;
   try {
-    refreshReport = await invoke<RacingRefreshReport>("refresh_racing_data");
-    // Reload events for current range
-    if (currentRacingRange) {
-      await loadRacingEventsForRange(
-        currentRacingRange.start,
-        currentRacingRange.end
-      );
-    }
-    await loadRacingConfig();
-    refreshSignal++;
+    // The shared completion event reloads the calendar for manual and scheduled runs.
+    await invoke("run_library_sync", { kind: "racing", retryFailed: false });
   } catch (error) {
     logger.error("Failed to refresh racing data", error);
     showError("Failed to refresh racing data" + ": " + String(error));
@@ -239,18 +225,7 @@ export async function refreshRacingData(): Promise<void> {
 export async function refreshSingleSeries(slug: string): Promise<void> {
   try {
     await invoke("refresh_single_racing_series", { slug });
-    if (refreshReport) {
-      refreshReport = { ...refreshReport, failures: refreshReport.failures.filter(f => f.slug !== slug) };
-      const db = await getDatabase();
-      await db.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('racing_refresh_report', $1)", [JSON.stringify(refreshReport)]);
-    }
-    if (currentRacingRange) {
-      await loadRacingEventsForRange(
-        currentRacingRange.start,
-        currentRacingRange.end
-      );
-    }
-    refreshSignal++;
+    await refreshRacingCalendar();
   } catch (error) {
     logger.error("Failed to refresh series", error);
     showError("Failed to refresh series" + ": " + String(error));

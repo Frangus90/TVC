@@ -28,9 +28,8 @@
   import { modalFocus } from "../../utils/modalFocus";
 
   // Day detail state
-  let dayDetailOpen = $state(false);
   let dayDetailDate = $state<Date | null>(null);
-  let dayDetailEvents = $state<RacingEvent[]>([]);
+  const dayDetailEvents = $derived(dayDetailDate ? getEventsForDay(dayDetailDate) : []);
 
   // Series filter: null means show all
   let activeSeriesFilter = $state<string | null>(null);
@@ -115,17 +114,12 @@
   }
 
   function handleDayClick(day: Date) {
-    const events = getEventsForDay(day);
-    if (events.length === 0) return;
+    if (getEventsForDay(day).length === 0) return;
     dayDetailDate = day;
-    dayDetailEvents = events;
-    dayDetailOpen = true;
   }
 
   function closeDayDetail() {
-    dayDetailOpen = false;
     dayDetailDate = null;
-    dayDetailEvents = [];
   }
 
   function toggleSeriesFilter(slug: string) {
@@ -272,7 +266,7 @@
 </div>
 
 <!-- Day detail modal -->
-{#if dayDetailOpen && dayDetailDate}
+{#if dayDetailDate}
   <button
     class="fixed inset-0 bg-black/50 z-40"
     onclick={closeDayDetail}
@@ -330,6 +324,8 @@
             </span>
           </div>
         </div>
+      {:else}
+        <p class="text-sm text-text-muted">No racing sessions are scheduled for this day.</p>
       {/each}
     </div>
 

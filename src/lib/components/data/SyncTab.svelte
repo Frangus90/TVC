@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, tick } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
-  import { RefreshCw, Tv, Film, AlertTriangle, Check, CircleX } from "lucide-svelte";
+  import { RefreshCw, Tv, Film, Flag, AlertTriangle, Check, CircleX } from "lucide-svelte";
   import type { LibraryKind, LibrarySyncStatus, SyncFrequency, SyncReport } from "../../stores/librarySync";
   import { unacceptedSyncFailures, acceptedSyncFailures } from "../../stores/librarySync";
   import { formatDateTime } from "../../utils/dateFormat";
@@ -18,15 +18,16 @@
   let failureFeedback = $state<string | null>(null);
   let failureFeedbackElement = $state<HTMLParagraphElement>();
   let savedScheduleStatusUnavailable = $state(false);
-  let histories = $state<Record<LibraryKind, SyncReport[]>>({ shows: [], movies: [] });
-  let historyLoading = $state<Record<LibraryKind, boolean>>({ shows: false, movies: false });
-  let historyErrors = $state<Record<LibraryKind, string | null>>({ shows: null, movies: null });
+  let histories = $state<Record<LibraryKind, SyncReport[]>>({ shows: [], movies: [], racing: [] });
+  let historyLoading = $state<Record<LibraryKind, boolean>>({ shows: false, movies: false, racing: false });
+  let historyErrors = $state<Record<LibraryKind, string | null>>({ shows: null, movies: null, racing: null });
   const historyOpen = new Set<LibraryKind>();
   const historyRequests = new Map<LibraryKind, Promise<void>>();
   let now = $state(Date.now());
   let disposed = false;
   let refreshPromise: Promise<void> | null = null;
-  const busy = $derived(pending || libraries.some((library) => library.running));
+  const runningLibrary = $derived(libraries.find(library => library.running));
+  const busy = $derived(pending || !!runningLibrary);
   const stopRequested = $derived(stopping || libraries.some(library => library.stop_requested));
 
   function completed(report: SyncReport) {
@@ -125,7 +126,7 @@
         report: library.report?.started_at === saved.started_at ? saved : library.report,
         last_full_report: library.last_full_report?.started_at === saved.started_at ? saved : library.last_full_report,
       });
-      failureFeedback = accepted ? `Failure accepted for ${failure.title}. This title stays included in future full syncs.` : `Acceptance undone for ${failure.title}. You can retry this failure.`;
+      failureFeedback = accepted ? `Failure accepted for ${failure.title}. It stays included in future full syncs.` : `Acceptance undone for ${failure.title}. You can retry this failure.`;
       // The clicked row moves to another list; keep keyboard focus in the page.
       await tick();
       if (!disposed) failureFeedbackElement?.focus();
@@ -169,7 +170,7 @@
   <div class="space-y-2">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <h2 class="text-base font-semibold text-text">TMDB sync</h2>
+        <h2 class="text-base font-semibold text-text">Library and racing sync</h2>
         <p class="text-sm text-text-muted">Automatic sync runs while TVC is open or in the tray.</p>
       </div>
       <button type="button" onclick={() => sync()} disabled={busy || changingFailure !== null || saving !== null || !libraries.length || !!loadError}
@@ -177,14 +178,15 @@
         <RefreshCw class="w-4 h-4 {busy ? 'animate-spin' : ''}" />
         Sync All
       </button>
-      {#if libraries.some(library => library.running)}
+      {#if runningLibrary}
+        {@const itemLabel = runningLibrary.kind === 'racing' ? 'series' : 'title'}
         <button type="button" onclick={stopSync} disabled={stopRequested} class="focus-button disabled:opacity-50">
-          {stopRequested ? 'Stopping after current title…' : 'Stop after current title'}
+          {stopRequested ? `Stopping after current ${itemLabel}…` : `Stop after current ${itemLabel}`}
         </button>
       {/if}
     </div>
     <p class="text-xs text-text-muted">
-      Shows and movies have separate schedules. After reopening, overdue syncs start within a minute once no other sync is running.
+      TV shows and movies sync with TMDB. Racing updates enabled series from their calendar feeds. Each has its own schedule.
     </p>
   </div>
 
@@ -208,14 +210,18 @@
 
   <div class="focus-sync-grid">
   {#each libraries as library (library.kind)}
+    {@const racing = library.kind === 'racing'}
+    {@const itemLabel = racing ? 'series' : 'title'}
+    {@const itemsLabel = racing ? 'series' : 'titles'}
     {@const report = library.report}
     {@const processed = report ? completed(report) : 0}
     {@const failures = unacceptedSyncFailures(report)}
     {@const accepted = acceptedSyncFailures(report)}
-    <section class="focus-panel bg-surface rounded-xl border border-border p-5 space-y-4" aria-label={library.kind === 'shows' ? 'TV show sync' : 'Movie sync'}>
+    <section class="focus-panel bg-surface rounded-xl border border-border p-5 space-y-4" aria-label={library.kind === 'shows' ? 'TV show sync' : racing ? 'Racing sync' : 'Movie sync'}>
       <div class="flex flex-wrap items-center justify-between gap-3">
         <h3 class="font-semibold flex items-center gap-2">
           {#if library.kind === "shows"}<Tv class="w-5 h-5 text-accent" />TV shows
+          {:else if racing}<Flag class="w-5 h-5 text-accent" />Racing
           {:else}<Film class="w-5 h-5 text-accent" />Movies{/if}
         </h3>
         <button type="button" onclick={() => sync(library.kind)} disabled={busy || changingFailure !== null || !!loadError}
@@ -243,6 +249,8 @@
           {:else if new Date(library.next_sync_at).getTime() <= now}Due now — {busy ? 'waiting for the current sync.' : 'starting shortly.'}
           {:else}Next sync: {formatDateTime(library.next_sync_at)}{/if}
         </p>
+      {:else if racing && library.frequency !== 'off' && !library.running}
+        <p class="text-xs text-text-muted">Enable a series in Settings → Racing to use automatic sync.</p>
       {/if}
 
       {#if report}
@@ -256,14 +264,14 @@
           </div>
           {#if library.running}
             <p class="text-sm text-text-muted break-words">{processed} / {report.total} processed{report.current_title ? ` · ${report.current_title}` : ''}</p>
-            {#if library.stop_requested || stopping}<p class="text-xs text-text-muted">Finishing the current title before stopping.</p>{/if}
+            {#if library.stop_requested || stopping}<p class="text-xs text-text-muted">Finishing the current {itemLabel} before stopping.</p>{/if}
             <progress value={processed} max={Math.max(report.total, 1)} aria-label="Sync progress" class="w-full h-1.5 accent-accent"></progress>
           {/if}
           {#if report.stopped}
-            <p class="text-sm text-warning">Stopped after {processed} / {report.total} titles. Sync now starts a new full run. Automatic sync waits until its next scheduled run.</p>
+            <p class="text-sm text-warning">Stopped after {processed} / {report.total} {itemsLabel}. Sync now starts a new full run. Automatic sync waits until its next scheduled run.</p>
           {/if}
           {#if library.interrupted}
-            <p class="text-sm text-warning">This run was interrupted. Sync now to finish refreshing the library.</p>
+            <p class="text-sm text-warning">This run was interrupted. Sync now to refresh {racing ? 'the racing calendar' : 'the library'}.</p>
           {/if}
           <p class="text-sm text-text-muted">
             <span class="text-success">{report.succeeded} synced</span> ·
@@ -271,7 +279,7 @@
             {report.skipped} skipped
           </p>
           {#if report.total === 0 && report.finished_at && !report.error}
-            <p class="text-sm text-text-muted">{report.source === 'retry' ? 'No failed titles remain in this library.' : 'No saved titles to sync yet.'}</p>
+            <p class="text-sm text-text-muted">{report.source === 'retry' ? `No failed ${itemsLabel} to retry.` : racing ? 'No racing series were enabled for this run.' : 'No saved titles to sync yet.'}</p>
           {/if}
           {#if report.error}<p class="text-sm text-error break-words">{report.error}</p>{/if}
           {#if report.skipped > 0}
@@ -310,14 +318,14 @@
                 {/each}
               </ul>
             </details>
-            <p class="text-xs text-text-muted">Accept a failure to clear its reminder for this run. Full syncs will still try the title again.</p>
+            <p class="text-xs text-text-muted">Accept a failure to clear its reminder for this run. Full syncs will still try the {itemLabel} again.</p>
             <button type="button" onclick={() => sync(library.kind, true)} disabled={busy || changingFailure !== null || !!loadError}
               class="px-3 py-1.5 text-sm border border-border hover:bg-surface-hover rounded disabled:opacity-50">Retry failed</button>
           {/if}
           {#if accepted.length}
             <details class="text-sm">
               <summary class="cursor-pointer text-text-muted py-1">Accepted failures ({accepted.length})</summary>
-              <p class="text-xs text-text-muted mt-2">Kept for your records. Full syncs still include these titles; any new failure will need attention again.</p>
+              <p class="text-xs text-text-muted mt-2">Kept for your records. Full syncs still include these {itemsLabel}; any new failure will need attention again.</p>
               <ul class="mt-2 space-y-2 max-h-56 overflow-auto">
                 {#each accepted as failure (failure.id)}
                   <li class="rounded bg-background border border-border p-2 break-words">
@@ -344,7 +352,7 @@
           <summary class="cursor-pointer text-text-muted">Original full-run result · {formatDateTime(full.started_at)}</summary>
           <p class="mt-2 text-text-muted">{completed(full)} / {full.total} processed · {full.succeeded} synced · {full.failures.length} failed · {full.skipped} skipped{full.stopped ? ' · Stopped' : !full.finished_at ? ' · Interrupted' : ''}</p>
           <p class="text-xs text-text-muted mt-1">These are the results before retries. The latest retry above shows which failures remain.</p>
-          {#if full.stopped || !full.finished_at}<p class="text-xs text-warning mt-1">This full run ended early. Start a full sync to refresh its remaining titles.</p>{/if}
+          {#if full.stopped || !full.finished_at}<p class="text-xs text-warning mt-1">This full run ended early. Start a full sync to refresh its remaining {itemsLabel}.</p>{/if}
         </details>
       {/if}
       <details class="border-t border-border pt-3 text-sm" ontoggle={(event) => toggleHistory(library.kind, event)}>
@@ -383,13 +391,14 @@
   <details class="text-xs text-text-muted">
     <summary class="cursor-pointer py-1">How sync works</summary>
     <p class="mt-2 leading-relaxed">
-    Includes archived and tier-list titles. Manual entries and unresolved TVDB matches are skipped.
+    TV and movie syncs include archived and tier-list titles. Manual entries and unresolved TVDB matches are skipped.
     The last five runs and the latest full result are kept. Retries only refresh failures that have not been accepted and keep the full-sync schedule.
     Accepting a failure keeps its error in history and clears its reminder for that run. Use Undo before starting another run to make it available for retry again.
-    Full syncs always include accepted titles. A new failure needs attention again.
+    Full syncs try eligible titles and enabled racing series again, including accepted failures.
     Every day means 24 hours, every week means 7 days, and every month means one calendar month after the last full attempt.
+    After reopening TVC, overdue syncs start within a minute once no other sync is running.
     Movie runs keep the release country chosen when they started. Changing it applies to the next run.
-    Stopping finishes the current title, skips any queued library, and postpones automatic sync until the next scheduled interval.
+    Stopping finishes the current title or series, skips queued syncs, and postpones automatic sync until the next scheduled interval.
     </p>
   </details>
 </div>
@@ -397,5 +406,6 @@
 <style>
   .focus-sync-content { container-type: inline-size; }
   .focus-sync-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }
+  @container (min-width: 1120px) { .focus-sync-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   @container (max-width: 740px) { .focus-sync-grid { grid-template-columns: 1fr; } }
 </style>

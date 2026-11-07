@@ -3,9 +3,10 @@ import { loadTrackedShows, loadArchivedShows, refreshCalendar } from "./shows.sv
 import { loadTrackedMovies, loadArchivedMovies, refreshMoviesCalendar, isMovieDetailOpen, getCurrentMovie, openMovieDetail } from "./movies.svelte";
 import { isShowDetailOpen, getCurrentShow, openShowDetail } from "./showDetail.svelte";
 import { loadTierListShows, loadTierListMovies } from "./tiers.svelte";
+import { refreshRacingCalendar } from "./racing.svelte";
 import { showError } from "./toast.svelte";
 
-export type LibraryKind = "shows" | "movies";
+export type LibraryKind = "shows" | "movies" | "racing";
 export type SyncFrequency = "off" | "daily" | "weekly" | "monthly";
 
 export interface SyncReport {
@@ -52,6 +53,7 @@ export interface LibrarySyncStatus {
 }
 
 async function refreshLibrary(kind: LibraryKind) {
+  if (kind === "racing") return refreshRacingCalendar();
   if (kind === "shows") {
     const detailId = isShowDetailOpen() ? getCurrentShow()?.id : undefined;
     const results = await Promise.all([loadTrackedShows(), loadArchivedShows(), loadTierListShows(), refreshCalendar()]);

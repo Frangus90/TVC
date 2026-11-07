@@ -4,6 +4,11 @@ All notable changes to TVC will be documented in this file.
 
 ## [0.15.2] - Unreleased
 
+### Racing
+
+- In **Data → Sync**, you can now refresh the racing series you follow automatically every day, week or month. Turn on **Every day** to pick up schedule corrections without pressing Refresh.
+- **Sync All** now includes Racing. Check **Data → Sync** for results and retry any feeds that failed. The racing calendar and reminders update after a refresh.
+
 ### Notifications
 
 - In **Settings → Notifications**, choose to automatically clear notification history after **1 day**, **1 week** or **1 month (30 days)**. It is turned off by default.
