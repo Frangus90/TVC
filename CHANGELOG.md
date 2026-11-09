@@ -2,7 +2,7 @@
 
 All notable changes to TVC will be documented in this file.
 
-## [0.15.2] - Unreleased
+## [0.15.2] - 09.11.2026
 
 ### Racing
 
