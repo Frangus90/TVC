@@ -1,7 +1,7 @@
-import { CalendarDays, Tv, Clapperboard, Flag, Layers, Trophy, ChartNoAxesCombined, Database, Settings } from "lucide-svelte";
+import { CalendarDays, Tv, Clapperboard, Flag, Layers, Trophy, History, Database, Settings } from "lucide-svelte";
 import type { Component } from "svelte";
 
-export type NavId = "calendar" | "shows" | "movies" | "tiers" | "racing" | "awards" | "statistics" | "data" | "settings";
+export type NavId = "calendar" | "shows" | "movies" | "tiers" | "racing" | "awards" | "data" | "watch-history" | "settings";
 
 export interface NavItem {
   id: NavId;
@@ -19,8 +19,8 @@ export const navItems: NavItem[] = [
   { id: "tiers", label: "Tier lists", icon: Layers, kind: "standalone", load: () => import("../components/calendar/TierView.svelte") },
   { id: "racing", label: "Racing", icon: Flag, kind: "standalone", load: () => import("../components/racing/RaceCalendar.svelte") },
   { id: "awards", label: "Awards", icon: Trophy, kind: "standalone", load: () => import("../components/awards/AwardsView.svelte") },
-  { id: "statistics", label: "Statistics", icon: ChartNoAxesCombined, kind: "standalone", load: () => import("../components/StatisticsDashboard.svelte") },
-  { id: "data", label: "Data", icon: Database, kind: "standalone", load: () => import("../components/DataManagement.svelte") },
+  { id: "data", label: "Data/Stats", icon: Database, kind: "standalone", load: () => import("../components/DataManagement.svelte") },
+  { id: "watch-history", label: "Watch History", icon: History, kind: "standalone", load: () => import("../components/StatisticsDashboard.svelte") },
   { id: "settings", label: "Settings", icon: Settings, kind: "standalone", load: () => import("../components/settings/UnifiedSettings.svelte") },
 ];
 

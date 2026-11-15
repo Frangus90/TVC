@@ -49,7 +49,7 @@ export interface CleanupEpisodePreview {
   name: string | null;
 }
 
-export type DataTab = "overview" | "sync" | "backups" | "archive" | "maintenance";
+export type DataTab = "overview" | "statistics" | "sync" | "backups" | "archive" | "maintenance";
 export type MaintenanceSection = "duplicates" | "cleanup" | "unmapped";
 export type DataTarget = DataTab | MaintenanceSection;
 

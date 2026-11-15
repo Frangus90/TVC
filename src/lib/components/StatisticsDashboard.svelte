@@ -8,7 +8,6 @@
     Film,
     CheckCircle,
     PlayCircle,
-    History,
     BarChart3,
     Loader2,
   } from "lucide-svelte";
@@ -16,28 +15,54 @@
     isStatisticsModalOpen,
     closeStatisticsModal,
     getStatistics,
-    loadAllStatistics,
+    loadStatisticsOverview,
+    loadWatchHistory,
     getCompletionRates,
     getWatchHistory,
     isLoading,
-    getActiveTab,
-    setActiveTab,
+    isWatchHistoryLoading,
+    getHistoryMediaTab,
+    setHistoryMediaTab,
     formatWatchTime,
     formatRelativeDate,
     groupHistoryByDate,
     formatDateHeader,
+    type WatchHistoryItem,
   } from "../stores/statistics.svelte";
+  import { openMovieDetail } from "../stores/movies.svelte";
+  import { openShowDetail } from "../stores/showDetail.svelte";
+  import PlexHistoryPreview from "./PlexHistoryPreview.svelte";
 
-  let { embedded = false }: { embedded?: boolean } = $props();
+  let { embedded = false, historyOnly = false, showHeading = true }: {
+    embedded?: boolean;
+    historyOnly?: boolean;
+    showHeading?: boolean;
+  } = $props();
+  let plexHistoryPreview = $state<WatchHistoryItem | null>(null);
 
   onMount(() => {
-    if (embedded) void loadAllStatistics();
+    if (!embedded) return;
+    if (historyOnly) void loadWatchHistory();
+    else void loadStatisticsOverview();
   });
 
   function handleKeyDown(event: KeyboardEvent) {
+    if (plexHistoryPreview && event.key === "Escape") {
+      plexHistoryPreview = null;
+      return;
+    }
     if (!embedded && isStatisticsModalOpen() && event.key === "Escape") {
       closeStatisticsModal();
     }
+  }
+
+  function openHistoryItem(item: WatchHistoryItem) {
+    if (item.detail_id !== null) {
+      if (item.item_type === "movie") void openMovieDetail(item.detail_id);
+      else void openShowDetail(item.detail_id);
+      return;
+    }
+    plexHistoryPreview = item;
   }
 
   function getCompletionColor(percentage: number): string {
@@ -61,41 +86,14 @@
   <!-- Modal or full page -->
   <div
     transition:scale={{ duration: embedded ? 0 : 200, start: 0.95, opacity: 0 }}
-    class={embedded ? "focus-page focus-statistics-page" : "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl max-h-[85vh] z-50 bg-surface rounded-xl border border-border shadow-2xl flex flex-col"}
+    class={embedded ? (historyOnly ? "focus-page focus-statistics-page" : "") : "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl max-h-[85vh] z-50 bg-surface rounded-xl border border-border shadow-2xl flex flex-col"}
   >
-    {#snippet sectionTabs()}
-      <!-- Tabs -->
-      <nav class={embedded ? "focus-tabs" : "flex border-b border-border"} aria-label="Statistics sections">
-        <button
-          class="flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors {getActiveTab() ===
-          'overview'
-            ? 'text-accent border-b-2 border-accent'
-            : 'text-text-muted hover:text-text'}"
-          onclick={() => setActiveTab("overview")}
-          aria-pressed={getActiveTab() === "overview"}
-        >
-          <BarChart3 class="w-4 h-4" />
-          Overview
-        </button>
-        <button
-          class="flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors {getActiveTab() ===
-          'history'
-            ? 'text-accent border-b-2 border-accent'
-            : 'text-text-muted hover:text-text'}"
-          onclick={() => setActiveTab("history")}
-          aria-pressed={getActiveTab() === "history"}
-        >
-          <History class="w-4 h-4" />
-          Watch History
-        </button>
-      </nav>
-    {/snippet}
-
     {#if embedded}
-      <header class="focus-page-heading focus-page-bar">
-        <h1>Statistics</h1>
-        {@render sectionTabs()}
-      </header>
+      {#if showHeading}
+        <header class="focus-page-heading focus-page-bar">
+          <h1>{historyOnly ? "Watch History" : "Statistics"}</h1>
+        </header>
+      {/if}
     {:else}
       <div class="flex items-center justify-between p-4 border-b border-border">
         <div class="flex items-center gap-3">
@@ -108,17 +106,13 @@
       </div>
     {/if}
 
-    {#if !embedded}
-      {@render sectionTabs()}
-    {/if}
-
     <!-- Content -->
     <div class={embedded ? "focus-statistics-content" : "flex-1 overflow-auto p-6"}>
-      {#if isLoading()}
+      {#if historyOnly ? isWatchHistoryLoading() : isLoading()}
         <div class="flex items-center justify-center py-12">
           <Loader2 class="w-8 h-8 text-accent animate-spin" />
         </div>
-      {:else if getActiveTab() === "overview"}
+      {:else if !historyOnly}
         <!-- Overview Tab -->
         {@const stats = getStatistics()}
         {#if stats}
@@ -227,19 +221,40 @@
             No statistics available yet. Start watching some content!
           </div>
         {/if}
-      {:else if getActiveTab() === "history"}
+      {:else}
         <!-- History Tab -->
         {@const history = getWatchHistory()}
-        {#if history.length > 0}
-          {@const groupedHistory = groupHistoryByDate(history)}
+        <div class="focus-tabs mb-4" role="group" aria-label="Watch history type">
+          <button
+            type="button"
+            aria-pressed={getHistoryMediaTab() === "tv"}
+            onclick={() => setHistoryMediaTab("tv")}
+          >TV Shows</button>
+          <button
+            type="button"
+            aria-pressed={getHistoryMediaTab() === "movies"}
+            onclick={() => setHistoryMediaTab("movies")}
+          >Movies</button>
+        </div>
+        <p class="text-sm text-text-muted mb-4">
+          Includes titles marked watched in TVC and new plays received through the Plex webhook. Older Plex plays are not imported.
+        </p>
+        {@const filteredHistory = history.filter((item) =>
+          getHistoryMediaTab() === "movies" ? item.item_type === "movie" : item.item_type === "episode"
+        )}
+        {#if filteredHistory.length > 0}
+          {@const groupedHistory = groupHistoryByDate(filteredHistory)}
           <div class="space-y-6">
             {#each [...groupedHistory] as [dateGroup, items]}
               <div>
                 <h3 class="text-sm font-medium text-text-muted mb-3">{formatDateHeader(dateGroup)}</h3>
                 <div class="space-y-2">
                   {#each items as item}
-                    <div
-                      class="flex items-center gap-4 p-4 bg-surface border border-border rounded-xl transition-colors"
+                    <button
+                      type="button"
+                      onclick={() => openHistoryItem(item)}
+                      aria-label={`Open details for ${item.item_type === "episode" ? item.show_name || item.name : item.name}`}
+                      class="flex items-center gap-4 p-4 w-full text-left bg-surface border border-border rounded-xl transition-colors hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                     >
                       {#if item.poster_url}
                         <img
@@ -260,14 +275,15 @@
                       {/if}
                       <div class="flex-1 min-w-0">
                         <p class="font-medium text-text truncate">
-                          {#if item.item_type === "episode" && item.show_name}
-                            {item.show_name}
+                          {#if item.item_type === "episode"}
+                            {item.show_name || item.name}
                           {:else}
                             {item.name}
                           {/if}
                         </p>
                         <p class="text-sm text-text-muted">
                           {#if item.item_type === "episode"}
+                            {#if item.source === "plex"}Plex · {/if}
                             S{String(item.season_number).padStart(2, "0")}E{String(
                               item.episode_number
                             ).padStart(2, "0")}
@@ -275,7 +291,7 @@
                               - {item.name}
                             {/if}
                           {:else}
-                            Movie
+                            {item.source === "plex" ? "Plex play" : "Movie"}
                           {/if}
                         </p>
                       </div>
@@ -287,7 +303,7 @@
                           <p class="text-xs text-text-muted">{item.runtime}m</p>
                         {/if}
                       </div>
-                    </div>
+                    </button>
                   {/each}
                 </div>
               </div>
@@ -295,9 +311,15 @@
           </div>
         {:else}
           <div class="text-center text-text-muted py-12">
-            <History class="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>No watch history yet.</p>
-            <p class="text-sm mt-1">Mark episodes and movies as watched to build your history.</p>
+            {#if getHistoryMediaTab() === "movies"}
+              <Film class="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>No movie watch history yet.</p>
+              <p class="text-sm mt-1">Movies you mark as watched and new Plex movie plays appear here.</p>
+            {:else}
+              <Tv class="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>No TV watch history yet.</p>
+              <p class="text-sm mt-1">Watched episodes and new Plex TV plays appear here.</p>
+            {/if}
           </div>
         {/if}
       {/if}
@@ -316,10 +338,12 @@
       </div>
     {/if}
   </div>
+  {#if plexHistoryPreview}
+    <PlexHistoryPreview item={plexHistoryPreview} onClose={() => (plexHistoryPreview = null)} />
+  {/if}
 {/if}
 
 <style>
-  .focus-page-bar .focus-tabs { margin-bottom: 0; }
   .focus-statistics-page { max-width: 1440px; }
   .focus-statistics-content { min-width: 0; }
 </style>

@@ -60,6 +60,7 @@ impl GeneralPreferences {
             "awards",
             "statistics",
             "data",
+            "watch-history",
             "settings",
         ]
         .contains(&self.last_page.as_str())
@@ -288,6 +289,10 @@ mod tests {
 
     #[test]
     fn invalid_navigation_and_calendar_preferences_are_rejected() {
+        let mut history = GeneralPreferences::default();
+        history.last_page = "watch-history".into();
+        assert!(history.validate().is_ok());
+
         for field in [
             "startup",
             "close",

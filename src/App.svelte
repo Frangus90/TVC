@@ -21,7 +21,7 @@
   import { isDayDetailOpen } from "./lib/stores/shows.svelte";
   import { isShowDetailOpen } from "./lib/stores/showDetail.svelte";
   import { isMovieDetailOpen } from "./lib/stores/movies.svelte";
-  import { isStatisticsModalOpen, closeStatisticsModal } from "./lib/stores/statistics.svelte";
+  import { isStatisticsModalOpen, closeStatisticsModal, loadWatchHistory } from "./lib/stores/statistics.svelte";
   import { isModalOpen as isDataManagementOpen, closeDataManagement } from "./lib/stores/dataManagement.svelte";
   import { isUpdateModalOpen } from "./lib/stores/updates.svelte";
   import { isWhatsNewOpen } from "./lib/stores/whatsNew.svelte";
@@ -127,7 +127,7 @@
   $effect(() => {
     if (isSettingsOpen()) { setSidebarTab("settings"); closeSettings(); }
     if (isDataManagementOpen()) { setSidebarTab("data"); closeDataManagement(); }
-    if (isStatisticsModalOpen()) { setSidebarTab("statistics"); closeStatisticsModal(); }
+    if (isStatisticsModalOpen()) { setDataTab("statistics"); setSidebarTab("data"); closeStatisticsModal(); }
   });
 
   // Load full pages when first opened, keeping startup light.
@@ -185,6 +185,7 @@
   $effect(() => {
     if (isGeneralLoaded() && !preferencesReady) untrack(() => {
       const startup = getStartupState();
+      if (startup.dataStatistics) setDataTab("statistics");
       if (getSidebarTab() === "calendar") setSidebarTab(startup.page);
       if (getViewMode() === "month" && getCalendarFilter() === "all") {
         setViewMode(startup.viewMode);
@@ -270,11 +271,19 @@
       unlistenScrobble = unlisten;
     });
 
+    let unlistenPlexHistory: UnlistenFn | undefined;
+    listen("plex-watch-history-updated", () => {
+      void loadWatchHistory();
+    }).then((unlisten) => {
+      unlistenPlexHistory = unlisten;
+    });
+
     return () => {
       window.removeEventListener("unhandledrejection", rejected);
       stopClock();
       unsubDayChange();
       unlistenScrobble?.();
+      unlistenPlexHistory?.();
       unlistenNotifications();
       unlistenMigration();
       unlistenLibrarySync();
@@ -313,7 +322,9 @@
               {@const Comp = loadedNav[activeItem.id]}
               {#if activeItem.id === "shows" || activeItem.id === "movies"}
                 <Comp mediaType={activeItem.id} />
-              {:else if activeItem.id === "settings" || activeItem.id === "data" || activeItem.id === "statistics"}
+              {:else if activeItem.id === "watch-history"}
+                <Comp embedded={true} historyOnly={true} />
+              {:else if activeItem.id === "settings" || activeItem.id === "data"}
                 <Comp embedded={true} />
               {:else}
                 <Comp />

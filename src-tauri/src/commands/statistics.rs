@@ -1,6 +1,6 @@
 use crate::db::connection;
 use serde::{Deserialize, Serialize};
-use sqlx::Row;
+use sqlx::{Row, SqlitePool};
 use tauri::AppHandle;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -32,12 +32,15 @@ pub struct ShowCompletion {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WatchHistoryItem {
+    pub source: String,
     pub item_type: String,
     pub id: i64,
+    pub detail_id: Option<i64>,
     pub name: String,
     pub show_name: Option<String>,
     pub season_number: Option<i32>,
     pub episode_number: Option<i32>,
+    pub year: Option<i32>,
     pub watched_at: String,
     pub poster_url: Option<String>,
     pub runtime: Option<i32>,
@@ -276,56 +279,137 @@ pub async fn get_watch_history(
         .await
         .map_err(|e| format!("Database error: {}", e))?;
 
-    let limit_val = limit.unwrap_or(50);
+    get_watch_history_from_pool(&pool, limit.unwrap_or(50)).await
+}
+
+async fn get_watch_history_from_pool(
+    pool: &SqlitePool,
+    limit: i32,
+) -> Result<Vec<WatchHistoryItem>, String> {
+    let limit = limit.clamp(1, 500);
 
     let rows = sqlx::query(
         r#"
-        SELECT
-            'episode' as item_type,
-            e.id,
-            e.name,
-            s.name as show_name,
-            e.season_number,
-            e.episode_number,
-            e.watched_at,
-            s.poster_url,
-            e.runtime
-        FROM episodes e
-        JOIN shows s ON e.show_id = s.id
-        WHERE e.watched = 1 AND e.watched_at IS NOT NULL
-        UNION ALL
-        SELECT
-            'movie' as item_type,
-            m.id,
-            m.title as name,
-            NULL as show_name,
-            NULL as season_number,
-            NULL as episode_number,
-            m.watched_at,
-            m.poster_url,
-            m.runtime
-        FROM movies m
-        WHERE m.watched = 1 AND m.watched_at IS NOT NULL
-        ORDER BY watched_at DESC
-        LIMIT ?
+        WITH history AS (
+            SELECT
+                'library' AS source,
+                'episode' AS item_type,
+                e.id,
+                s.id AS detail_id,
+                e.name,
+                s.name AS show_name,
+                e.season_number,
+                e.episode_number,
+                NULL AS year,
+                e.watched_at,
+                s.poster_url,
+                e.runtime
+            FROM episodes e
+            JOIN shows s ON e.show_id = s.id
+            WHERE e.watched = 1 AND e.watched_at IS NOT NULL
+              AND NOT EXISTS (
+                  SELECT 1 FROM plex_scrobble_log p
+                  WHERE p.matched_entity_type = 'episode'
+                    AND p.matched_entity_id = e.id
+                    AND datetime(p.scrobbled_at) = datetime(e.watched_at)
+              )
+
+            UNION ALL
+
+            SELECT
+                'library' AS source,
+                'movie' AS item_type,
+                m.id,
+                m.id AS detail_id,
+                m.title AS name,
+                NULL AS show_name,
+                NULL AS season_number,
+                NULL AS episode_number,
+                NULL AS year,
+                m.watched_at,
+                m.poster_url,
+                m.runtime
+            FROM movies m
+            WHERE m.watched = 1 AND m.watched_at IS NOT NULL
+              AND NOT EXISTS (
+                  SELECT 1 FROM plex_scrobble_log p
+                  WHERE p.matched_entity_type = 'movie'
+                    AND p.matched_entity_id = m.id
+                    AND datetime(p.scrobbled_at) = datetime(m.watched_at)
+              )
+
+            UNION ALL
+
+            SELECT
+                'plex' AS source,
+                'episode' AS item_type,
+                p.id,
+                s.id AS detail_id,
+                p.raw_title AS name,
+                p.show_name,
+                p.season_number,
+                p.episode_number,
+                p.year,
+                p.scrobbled_at AS watched_at,
+                s.poster_url,
+                e.runtime
+            FROM plex_scrobble_log p
+            LEFT JOIN episodes e
+              ON p.matched_entity_type = 'episode' AND p.matched_entity_id = e.id
+            LEFT JOIN shows s ON e.show_id = s.id
+            WHERE p.event_type = 'media.scrobble' AND p.media_type = 'episode'
+
+            UNION ALL
+
+            SELECT
+                'plex' AS source,
+                'movie' AS item_type,
+                p.id,
+                m.id AS detail_id,
+                COALESCE(m.title, p.raw_title) AS name,
+                NULL AS show_name,
+                NULL AS season_number,
+                NULL AS episode_number,
+                p.year,
+                p.scrobbled_at AS watched_at,
+                m.poster_url,
+                m.runtime
+            FROM plex_scrobble_log p
+            LEFT JOIN movies m
+              ON p.matched_entity_type = 'movie' AND p.matched_entity_id = m.id
+            WHERE p.event_type = 'media.scrobble' AND p.media_type = 'movie'
+        ), ranked AS (
+            SELECT history.*,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY item_type
+                       ORDER BY julianday(watched_at) DESC, id DESC
+                   ) AS item_rank
+            FROM history
+        )
+        SELECT * FROM ranked
+        WHERE item_rank <= ?
+        ORDER BY julianday(watched_at) DESC, id DESC
         "#,
     )
-    .bind(limit_val)
-    .fetch_all(&pool)
+    .bind(limit)
+    .fetch_all(pool)
     .await
     .map_err(|e| format!("Failed to get watch history: {}", e))?;
 
     let history: Vec<WatchHistoryItem> = rows
         .into_iter()
         .map(|row| WatchHistoryItem {
+            source: row.get("source"),
             item_type: row.get("item_type"),
             id: row.get("id"),
+            detail_id: row.get("detail_id"),
             name: row
                 .get::<Option<String>, _>("name")
                 .unwrap_or_else(|| "Unknown".to_string()),
             show_name: row.get("show_name"),
             season_number: row.get("season_number"),
             episode_number: row.get("episode_number"),
+            year: row.get("year"),
             watched_at: row.get("watched_at"),
             poster_url: row.get("poster_url"),
             runtime: row.get("runtime"),
@@ -333,4 +417,86 @@ pub async fn get_watch_history(
         .collect();
 
     Ok(history)
+}
+
+#[cfg(test)]
+mod watch_history_tests {
+    use super::get_watch_history_from_pool;
+    use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
+
+    async fn fixture() -> SqlitePool {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::raw_sql(
+            "CREATE TABLE shows(id INTEGER PRIMARY KEY, name TEXT, poster_url TEXT);
+             CREATE TABLE episodes(id INTEGER PRIMARY KEY, show_id INTEGER, name TEXT,
+                 season_number INTEGER, episode_number INTEGER, watched INTEGER,
+                 watched_at TEXT, runtime INTEGER);
+             CREATE TABLE movies(id INTEGER PRIMARY KEY, title TEXT, watched INTEGER,
+                 watched_at TEXT, poster_url TEXT, runtime INTEGER);
+             CREATE TABLE plex_scrobble_log(id INTEGER PRIMARY KEY, event_type TEXT,
+                 media_type TEXT, raw_title TEXT, show_name TEXT, season_number INTEGER,
+                 episode_number INTEGER, year INTEGER, matched_entity_type TEXT,
+                 matched_entity_id INTEGER, scrobbled_at TEXT);
+             INSERT INTO shows VALUES (10, 'Tracked Show', 'show-poster'), (20, 'Other Show', NULL);
+             INSERT INTO episodes VALUES (101, 10, 'First Episode', 1, 1, 1, '2026-11-01 10:00:00', 42);
+             INSERT INTO episodes VALUES (102, 10, 'Second Episode', 1, 2, 1, '2026-11-02 10:00:00', 43);
+             INSERT INTO movies VALUES (201, 'Tracked Movie', 1, '2026-11-03 10:00:00', 'movie-poster', 120);
+             INSERT INTO plex_scrobble_log VALUES
+                 (1, 'media.scrobble', 'episode', 'First Episode', 'Tracked Show', 1, 1, 2020, 'episode', 101, '2026-11-01 10:00:00'),
+                 (2, 'media.scrobble', 'episode', 'Untracked Episode', 'Outside TVC', 2, 5, 2024, NULL, NULL, '2026-11-04 10:00:00'),
+                 (3, 'media.scrobble', 'movie', 'Tracked Movie', NULL, NULL, NULL, 2021, 'movie', 201, '2026-11-03 10:00:00'),
+                 (4, 'media.scrobble', 'movie', 'Untracked Movie', NULL, NULL, NULL, 1987, NULL, NULL, '2026-11-05 10:00:00'),
+                 (5, 'media.scrobble', 'movie', 'Tracked Movie', NULL, NULL, NULL, 2021, 'movie', 201, '2026-11-06 10:00:00');",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        pool
+    }
+
+    #[tokio::test]
+    async fn history_includes_unmatched_plex_plays_and_deduplicates_the_initial_match() {
+        let pool = fixture().await;
+        let history = get_watch_history_from_pool(&pool, 50).await.unwrap();
+
+        assert_eq!(history.len(), 6);
+        let unmatched_movie = history
+            .iter()
+            .find(|item| item.name == "Untracked Movie")
+            .unwrap();
+        assert_eq!(unmatched_movie.source, "plex");
+        assert_eq!(unmatched_movie.item_type, "movie");
+        assert_eq!(unmatched_movie.detail_id, None);
+        assert_eq!(unmatched_movie.year, Some(1987));
+
+        let unmatched_episode = history
+            .iter()
+            .find(|item| item.name == "Untracked Episode")
+            .unwrap();
+        assert_eq!(unmatched_episode.show_name.as_deref(), Some("Outside TVC"));
+        assert_eq!(unmatched_episode.detail_id, None);
+
+        let first_episode = history
+            .iter()
+            .find(|item| item.name == "First Episode")
+            .unwrap();
+        assert_eq!(first_episode.source, "plex");
+        assert_eq!(first_episode.detail_id, Some(10));
+        assert_eq!(history.iter().filter(|item| item.name == "Tracked Movie").count(), 2,
+            "the matching initial play replaces the watched-state row, while a later rewatch remains");
+    }
+
+    #[tokio::test]
+    async fn history_limit_is_independent_for_tv_and_movies_and_results_are_recent_first() {
+        let pool = fixture().await;
+        let history = get_watch_history_from_pool(&pool, 1).await.unwrap();
+
+        assert_eq!(history.len(), 2);
+        assert_eq!(history[0].name, "Tracked Movie");
+        assert_eq!(history[1].name, "Untracked Episode");
+    }
 }

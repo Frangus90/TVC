@@ -91,9 +91,12 @@ export async function setWindowsStartup(enabled: boolean): Promise<void> {
   startup = await invoke<WindowsStartup>("set_start_with_windows", { enabled });
 }
 
-export function getStartupState(): { page: NavId; viewMode: CalendarView; filter: CalendarFilter } {
+export function getStartupState(): { page: NavId; dataStatistics: boolean; viewMode: CalendarView; filter: CalendarFilter } {
+  const savedPage = preferences.startup_page === "last_used" ? preferences.last_page : preferences.startup_page;
+  const dataStatistics = (savedPage as string) === "statistics";
   return {
-    page: preferences.startup_page === "last_used" ? preferences.last_page : preferences.startup_page,
+    page: dataStatistics ? "data" : savedPage,
+    dataStatistics,
     viewMode: preferences.remember_calendar ? preferences.calendar_view : "month",
     filter: preferences.remember_calendar ? preferences.calendar_filter : "all",
   };

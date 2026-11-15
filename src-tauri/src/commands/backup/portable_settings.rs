@@ -139,6 +139,7 @@ impl PortableSettings {
                 "awards",
                 "statistics",
                 "data",
+                "watch-history",
                 "settings",
             ]
             .contains(&general.last_page.as_str())

@@ -77,10 +77,20 @@ test('startup restoration uses saved page and calendar choices only when request
     ? { ...defaults, last_page: 'tiers', calendar_view: 'week', calendar_filter: 'movies' }
     : args.preferences);
   await api.loadGeneralPreferences();
-  assert.deepEqual(JSON.parse(JSON.stringify(api.getStartupState())), { page: 'calendar', viewMode: 'month', filter: 'all' });
+  assert.deepEqual(JSON.parse(JSON.stringify(api.getStartupState())), { page: 'calendar', dataStatistics: false, viewMode: 'month', filter: 'all' });
   await api.updateGeneralPreferences({ startup_page: 'last_used', remember_calendar: true });
-  assert.deepEqual(JSON.parse(JSON.stringify(api.getStartupState())), { page: 'tiers', viewMode: 'week', filter: 'movies' });
+  assert.deepEqual(JSON.parse(JSON.stringify(api.getStartupState())), { page: 'tiers', dataStatistics: false, viewMode: 'week', filter: 'movies' });
   await api.rememberCalendarState('agenda', 'shows');
   assert.equal(api.getStartupState().viewMode, 'agenda');
   assert.equal(api.getStartupState().filter, 'shows');
+});
+
+test('older saved Statistics navigation opens the Statistics section inside Data/Stats', async () => {
+  const { api } = load(async (command, args) => command === 'get_general_preferences'
+    ? { ...defaults, startup_page: 'last_used', last_page: 'statistics' }
+    : args.preferences);
+  await api.loadGeneralPreferences();
+  assert.deepEqual(JSON.parse(JSON.stringify(api.getStartupState())), {
+    page: 'data', dataStatistics: true, viewMode: 'month', filter: 'all',
+  });
 });

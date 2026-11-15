@@ -2,6 +2,19 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.15.3] - Unreleased
+
+### Navigation
+
+- Statistics now lives inside **Data/Stats**. **Watch History** has its own sidebar tab for TV shows and movies.
+- Your last-used page setting still opens the right place if it previously pointed to Statistics.
+
+### Watch History
+
+- Watch History now includes new Plex plays, even when a movie or show has not been added to TVC.
+- Browse TV episodes and movies in separate tabs. Saved titles open their usual details; other Plex plays open a read-only preview.
+- New plays appear while TVC is open. Plex must be set up to send scrobbles to TVC; older plays are not imported.
+
 ## [0.15.2] - 09.11.2026
 
 ### Racing

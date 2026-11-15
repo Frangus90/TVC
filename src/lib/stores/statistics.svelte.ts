@@ -27,12 +27,15 @@ export interface ShowCompletion {
 }
 
 export interface WatchHistoryItem {
+  source: "library" | "plex";
   item_type: "episode" | "movie";
   id: number;
+  detail_id: number | null;
   name: string;
   show_name: string | null;
   season_number: number | null;
   episode_number: number | null;
+  year: number | null;
   watched_at: string;
   poster_url: string | null;
   runtime: number | null;
@@ -44,8 +47,10 @@ let statistics = $state<WatchStatistics | null>(null);
 let periodStats = $state<PeriodStats[]>([]);
 let completionRates = $state<ShowCompletion[]>([]);
 let watchHistory = $state<WatchHistoryItem[]>([]);
+let watchHistoryRequest = 0;
+let watchHistoryLoading = $state(false);
 let loading = $state(false);
-let activeTab = $state<"overview" | "history">("overview");
+let historyMediaTab = $state<"tv" | "movies">("tv");
 
 // Getters
 export function isStatisticsModalOpen() {
@@ -72,8 +77,8 @@ export function isLoading() {
   return loading;
 }
 
-export function getActiveTab() {
-  return activeTab;
+export function isWatchHistoryLoading() {
+  return watchHistoryLoading;
 }
 
 // Actions
@@ -86,8 +91,12 @@ export function closeStatisticsModal() {
   statisticsModalOpen = false;
 }
 
-export function setActiveTab(tab: "overview" | "history") {
-  activeTab = tab;
+export function getHistoryMediaTab() {
+  return historyMediaTab;
+}
+
+export function setHistoryMediaTab(tab: "tv" | "movies") {
+  historyMediaTab = tab;
 }
 
 export async function loadAllStatistics(): Promise<void> {
@@ -98,6 +107,15 @@ export async function loadAllStatistics(): Promise<void> {
       loadCompletionRates(),
       loadWatchHistory(),
     ]);
+  } finally {
+    loading = false;
+  }
+}
+
+export async function loadStatisticsOverview(): Promise<void> {
+  loading = true;
+  try {
+    await Promise.all([loadWatchStatistics(), loadCompletionRates()]);
   } finally {
     loading = false;
   }
@@ -139,11 +157,18 @@ export async function loadCompletionRates(): Promise<void> {
 }
 
 export async function loadWatchHistory(limit?: number): Promise<void> {
+  const request = ++watchHistoryRequest;
+  if (watchHistory.length === 0) watchHistoryLoading = true;
   try {
-    watchHistory = await invoke<WatchHistoryItem[]>("get_watch_history", { limit });
+    const result = await invoke<WatchHistoryItem[]>("get_watch_history", { limit });
+    if (request !== watchHistoryRequest) return;
+    watchHistory = result;
   } catch (error) {
+    if (request !== watchHistoryRequest) return;
     logger.error("Failed to load watch history:", error);
     watchHistory = [];
+  } finally {
+    if (request === watchHistoryRequest) watchHistoryLoading = false;
   }
 }
 

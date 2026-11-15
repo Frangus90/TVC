@@ -62,6 +62,7 @@ pub async fn handle_webhook(
                 Some(s) => s.clone(),
                 None => {
                     log_scrobble(pool, &payload, None).await;
+                    emit_watch_history_updated(&state.app_handle);
                     return StatusCode::OK;
                 }
             };
@@ -105,6 +106,7 @@ pub async fn handle_webhook(
                     .map(|r| (r.entity_type.clone(), r.entity_id, r.method.clone())),
             )
             .await;
+            emit_watch_history_updated(&state.app_handle);
         }
         "movie" => {
             let match_result = match_movie(
@@ -153,6 +155,7 @@ pub async fn handle_webhook(
                     .map(|r| (r.entity_type.clone(), r.entity_id, r.method.clone())),
             )
             .await;
+            emit_watch_history_updated(&state.app_handle);
         }
         _ => {
             // Ignore unknown media types
@@ -160,6 +163,10 @@ pub async fn handle_webhook(
     }
 
     StatusCode::OK
+}
+
+fn emit_watch_history_updated(app_handle: &AppHandle) {
+    let _ = app_handle.emit("plex-watch-history-updated", ());
 }
 
 /// Parse structured multipart bytes; binary thumbnail fields never pass through UTF-8 conversion.
