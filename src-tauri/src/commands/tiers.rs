@@ -719,7 +719,7 @@ pub async fn add_show_tier_only(
             overview = excluded.overview,
             network = excluded.network,
             runtime = excluded.runtime,
-            tier_id = excluded.tier_id
+            tier_id = COALESCE(excluded.tier_id, shows.tier_id)
         "#,
     )
     .bind(show_details.id)
@@ -806,7 +806,7 @@ pub async fn add_movie_tier_only(
             genres = excluded.genres,
             vote_average = excluded.vote_average,
             last_synced = datetime('now'),
-            tier_id = excluded.tier_id
+            tier_id = COALESCE(excluded.tier_id, movies.tier_id)
         "#,
     )
     .bind(movie_details.id)

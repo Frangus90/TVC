@@ -9,25 +9,34 @@
     getTierListShows,
     getTierListMovies,
     getTierSearchModalMode,
+    getPlexHistoryMatchRequest,
     addShowTierOnly,
     addMovieTierOnly,
     addManualShow,
     addManualMovie,
     removeShowFromTierList,
     removeMovieFromTierList,
+    type PlexHistoryMatchRequest,
   } from "../stores/tiers.svelte";
+  import { matchPlexHistoryItem } from "../stores/statistics.svelte";
   import {
     searchShows,
     getSearchResults,
     isSearchLoading,
+    getTrackedShows,
+    getArchivedShows,
     type SearchResult,
   } from "../stores/shows.svelte";
   import {
     searchMovies,
     getMovieSearchResults,
     isMovieSearchLoading,
+    getTrackedMovies,
+    getArchivedMovies,
+    openMovieDetail,
     type MovieSearchResult,
   } from "../stores/movies.svelte";
+  import { openShowDetail } from "../stores/showDetail.svelte";
   import { config } from "../config";
   import { logger } from "../utils/logger";
 
@@ -36,6 +45,7 @@
   let searchInput: HTMLInputElement | undefined = $state();
   let debounceTimer: ReturnType<typeof setTimeout> | null = $state(null);
   let searchMode = $state<SearchMode>(getTierSearchModalMode());
+  let plexHistoryMatch = $state<PlexHistoryMatchRequest | null>(null);
   let query = $state("");
   let addingIds = $state(new Set<string>());
   let addedIds = $state(new Set<string>());
@@ -59,6 +69,18 @@
     return addedIds.has(`movie-${id}`) || getTierListMovies().some(m => m.id === id);
   }
 
+  function isShowSaved(id: number): boolean {
+    return getTrackedShows().some(show => show.id === id)
+      || getArchivedShows().some(show => show.id === id)
+      || getTierListShows().some(show => show.id === id);
+  }
+
+  function isMovieSaved(id: number): boolean {
+    return getTrackedMovies().some(movie => movie.id === id)
+      || getArchivedMovies().some(movie => movie.id === id)
+      || getTierListMovies().some(movie => movie.id === id);
+  }
+
   // Auto-focus when modal opens
   $effect(() => {
     if (isTierSearchModalOpen() && searchInput) {
@@ -69,15 +91,24 @@
   // Reset state when modal opens
   $effect(() => {
     if (isTierSearchModalOpen()) {
-      searchMode = getTierSearchModalMode();
-      manualType = getTierSearchModalMode() === "movies" ? "movie" : "show";
-      query = "";
+      const request = getPlexHistoryMatchRequest();
+      const initialMode = getTierSearchModalMode();
+      const initialQuery = request?.query ?? "";
+      searchMode = initialMode;
+      plexHistoryMatch = request;
+      manualType = initialMode === "movies" ? "movie" : "show";
+      query = initialQuery;
       addingIds = new Set();
       addedIds = new Set();
       selectedTierId = null;
       manualTitle = "";
       manualPosterUrl = "";
       addError = null;
+
+      if (initialQuery.trim()) {
+        if (initialMode === "shows") void searchShows(initialQuery);
+        else if (initialMode === "movies") void searchMovies(initialQuery);
+      }
     }
   });
 
@@ -131,16 +162,31 @@
     return `${prefix}: ${msg}`;
   }
 
+  async function openHistoryTitle(kind: "show" | "movie", id: number) {
+    const request = plexHistoryMatch;
+    if (!request) return;
+
+    await matchPlexHistoryItem(request.historyId, request.itemType, id);
+    closeTierSearchModal();
+    if (kind === "show") await openShowDetail(id);
+    else await openMovieDetail(id);
+  }
+
   async function handleAddShow(show: SearchResult) {
     const id = getShowId(show);
     const key = `show-${id}`;
-    if (!id || addingIds.has(key) || isShowInTierList(id)) return;
+    if (!id || addingIds.has(key) || (!plexHistoryMatch && isShowInTierList(id))) return;
 
     addError = null;
     addingIds = new Set(addingIds).add(key);
     try {
-      await addShowTierOnly(id, selectedTierId);
-      addedIds = new Set(addedIds).add(key);
+      if (plexHistoryMatch) {
+        if (!isShowSaved(id)) await addShowTierOnly(id, null);
+        await openHistoryTitle("show", id);
+      } else {
+        await addShowTierOnly(id, selectedTierId);
+        addedIds = new Set(addedIds).add(key);
+      }
     } catch (err) {
       logger.error("Failed to add show to tier list", err);
       addError = formatErr(`Failed to add "${show.name ?? "show"}"`, err);
@@ -195,13 +241,18 @@
 
   async function handleAddMovie(movie: MovieSearchResult) {
     const key = `movie-${movie.id}`;
-    if (addingIds.has(key) || isMovieInTierList(movie.id)) return;
+    if (addingIds.has(key) || (!plexHistoryMatch && isMovieInTierList(movie.id))) return;
 
     addError = null;
     addingIds = new Set(addingIds).add(key);
     try {
-      await addMovieTierOnly(movie.id, selectedTierId);
-      addedIds = new Set(addedIds).add(key);
+      if (plexHistoryMatch) {
+        if (!isMovieSaved(movie.id)) await addMovieTierOnly(movie.id, null);
+        await openHistoryTitle("movie", movie.id);
+      } else {
+        await addMovieTierOnly(movie.id, selectedTierId);
+        addedIds = new Set(addedIds).add(key);
+      }
     } catch (err) {
       logger.error("Failed to add movie to tier list", err);
       addError = formatErr(`Failed to add "${movie.title}"`, err);
@@ -255,14 +306,32 @@
   <!-- Modal -->
   <div
     transition:scale={{ duration: 200, start: 0.95, opacity: 0 }}
-    role="dialog" aria-modal="true" aria-label="Add a tier-list title" use:modalFocus={closeTierSearchModal}
+    role="dialog" aria-modal="true" aria-label={plexHistoryMatch ? "Match Plex history title" : "Add a tier-list title"} use:modalFocus={closeTierSearchModal}
     class="focus-dialog fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-5xl z-50 bg-surface rounded-xl border border-border shadow-2xl flex flex-col"
     style="max-height: 700px;"
   >
     <!-- Header -->
     <div class="p-4 border-b border-border">
-      <!-- Mode tabs -->
-      <div class="flex items-center gap-2 mb-3">
+      {#if plexHistoryMatch}
+        <div class="flex items-start justify-between gap-4 mb-3">
+          <div>
+            <h2 class="text-lg font-semibold text-text">Find the matching title</h2>
+            <p class="text-sm text-text-muted mt-1">
+              Choose the right TMDB result. TVC will add it to the tier list only, then open its full details.
+            </p>
+          </div>
+          <button
+            type="button"
+            onclick={closeTierSearchModal}
+            class="p-1.5 rounded-lg hover:bg-surface-hover transition-colors"
+            aria-label="Close"
+          >
+            <X class="w-5 h-5 text-text-muted" />
+          </button>
+        </div>
+      {:else}
+        <!-- Mode tabs -->
+        <div class="flex items-center gap-2 mb-3">
         <div class="flex gap-1 p-1 bg-background rounded-lg">
           <button
             type="button"
@@ -318,6 +387,7 @@
           <X class="w-5 h-5 text-text-muted" />
         </button>
       </div>
+      {/if}
 
       <!-- Search input (for shows/movies modes) -->
       {#if searchMode !== "manual"}
@@ -325,7 +395,7 @@
           <Search class="w-5 h-5 text-text-muted" />
           <input
             type="text"
-            placeholder="Search for a {searchMode === 'shows' ? 'TV show' : 'movie'} to add to tier list..."
+            placeholder={plexHistoryMatch ? "Confirm the title or adjust your search…" : `Search for a ${searchMode === "shows" ? "TV show" : "movie"} to add to tier list...`}
             class="flex-1 bg-transparent text-text text-lg outline-none placeholder:text-text-muted"
             value={query}
             oninput={handleInput}
@@ -426,7 +496,9 @@
           {#if query.trim()}
             <div class="py-12 text-center">
               <p class="text-text-muted mb-2">No results found for "{query}"</p>
-              <p class="text-xs text-text-muted">Try a different search term, or use Manual to add custom entries</p>
+              <p class="text-xs text-text-muted">
+                {plexHistoryMatch ? "Try a different search term to find the matching show." : "Try a different search term, or use Manual to add custom entries"}
+              </p>
             </div>
           {:else}
             <div class="py-12 text-center text-text-muted">
@@ -464,6 +536,15 @@
                   <button disabled class="flex-shrink-0 p-2 bg-accent text-white rounded-lg opacity-70">
                     <Loader2 class="w-5 h-5 animate-spin" />
                   </button>
+                {:else if plexHistoryMatch}
+                  <button
+                    type="button"
+                    onclick={() => handleAddShow(show)}
+                    class="flex-shrink-0 px-3 py-2 bg-accent hover:bg-accent/90 text-white rounded-lg transition-colors"
+                    aria-label={isShowSaved(showId) ? "Open show details" : "Add show and open details"}
+                  >
+                    {isShowSaved(showId) ? "Open details" : "Add & open details"}
+                  </button>
                 {:else if isShowInTierList(showId)}
                   <button
                     onclick={() => handleRemoveShow(showId)}
@@ -496,7 +577,9 @@
           {#if query.trim()}
             <div class="py-12 text-center">
               <p class="text-text-muted mb-2">No results found for "{query}"</p>
-              <p class="text-xs text-text-muted">Try a different search term, or use Manual to add custom entries</p>
+              <p class="text-xs text-text-muted">
+                {plexHistoryMatch ? "Try a different search term to find the matching movie." : "Try a different search term, or use Manual to add custom entries"}
+              </p>
             </div>
           {:else}
             <div class="py-12 text-center text-text-muted">
@@ -533,6 +616,15 @@
                   <button disabled class="flex-shrink-0 p-2 bg-accent text-white rounded-lg opacity-70">
                     <Loader2 class="w-5 h-5 animate-spin" />
                   </button>
+                {:else if plexHistoryMatch}
+                  <button
+                    type="button"
+                    onclick={() => handleAddMovie(movie)}
+                    class="flex-shrink-0 px-3 py-2 bg-accent hover:bg-accent/90 text-white rounded-lg transition-colors"
+                    aria-label={isMovieSaved(movie.id) ? "Open movie details" : "Add movie and open details"}
+                  >
+                    {isMovieSaved(movie.id) ? "Open details" : "Add & open details"}
+                  </button>
                 {:else if isMovieInTierList(movie.id)}
                   <button
                     onclick={() => handleRemoveMovie(movie.id)}
@@ -565,7 +657,7 @@
         onclick={closeTierSearchModal}
         class="w-full py-2.5 text-text-muted hover:bg-surface-hover rounded-lg transition-colors"
       >
-        Close
+        {plexHistoryMatch ? "Cancel" : "Close"}
       </button>
     </div>
   </div>

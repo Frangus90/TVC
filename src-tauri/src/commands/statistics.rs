@@ -282,6 +282,70 @@ pub async fn get_watch_history(
     get_watch_history_from_pool(&pool, limit.unwrap_or(50)).await
 }
 
+#[tauri::command]
+pub async fn resolve_plex_history_item(
+    app: AppHandle,
+    history_id: i64,
+    media_type: String,
+    entity_id: i64,
+) -> Result<(), String> {
+    crate::commands::validation::validate_id(history_id)?;
+    crate::commands::validation::validate_id(entity_id)?;
+
+    let pool = connection::get_pool(&app)
+        .await
+        .map_err(|e| format!("Database error: {e}"))?;
+    resolve_plex_history_item_in_pool(&pool, history_id, &media_type, entity_id).await
+}
+
+async fn resolve_plex_history_item_in_pool(
+    pool: &SqlitePool,
+    history_id: i64,
+    media_type: &str,
+    entity_id: i64,
+) -> Result<(), String> {
+    let (entity_type, target_exists) = match media_type {
+        "episode" => (
+            "show",
+            sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM shows WHERE id = ?)")
+                .bind(entity_id)
+                .fetch_one(pool)
+                .await
+                .map_err(|e| format!("Failed to check show: {e}"))?,
+        ),
+        "movie" => (
+            "movie",
+            sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM movies WHERE id = ?)")
+                .bind(entity_id)
+                .fetch_one(pool)
+                .await
+                .map_err(|e| format!("Failed to check movie: {e}"))?,
+        ),
+        _ => return Err("Unsupported Plex history media type".into()),
+    };
+
+    if !target_exists {
+        return Err("The selected title is not saved in TVC".into());
+    }
+
+    let result = sqlx::query(
+        "UPDATE plex_scrobble_log SET matched_entity_type = ?, matched_entity_id = ?, match_method = 'manual' WHERE id = ? AND event_type = 'media.scrobble' AND media_type = ? AND matched_entity_id IS NULL",
+    )
+    .bind(entity_type)
+    .bind(entity_id)
+    .bind(history_id)
+    .bind(media_type)
+    .execute(pool)
+    .await
+    .map_err(|e| format!("Failed to link Plex history item: {e}"))?;
+
+    if result.rows_affected() == 0 {
+        return Err("The Plex history item was not found or is already linked".into());
+    }
+
+    Ok(())
+}
+
 async fn get_watch_history_from_pool(
     pool: &SqlitePool,
     limit: i32,
@@ -309,8 +373,10 @@ async fn get_watch_history_from_pool(
             WHERE e.watched = 1 AND e.watched_at IS NOT NULL
               AND NOT EXISTS (
                   SELECT 1 FROM plex_scrobble_log p
-                  WHERE p.matched_entity_type = 'episode'
-                    AND p.matched_entity_id = e.id
+                  WHERE (
+                    (p.matched_entity_type = 'episode' AND p.matched_entity_id = e.id)
+                    OR (p.matched_entity_type = 'show' AND p.matched_entity_id = s.id)
+                  )
                     AND datetime(p.scrobbled_at) = datetime(e.watched_at)
               )
 
@@ -346,7 +412,7 @@ async fn get_watch_history_from_pool(
                 p.id,
                 s.id AS detail_id,
                 p.raw_title AS name,
-                p.show_name,
+                COALESCE(p.show_name, s.name) AS show_name,
                 p.season_number,
                 p.episode_number,
                 p.year,
@@ -356,7 +422,9 @@ async fn get_watch_history_from_pool(
             FROM plex_scrobble_log p
             LEFT JOIN episodes e
               ON p.matched_entity_type = 'episode' AND p.matched_entity_id = e.id
-            LEFT JOIN shows s ON e.show_id = s.id
+            LEFT JOIN shows s
+              ON (p.matched_entity_type = 'show' AND p.matched_entity_id = s.id)
+              OR (p.matched_entity_type = 'episode' AND e.show_id = s.id)
             WHERE p.event_type = 'media.scrobble' AND p.media_type = 'episode'
 
             UNION ALL
@@ -421,7 +489,7 @@ async fn get_watch_history_from_pool(
 
 #[cfg(test)]
 mod watch_history_tests {
-    use super::get_watch_history_from_pool;
+    use super::{get_watch_history_from_pool, resolve_plex_history_item_in_pool};
     use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
 
     async fn fixture() -> SqlitePool {
@@ -440,17 +508,20 @@ mod watch_history_tests {
              CREATE TABLE plex_scrobble_log(id INTEGER PRIMARY KEY, event_type TEXT,
                  media_type TEXT, raw_title TEXT, show_name TEXT, season_number INTEGER,
                  episode_number INTEGER, year INTEGER, matched_entity_type TEXT,
-                 matched_entity_id INTEGER, scrobbled_at TEXT);
+                 matched_entity_id INTEGER, match_method TEXT, scrobbled_at TEXT);
              INSERT INTO shows VALUES (10, 'Tracked Show', 'show-poster'), (20, 'Other Show', NULL);
              INSERT INTO episodes VALUES (101, 10, 'First Episode', 1, 1, 1, '2026-11-01 10:00:00', 42);
              INSERT INTO episodes VALUES (102, 10, 'Second Episode', 1, 2, 1, '2026-11-02 10:00:00', 43);
              INSERT INTO movies VALUES (201, 'Tracked Movie', 1, '2026-11-03 10:00:00', 'movie-poster', 120);
-             INSERT INTO plex_scrobble_log VALUES
-                 (1, 'media.scrobble', 'episode', 'First Episode', 'Tracked Show', 1, 1, 2020, 'episode', 101, '2026-11-01 10:00:00'),
-                 (2, 'media.scrobble', 'episode', 'Untracked Episode', 'Outside TVC', 2, 5, 2024, NULL, NULL, '2026-11-04 10:00:00'),
-                 (3, 'media.scrobble', 'movie', 'Tracked Movie', NULL, NULL, NULL, 2021, 'movie', 201, '2026-11-03 10:00:00'),
-                 (4, 'media.scrobble', 'movie', 'Untracked Movie', NULL, NULL, NULL, 1987, NULL, NULL, '2026-11-05 10:00:00'),
-                 (5, 'media.scrobble', 'movie', 'Tracked Movie', NULL, NULL, NULL, 2021, 'movie', 201, '2026-11-06 10:00:00');",
+             INSERT INTO movies VALUES (202, 'Untracked Movie', 0, NULL, 'new-movie-poster', 95);
+             INSERT INTO plex_scrobble_log
+                 (id,event_type,media_type,raw_title,show_name,season_number,episode_number,year,matched_entity_type,matched_entity_id,match_method,scrobbled_at)
+             VALUES
+                 (1, 'media.scrobble', 'episode', 'First Episode', 'Tracked Show', 1, 1, 2020, 'episode', 101, 'title', '2026-11-01 10:00:00'),
+                 (2, 'media.scrobble', 'episode', 'Untracked Episode', 'Outside TVC', 2, 5, 2024, NULL, NULL, NULL, '2026-11-04 10:00:00'),
+                 (3, 'media.scrobble', 'movie', 'Tracked Movie', NULL, NULL, NULL, 2021, 'movie', 201, 'title', '2026-11-03 10:00:00'),
+                 (4, 'media.scrobble', 'movie', 'Untracked Movie', NULL, NULL, NULL, 1987, NULL, NULL, NULL, '2026-11-05 10:00:00'),
+                 (5, 'media.scrobble', 'movie', 'Tracked Movie', NULL, NULL, NULL, 2021, 'movie', 201, 'title', '2026-11-06 10:00:00');",
         )
         .execute(&pool)
         .await
@@ -498,5 +569,59 @@ mod watch_history_tests {
         assert_eq!(history.len(), 2);
         assert_eq!(history[0].name, "Tracked Movie");
         assert_eq!(history[1].name, "Untracked Episode");
+    }
+
+    #[tokio::test]
+    async fn unmatched_plex_plays_can_be_linked_to_tier_only_titles_for_details() {
+        let pool = fixture().await;
+        sqlx::query("INSERT INTO episodes VALUES (303, 20, 'New Episode', 2, 5, 1, '2026-11-04 10:00:00', 42)")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        resolve_plex_history_item_in_pool(&pool, 2, "episode", 20)
+            .await
+            .unwrap();
+        resolve_plex_history_item_in_pool(&pool, 4, "movie", 202)
+            .await
+            .unwrap();
+
+        let history = get_watch_history_from_pool(&pool, 50).await.unwrap();
+        let episode = history
+            .iter()
+            .find(|item| item.name == "Untracked Episode")
+            .unwrap();
+        assert_eq!(episode.detail_id, Some(20));
+        assert_eq!(episode.show_name.as_deref(), Some("Outside TVC"));
+        assert_eq!(
+            history
+                .iter()
+                .filter(|item| item.watched_at == "2026-11-04 10:00:00")
+                .count(),
+            1,
+            "linking the Plex play suppresses its duplicate watched episode"
+        );
+
+        let movie = history
+            .iter()
+            .find(|item| item.name == "Untracked Movie")
+            .unwrap();
+        assert_eq!(movie.detail_id, Some(202));
+        assert_eq!(movie.poster_url.as_deref(), Some("new-movie-poster"));
+    }
+
+    #[tokio::test]
+    async fn plex_history_link_rejects_wrong_media_and_missing_targets() {
+        let pool = fixture().await;
+
+        assert!(resolve_plex_history_item_in_pool(&pool, 2, "movie", 202)
+            .await
+            .is_err());
+        assert!(resolve_plex_history_item_in_pool(&pool, 2, "episode", 999)
+            .await
+            .is_err());
+        assert!(resolve_plex_history_item_in_pool(&pool, 2, "unknown", 20)
+            .await
+            .is_err());
     }
 }

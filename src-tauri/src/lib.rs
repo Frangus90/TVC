@@ -330,6 +330,7 @@ pub fn run() {
             commands::statistics::get_episodes_watched_by_period,
             commands::statistics::get_completion_rates,
             commands::statistics::get_watch_history,
+            commands::statistics::resolve_plex_history_item,
             // Duplicates commands
             commands::duplicates::find_duplicates,
             commands::duplicates::merge_duplicates,

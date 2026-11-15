@@ -279,6 +279,8 @@ pub(crate) async fn merge_in_pool(
         .map_err(|e| e.to_string())?;
     sqlx::query("UPDATE title_mappings SET tvc_id = ?, tvc_title = (SELECT name FROM shows WHERE id = ?) WHERE media_type = 'show' AND tvc_id = ?")
         .bind(keep_id).bind(keep_id).bind(merge_id).execute(&mut *tx).await.map_err(|e| e.to_string())?;
+    sqlx::query("UPDATE plex_scrobble_log SET matched_entity_id = ? WHERE matched_entity_type = 'show' AND matched_entity_id = ?")
+        .bind(keep_id).bind(merge_id).execute(&mut *tx).await.map_err(|e| e.to_string())?;
     sqlx::query("UPDATE shows SET rating = COALESCE(rating, (SELECT rating FROM shows WHERE id = ?)) WHERE id = ?")
         .bind(merge_id).bind(keep_id).execute(&mut *tx).await.map_err(|e| e.to_string())?;
     sqlx::query(

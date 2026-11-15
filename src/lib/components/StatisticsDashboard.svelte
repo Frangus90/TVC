@@ -31,14 +31,13 @@
   } from "../stores/statistics.svelte";
   import { openMovieDetail } from "../stores/movies.svelte";
   import { openShowDetail } from "../stores/showDetail.svelte";
-  import PlexHistoryPreview from "./PlexHistoryPreview.svelte";
+  import { openTierSearchModal } from "../stores/tiers.svelte";
 
   let { embedded = false, historyOnly = false, showHeading = true }: {
     embedded?: boolean;
     historyOnly?: boolean;
     showHeading?: boolean;
   } = $props();
-  let plexHistoryPreview = $state<WatchHistoryItem | null>(null);
 
   onMount(() => {
     if (!embedded) return;
@@ -47,10 +46,6 @@
   });
 
   function handleKeyDown(event: KeyboardEvent) {
-    if (plexHistoryPreview && event.key === "Escape") {
-      plexHistoryPreview = null;
-      return;
-    }
     if (!embedded && isStatisticsModalOpen() && event.key === "Escape") {
       closeStatisticsModal();
     }
@@ -62,7 +57,13 @@
       else void openShowDetail(item.detail_id);
       return;
     }
-    plexHistoryPreview = item;
+    const title = item.item_type === "episode" ? item.show_name || item.name : item.name;
+    const query = item.year ? `${title} ${item.year}` : title;
+    openTierSearchModal(item.item_type === "movie" ? "movies" : "shows", {
+      query,
+      historyId: item.id,
+      itemType: item.item_type,
+    });
   }
 
   function getCompletionColor(percentage: number): string {
@@ -338,9 +339,6 @@
       </div>
     {/if}
   </div>
-  {#if plexHistoryPreview}
-    <PlexHistoryPreview item={plexHistoryPreview} onClose={() => (plexHistoryPreview = null)} />
-  {/if}
 {/if}
 
 <style>

@@ -38,6 +38,12 @@ export interface DeleteTierResult {
   affected_movies: number;
 }
 
+export interface PlexHistoryMatchRequest {
+  query: string;
+  historyId: number;
+  itemType: "episode" | "movie";
+}
+
 export type TierPreset = "10-star" | "5-star" | "custom";
 export interface TierDefinition { name: string; color: string }
 export interface TierDraft { preset: TierPreset; tiers: TierDefinition[] }
@@ -82,6 +88,7 @@ let tierListMovies = $state<TierListMovie[]>([]);
 let tiersLoading = $state(false);
 let tierSearchModalOpen = $state(false);
 let tierSearchModalMode = $state<"shows" | "movies">("shows");
+let plexHistoryMatchRequest = $state<PlexHistoryMatchRequest | null>(null);
 
 // Getters
 export function getTiers(): Tier[] {
@@ -120,14 +127,23 @@ export function getTierSearchModalMode(): "shows" | "movies" {
   return tierSearchModalMode;
 }
 
+export function getPlexHistoryMatchRequest(): PlexHistoryMatchRequest | null {
+  return plexHistoryMatchRequest;
+}
+
 // Actions
-export function openTierSearchModal(mode: "shows" | "movies" = "shows") {
+export function openTierSearchModal(
+  mode: "shows" | "movies" = "shows",
+  plexHistoryRequest: PlexHistoryMatchRequest | null = null,
+) {
   tierSearchModalMode = mode;
+  plexHistoryMatchRequest = plexHistoryRequest;
   tierSearchModalOpen = true;
 }
 
 export function closeTierSearchModal() {
   tierSearchModalOpen = false;
+  plexHistoryMatchRequest = null;
 }
 
 export async function loadTiers(): Promise<void> {

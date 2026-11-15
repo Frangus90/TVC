@@ -2,6 +2,13 @@
 
 All notable changes to TVC will be documented in this file.
 
+## [0.15.4] - Unreleased
+
+### Watch History
+
+- When a Plex play is not matched to a TVC title, choose the matching TMDB result to add it to your tier list and open its full details. It stays out of your tracked shows or movies.
+- TVC remembers that match, so you can open the details directly next time.
+
 ## [0.15.3] - 15.11.2026
 
 ### Navigation

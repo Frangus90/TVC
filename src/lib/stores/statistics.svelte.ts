@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { logger } from "../utils/logger";
+import { showError } from "./toast.svelte";
 import { formatDateKey, formatDateHeader, parseDateTime } from "../utils/dateFormat";
 
 export interface WatchStatistics {
@@ -169,6 +170,26 @@ export async function loadWatchHistory(limit?: number): Promise<void> {
     watchHistory = [];
   } finally {
     if (request === watchHistoryRequest) watchHistoryLoading = false;
+  }
+}
+
+export async function matchPlexHistoryItem(
+  historyId: number,
+  itemType: "episode" | "movie",
+  entityId: number,
+): Promise<boolean> {
+  try {
+    await invoke("resolve_plex_history_item", {
+      historyId,
+      mediaType: itemType,
+      entityId,
+    });
+    await loadWatchHistory();
+    return true;
+  } catch (error) {
+    logger.error("Failed to link Plex history item", error);
+    showError(`Title added, but the Plex play could not be linked: ${String(error)}`);
+    return false;
   }
 }
 

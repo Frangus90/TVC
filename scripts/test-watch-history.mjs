@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import vm from 'node:vm';
 import ts from 'typescript';
 
-function loadStore(invoke) {
+function loadStore(invoke, showError = () => {}) {
   const exports = {};
   const code = ts.transpileModule(readFileSync('src/lib/stores/statistics.svelte.ts', 'utf8'), {
     compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS },
@@ -15,6 +15,7 @@ function loadStore(invoke) {
     require: name => {
       if (name === '@tauri-apps/api/core') return { invoke };
       if (name === '../utils/logger') return { logger: { error() {} } };
+      if (name === './toast.svelte') return { showError };
       if (name === '../utils/dateFormat') return {
         formatDateKey: value => value,
         formatDateHeader: value => value,
@@ -65,4 +66,29 @@ test('a late older history response cannot overwrite a newer Plex refresh', asyn
   await older;
 
   assert.deepEqual(Array.from(api.getWatchHistory(), entry => entry.name), ['Newest Plex play']);
+});
+
+test('matching a Plex history item saves the selected title and reloads history', async () => {
+  const history = [item('Matched title')];
+  const calls = [];
+  const api = loadStore(async (command, args) => {
+    calls.push([command, args]);
+    return command === 'get_watch_history' ? history : undefined;
+  });
+
+  assert.equal(await api.matchPlexHistoryItem(17, 'episode', 42), true);
+  assert.deepEqual(JSON.parse(JSON.stringify(calls)), [
+    ['resolve_plex_history_item', { historyId: 17, mediaType: 'episode', entityId: 42 }],
+    ['get_watch_history', {}],
+  ]);
+  assert.equal(api.getWatchHistory()[0].name, 'Matched title');
+});
+
+test('a failed Plex history match reports the error and leaves the picker result usable', async () => {
+  const errors = [];
+  const api = loadStore(async () => { throw new Error('database unavailable'); }, message => errors.push(message));
+
+  assert.equal(await api.matchPlexHistoryItem(17, 'movie', 42), false);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /could not be linked/);
 });
